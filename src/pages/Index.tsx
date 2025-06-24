@@ -1,12 +1,21 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { ArrowRight, Code2, Palette, Zap, Star, Users, Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Hero from "@/components/Hero";
+import Features from "@/components/Features";
+import Stats from "@/components/Stats";
+import CTA from "@/components/CTA";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <Hero />
+      <Features />
+      <Stats />
+      <CTA />
+      <Footer />
     </div>
   );
 };
