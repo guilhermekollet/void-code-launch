@@ -1,5 +1,6 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useCategoryChartData } from "@/hooks/useCategoryChartData";
 import * as LucideIcons from "lucide-react";
 import { Tag } from "lucide-react";
@@ -151,8 +152,8 @@ export function CategoryChart() {
               stroke="none"
             >
               {categoryData.map((entry, index) => (
-                <Bar 
-                  key={`bar-${index}`} 
+                <Cell 
+                  key={`cell-${index}`} 
                   fill={entry.color}
                 />
               ))}
