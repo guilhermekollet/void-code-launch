@@ -1,16 +1,23 @@
 
 import React from 'react';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function LoadingState() {
   return (
-    <div className="min-h-screen bg-[#FEFEFE] p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#61710C]"></div>
-            <p className="text-gray-600 text-lg">Carregando despesas recorrentes...</p>
-          </div>
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg border border-[#E2E8F0] p-6">
+        <Skeleton className="h-8 w-48 mb-4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-20" />
+          ))}
         </div>
+      </div>
+      
+      <div className="space-y-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-24" />
+        ))}
       </div>
     </div>
   );
