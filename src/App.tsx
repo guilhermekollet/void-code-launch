@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
 import Dashboard from "./pages/Dashboard";
+import Transacoes from "./pages/Transacoes";
 import Recorrentes from "./pages/Recorrentes";
 import Assinatura from "./pages/Assinatura";
 import Relatorios from "./pages/Relatorios";
@@ -31,6 +32,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/transacoes" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Transacoes />
                 </Layout>
               </ProtectedRoute>
             } />
