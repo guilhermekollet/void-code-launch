@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinancialMetrics } from "@/hooks/useFinancialData";
@@ -47,7 +48,7 @@ export function FinancialSummary() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card, index) => (
-          <Card key={index}>
+          <Card key={index} className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
                 {card.title}
@@ -64,7 +65,7 @@ export function FinancialSummary() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-gray-600">Resultado do Mês</CardTitle>
           </CardHeader>
@@ -75,7 +76,7 @@ export function FinancialSummary() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-gray-600">Taxa de Poupança</CardTitle>
           </CardHeader>
@@ -86,7 +87,7 @@ export function FinancialSummary() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-gray-600">% Gastos Recorrentes</CardTitle>
           </CardHeader>

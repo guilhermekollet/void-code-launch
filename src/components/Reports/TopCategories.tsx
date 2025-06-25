@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,9 +18,9 @@ export function TopCategories() {
   const topCategories = categoryData.slice(0, 5);
 
   return (
-    <Card>
+    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader>
-        <CardTitle>Top 5 Categorias</CardTitle>
+        <CardTitle className="text-lg font-semibold text-gray-900">Top 5 Categorias</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -31,15 +32,16 @@ export function TopCategories() {
                     className="w-3 h-3 rounded-full" 
                     style={{ backgroundColor: category.color }}
                   />
-                  <span className="text-sm font-medium">{category.name}</span>
+                  <span className="text-sm font-medium text-gray-700">{category.name}</span>
                 </div>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm font-semibold text-gray-600">
                   {formatCurrency(category.value)}
                 </span>
               </div>
               <Progress 
                 value={(category.value / maxValue) * 100} 
                 className="h-2"
+                style={{ backgroundColor: '#F3F4F6' }}
               />
             </div>
           ))}

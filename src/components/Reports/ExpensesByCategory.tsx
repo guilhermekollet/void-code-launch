@@ -15,9 +15,9 @@ export function ExpensesByCategory() {
   };
 
   return (
-    <Card>
+    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader>
-        <CardTitle>Despesas por Categoria</CardTitle>
+        <CardTitle className="text-lg font-semibold text-gray-900">Despesas por Categoria</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -37,7 +37,15 @@ export function ExpensesByCategory() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+              <Tooltip 
+                formatter={(value) => formatCurrency(Number(value))}
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
