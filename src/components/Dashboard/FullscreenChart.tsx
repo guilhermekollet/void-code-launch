@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -101,6 +100,9 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
   // Find the index where future data starts for background differentiation
   const futureStartIndex = displayData.findIndex(item => item.isFuture);
 
+  // Check if there are future transactions to show
+  const hasFutureData = chartData.some(item => item.isFuture && (item.receitas > 0 || item.despesas > 0));
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
@@ -124,7 +126,19 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0]">
-            <h2 className="text-2xl font-semibold text-[#121212]">Fluxo Financeiro</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-semibold text-[#121212]">Fluxo Financeiro</h2>
+              {showFuture && !hasFutureData && (
+                <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+                  Nenhuma transação futura encontrada
+                </div>
+              )}
+              {showFuture && hasFutureData && (
+                <div className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-lg border border-green-200">
+                  Mostrando dados futuros
+                </div>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="icon"

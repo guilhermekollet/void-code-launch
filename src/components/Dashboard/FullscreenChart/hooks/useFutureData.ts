@@ -10,6 +10,10 @@ export function useFutureData(showFuture: boolean) {
   return useMemo(() => {
     if (!showFuture) return [];
 
+    console.log('Generating future data...');
+    console.log('Recurring transactions:', recurringTransactions);
+    console.log('Installment transactions:', transactions.filter(t => t.is_installment));
+
     const currentDate = new Date();
     const futureMonths: any[] = [];
     
@@ -33,10 +37,19 @@ export function useFutureData(showFuture: boolean) {
       // Calculate future installments for this month
       installmentTransactions.forEach(transaction => {
         const startDate = new Date(transaction.installment_start_date || transaction.tx_date);
-        const monthsFromStart = Math.floor((futureDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
         
-        if (monthsFromStart >= 0 && monthsFromStart < (transaction.total_installments || 0)) {
+        // More precise month calculation
+        const monthsDiff = (futureDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                          (futureDate.getMonth() - startDate.getMonth());
+        
+        // Check if this installment should be paid in this future month
+        const installmentIndex = monthsDiff;
+        const currentInstallment = (transaction.installment_number || 1) + installmentIndex;
+        
+        if (installmentIndex >= 0 && currentInstallment <= (transaction.total_installments || 0)) {
           const amount = Number(transaction.amount);
+          console.log(`Future installment: ${transaction.description}, amount: ${amount}, month: ${futureDate.toLocaleDateString('pt-BR', { month: 'short' })}`);
+          
           if (transaction.type === 'receita') {
             futureReceitas += amount;
           } else if (transaction.type === 'despesa') {
@@ -48,9 +61,11 @@ export function useFutureData(showFuture: boolean) {
         }
       });
 
-      // Add recurring transactions to future months
+      // Add recurring transactions to ALL future months
       recurringTransactions.forEach(transaction => {
         const amount = Number(transaction.amount);
+        console.log(`Recurring transaction: ${transaction.description}, amount: ${amount}, type: ${transaction.type}`);
+        
         if (transaction.type === 'receita') {
           futureReceitas += amount;
         } else if (transaction.type === 'despesa') {
@@ -59,27 +74,35 @@ export function useFutureData(showFuture: boolean) {
         }
       });
 
-      if (futureReceitas > 0 || futureDespesas > 0) {
-        futureMonths.push({
-          mes: futureDate.toLocaleDateString('pt-BR', { month: 'short' }),
-          receitas: futureReceitas,
-          despesas: futureDespesas,
-          gastosRecorrentes: futureGastosRecorrentes,
-          fluxoLiquido: futureReceitas - futureDespesas,
-          isFuture: true
-        });
-      }
+      // Always add the month data, even if values are zero (we'll filter later)
+      futureMonths.push({
+        mes: futureDate.toLocaleDateString('pt-BR', { month: 'short' }),
+        receitas: futureReceitas,
+        despesas: futureDespesas,
+        gastosRecorrentes: futureGastosRecorrentes,
+        fluxoLiquido: futureReceitas - futureDespesas,
+        isFuture: true
+      });
+
+      console.log(`Future month ${futureDate.toLocaleDateString('pt-BR', { month: 'short' })}: receitas=${futureReceitas}, despesas=${futureDespesas}`);
     }
 
-    // Stop when we have 6 consecutive months with no data
-    let emptyMonths = 0;
-    return futureMonths.filter((month, index) => {
-      if (month.receitas === 0 && month.despesas === 0) {
-        emptyMonths++;
+    // Improved filtering: stop when we have 6 consecutive months with NO recurring transactions AND NO installments
+    // This ensures we show future data when it exists
+    let consecutiveEmptyMonths = 0;
+    const filteredMonths = futureMonths.filter((month, index) => {
+      // If this month has any data (even if just one type), reset counter
+      if (month.receitas > 0 || month.despesas > 0) {
+        consecutiveEmptyMonths = 0;
+        return true;
       } else {
-        emptyMonths = 0;
+        consecutiveEmptyMonths++;
+        // Only exclude if we've had 6 consecutive empty months AND we're not early in the sequence
+        return consecutiveEmptyMonths < 6 || index < 6;
       }
-      return emptyMonths < 6;
     });
+
+    console.log('Filtered future months:', filteredMonths);
+    return filteredMonths;
   }, [showFuture, transactions, recurringTransactions]);
 }

@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,8 @@ export function useRecurringTransactions() {
     queryFn: async () => {
       if (!user) return [];
 
+      console.log('Fetching recurring transactions for user:', user.id);
+
       // First get the user's internal ID
       const { data: userData } = await supabase
         .from('users')
@@ -17,7 +20,10 @@ export function useRecurringTransactions() {
         .eq('user_id', user.id)
         .single();
 
-      if (!userData) return [];
+      if (!userData) {
+        console.log('No user data found');
+        return [];
+      }
 
       const { data, error } = await supabase
         .from('transactions')
@@ -30,6 +36,9 @@ export function useRecurringTransactions() {
         console.error('Error fetching recurring transactions:', error);
         return [];
       }
+
+      console.log('Found recurring transactions:', data?.length || 0);
+      console.log('Recurring transactions details:', data);
 
       return data || [];
     },
