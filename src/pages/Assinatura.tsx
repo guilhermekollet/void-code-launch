@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { CheckCircle, Crown, RefreshCcw, CreditCard } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useCreateCheckout, useCustomerPortal, useRefreshSubscription } from "@/hooks/useSubscriptionMutations";
+
 export default function Assinatura() {
   const {
     data: subscription,
@@ -14,11 +15,18 @@ export default function Assinatura() {
   const createCheckout = useCreateCheckout();
   const customerPortal = useCustomerPortal();
   const refreshSubscription = useRefreshSubscription();
+  
   const isPremium = subscription?.plan_type === 'premium' && subscription?.status === 'active';
   const isFree = !isPremium;
+  
   const handleUpgrade = () => {
-    createCheckout.mutate('premium');
+    createCheckout.mutate({
+      planType: 'premium',
+      price: 2990, // R$ 29,90 in cents
+      billingCycle: 'monthly'
+    });
   };
+  
   const handleManageSubscription = () => {
     customerPortal.mutate();
   };
