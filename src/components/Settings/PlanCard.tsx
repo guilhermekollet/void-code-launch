@@ -45,6 +45,9 @@ export function PlanCard({
   const yearlyPrice = plan.yearlyPrice;
   const displayPrice = billingCycle === 'monthly' ? monthlyPrice : yearlyPrice;
 
+  // Remove "Free" from plan name if it's the free plan
+  const displayName = plan.id === 'free' ? 'Gratuito' : plan.name;
+
   return (
     <div className="relative p-6 rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
       {plan.popular && (
@@ -53,17 +56,10 @@ export function PlanCard({
         </Badge>
       )}
       
-      {billingCycle === 'yearly' && discount && discount > 0 && yearlyPrice > 0 && (
-        <Badge className="absolute -top-3 right-4 bg-green-500 hover:bg-green-500 text-white px-3 py-1 text-xs font-medium shadow-sm border-0">
-          Economize {discount}%
-        </Badge>
-      )}
-      
       {isCurrentPlan && (
         <Badge 
           variant="outline" 
           className="absolute -top-3 right-4 bg-green-500 text-white border-green-500 px-3 py-1 font-medium shadow-sm"
-          style={{ right: billingCycle === 'yearly' && discount && discount > 0 && yearlyPrice > 0 ? '140px' : '16px' }}
         >
           Plano Atual
         </Badge>
@@ -71,7 +67,7 @@ export function PlanCard({
 
       <div className="text-center mb-6 flex-shrink-0">
         <h3 className="text-xl font-semibold text-gray-900 mb-3">
-          {plan.name}
+          {displayName}
         </h3>
         
         {displayPrice > 0 ? (
