@@ -59,7 +59,7 @@ export default function Login() {
       setLoading(false);
     }
   };
-  return <div className="min-h-screen flex items-center justify-center bg-[#FEFEFE] px-4">
+  return <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
       <Card className="w-full max-w-md border-[#DEDEDE]">
         <CardHeader className="text-center py-[60px]">
           <div className="flex justify-center mb-4">
