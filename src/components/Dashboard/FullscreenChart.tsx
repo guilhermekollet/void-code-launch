@@ -124,7 +124,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0]">
-            <h2 className="text-2xl font-semibold text-[#121212]">Fluxo Financeiro - Tela Cheia</h2>
+            <h2 className="text-2xl font-semibold text-[#121212]">Fluxo Financeiro</h2>
             <Button
               variant="ghost"
               size="icon"
