@@ -68,9 +68,7 @@ export function AIAgentSection() {
             ...prev,
             phone_number: e.target.value
           }))} placeholder="(11) 99999-9999" disabled={!formData.is_enabled} />
-            <p className="text-sm text-gray-500">
-              Este número receberá instruções e notificações do agente de IA
-            </p>
+            <p className="text-sm text-gray-500">O Agente entrará em contato através desse número</p>
           </div>
           
           <Button type="submit" disabled={updateSettings.isPending || !formData.is_enabled} className="w-full md:w-auto bg-gray-200 hover:bg-gray-100">
@@ -80,9 +78,9 @@ export function AIAgentSection() {
         </form>
 
         {formData.is_enabled && <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="font-medium text-blue-900 mb-2">Como funciona o Agente de IA:</h4>
+            <h4 className="font-medium text-blue-900 mb-2">Instruções</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Recebe comandos de voz e texto via WhatsApp</li>
+              <li>• O Agente suporta envio de várias mensagens simultâneamente.</li>
               <li>• Registra transações automaticamente</li>
               <li>• Envia relatórios e lembretes personalizados</li>
               <li>• Responde perguntas sobre suas finanças</li>
