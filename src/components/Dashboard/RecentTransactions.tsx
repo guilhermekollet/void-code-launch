@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
+import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
 
 interface Transaction {
   id: number;
@@ -33,6 +35,9 @@ export function RecentTransactions({
   const isMobile = useIsMobile();
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<{ id: number; description: string } | null>(null);
+  
+  const updateTransactionMutation = useUpdateTransaction();
+  const deleteTransactionMutation = useDeleteTransaction();
 
   const handleEdit = (transaction: Transaction) => {
     setEditTransaction(transaction);
@@ -43,13 +48,13 @@ export function RecentTransactions({
   };
 
   const handleSaveEdit = (id: number, updates: Partial<Transaction>) => {
-    console.log('Salvando edição da transação:', id, updates);
-    // TODO: Implementar lógica de edição
+    updateTransactionMutation.mutate({ id, updates });
+    setEditTransaction(null);
   };
 
   const handleConfirmDelete = (id: number) => {
-    console.log('Removendo transação:', id);
-    // TODO: Implementar lógica de remoção
+    deleteTransactionMutation.mutate(id);
+    setDeleteTransaction(null);
   };
 
   if (transactions.length === 0) {
@@ -175,6 +180,7 @@ export function RecentTransactions({
                         size="sm" 
                         onClick={() => handleEdit(transacao)}
                         className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                        disabled={updateTransactionMutation.isPending}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -183,6 +189,7 @@ export function RecentTransactions({
                         size="sm" 
                         onClick={() => handleDelete(transacao.id, transacao.description)}
                         className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                        disabled={deleteTransactionMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

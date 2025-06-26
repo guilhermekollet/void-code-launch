@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   AlertDialog,
@@ -9,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useDeleteTransaction } from "@/hooks/useTransactionMutations";
 
 interface DeleteTransactionDialogProps {
   transactionId: number | null;
@@ -25,10 +27,11 @@ export function DeleteTransactionDialog({
   onClose,
   onDelete,
 }: DeleteTransactionDialogProps) {
+  const deleteTransactionMutation = useDeleteTransaction();
+
   const handleDelete = () => {
     if (transactionId) {
       onDelete(transactionId);
-      onClose();
     }
   };
 
@@ -43,12 +46,15 @@ export function DeleteTransactionDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose} disabled={deleteTransactionMutation.isPending}>
+            Cancelar
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
+            disabled={deleteTransactionMutation.isPending}
             className="bg-red-600 hover:bg-red-700"
           >
-            Excluir
+            {deleteTransactionMutation.isPending ? 'Excluindo...' : 'Excluir'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
