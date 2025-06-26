@@ -142,21 +142,21 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
                 <Line
                   type="monotone"
                   dataKey="fluxoLiquido"
-                  stroke="#8B5CF6"
+                  stroke="#000000"
                   strokeWidth={3}
-                  name="Fluxo Líquido"
+                  name="Saldo Total"
                   dot={(props) => {
                     const { payload } = props;
                     return (
                       <circle
                         {...props}
-                        fill={payload.isFuture ? "#8B5CF680" : "#8B5CF6"}
+                        fill={payload.isFuture ? "#00000080" : "#000000"}
                         strokeWidth={2}
                         r={4}
                       />
                     );
                   }}
-                  activeDot={{ r: 6, fill: '#8B5CF6' }}
+                  activeDot={{ r: 6, fill: '#000000' }}
                 />
               )}
             </LineChart>

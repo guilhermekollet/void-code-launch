@@ -108,11 +108,11 @@ export function TransactionChart() {
               <Line 
                 type="monotone" 
                 dataKey="fluxoLiquido" 
-                stroke="#8B5CF6" 
+                stroke="#000000" 
                 strokeWidth={3} 
                 name="Saldo Total" 
-                dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }} 
-                activeDot={{ r: 6, fill: '#8B5CF6' }} 
+                dot={{ fill: '#000000', strokeWidth: 2, r: 4 }} 
+                activeDot={{ r: 6, fill: '#000000' }} 
               />
             </LineChart>
           </ResponsiveContainer>
