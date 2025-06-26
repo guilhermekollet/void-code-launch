@@ -65,7 +65,7 @@ export function UserProfileSection() {
             phone_number: e.target.value
           }))} placeholder="(11) 99999-9999" />
           </div>
-          <Button type="submit" disabled={updateProfile.isPending} className="w-full md:w-auto">
+          <Button type="submit" disabled={updateProfile.isPending} className="w-full md:w-auto bg-gray-200 hover:bg-gray-100">
             {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Alterações
           </Button>
