@@ -12,6 +12,7 @@ import Transacoes from "./pages/Transacoes";
 import Recorrentes from "./pages/Recorrentes";
 import Assinatura from "./pages/Assinatura";
 import Relatorios from "./pages/Relatorios";
+import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -60,6 +61,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <Relatorios />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/configuracoes" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Configuracoes />
                 </Layout>
               </ProtectedRoute>
             } />
