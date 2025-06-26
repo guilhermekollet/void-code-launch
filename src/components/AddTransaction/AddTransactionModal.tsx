@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -104,10 +105,16 @@ export function AddTransactionModal({
             {/* Type Tabs */}
             <Tabs value={type} onValueChange={value => setType(value as 'receita' | 'despesa')}>
               <TabsList className="grid w-full grid-cols-2 h-11">
-                <TabsTrigger value="despesa" className="data-[state=active]:bg-red-100 data-[state=active]:text-red-700 h-9">
+                <TabsTrigger 
+                  value="despesa" 
+                  className="data-[state=active]:bg-red-100 data-[state=active]:text-red-700 data-[state=inactive]:border data-[state=inactive]:border-[#DEDEDE] h-9"
+                >
                   Despesa
                 </TabsTrigger>
-                <TabsTrigger value="receita" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-700 h-9">
+                <TabsTrigger 
+                  value="receita" 
+                  className="data-[state=active]:bg-green-100 data-[state=active]:text-green-700 data-[state=inactive]:border data-[state=inactive]:border-[#DEDEDE] h-9"
+                >
                   Receita
                 </TabsTrigger>
               </TabsList>
@@ -131,12 +138,12 @@ export function AddTransactionModal({
 
               {/* Date */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Data da transação</Label>
+                <Label className="text-sm font-medium block">Data da transação</Label>
                 <DatePicker
                   date={date}
                   onDateChange={(newDate) => setDate(newDate || new Date())}
                   placeholder="Selecionar data"
-                  className="h-10"
+                  className="h-10 w-full"
                 />
               </div>
 
@@ -244,7 +251,7 @@ export function AddTransactionModal({
             disabled={!isFormValid || addTransaction.isPending} 
             className="w-full h-12 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]" 
             style={{
-              background: 'linear-gradient(135deg, #61710C 0%, #84CC16 100%)',
+              backgroundColor: '#61710C',
               color: '#CFF500',
               border: 'none'
             }}
