@@ -25,31 +25,449 @@ export function useExportReport() {
       
       const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
-        scale: 1,
+        scale: 2,
         useCORS: true,
         allowTaint: true,
         height: element.offsetHeight,
-        width: element.offsetWidth
+        width: element.offsetWidth,
+        logging: false
       });
       
-      return canvas.toDataURL('image/png', 0.8);
+      return canvas.toDataURL('image/png', 0.9);
     } catch (error) {
       console.error('Erro ao capturar gráfico:', error);
       return null;
     }
   };
 
-  const addLogo = (pdf: jsPDF) => {
+  const generateHTMLReport = async () => {
+    const currentDate = new Date().toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const monthlyNet = monthlyIncome - monthlyExpenses;
+    const savingsRate = monthlyIncome > 0 ? ((monthlyNet / monthlyIncome) * 100) : 0;
+
+    // Capturar gráficos
+    const cashFlowChart = await captureChart('[data-chart="cash-flow"] .recharts-wrapper');
+    const expensesByCategoryChart = await captureChart('[data-chart="expenses-by-category"] .recharts-wrapper');
+    const monthlyComparisonChart = await captureChart('[data-chart="monthly-comparison"] .recharts-wrapper');
+    const expenseTrendsChart = await captureChart('[data-chart="expense-trends"] .recharts-wrapper');
+
+    return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Financeiro - Bolsofy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #ffffff;
+            padding: 40px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #61710C;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #61710C;
+        }
+        
+        .date {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .title h1 {
+            font-size: 32px;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .title p {
+            font-size: 16px;
+            color: #6b7280;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .metric-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        
+        .metric-card h3 {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .metric-card .positive {
+            color: #22c55e;
+        }
+        
+        .metric-card .negative {
+            color: #ef4444;
+        }
+        
+        .metric-card .neutral {
+            color: #3b82f6;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #61710C;
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .chart-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .chart-container h4 {
+            font-size: 16px;
+            color: #1f2937;
+            margin-bottom: 15px;
+        }
+        
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        
+        .full-width-chart {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .data-table {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .data-table tr:hover {
+            background: #f9fafb;
+        }
+        
+        .category-analysis {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 6px;
+            border-left: 4px solid #61710C;
+        }
+        
+        .category-name {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .category-value {
+            font-weight: bold;
+            color: #61710C;
+        }
+        
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        @media print {
+            body {
+                padding: 20px;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">BOLSOFY</div>
+        <div class="date">${currentDate}</div>
+    </div>
+    
+    <div class="title">
+        <h1>Relatório Financeiro</h1>
+        <p>Análise completa das suas finanças pessoais</p>
+    </div>
+    
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <h3>Receitas do Mês</h3>
+            <div class="value positive">${formatCurrency(monthlyIncome)}</div>
+        </div>
+        <div class="metric-card">
+            <h3>Despesas do Mês</h3>
+            <div class="value negative">${formatCurrency(monthlyExpenses)}</div>
+        </div>
+        <div class="metric-card">
+            <h3>Resultado do Mês</h3>
+            <div class="value ${monthlyNet >= 0 ? 'positive' : 'negative'}">${formatCurrency(monthlyNet)}</div>
+        </div>
+        <div class="metric-card">
+            <h3>Saldo Total</h3>
+            <div class="value ${totalBalance >= 0 ? 'positive' : 'negative'}">${formatCurrency(totalBalance)}</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title">📈 Análise de Fluxo de Caixa</h2>
+        ${cashFlowChart ? `
+        <div class="full-width-chart">
+            <h4>Evolução do Fluxo de Caixa</h4>
+            <img src="${cashFlowChart}" alt="Gráfico de Fluxo de Caixa" />
+        </div>
+        ` : '<p>Gráfico de fluxo de caixa não disponível</p>'}
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title">🏷️ Análise de Categorias</h2>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h4>Despesas por Categoria</h4>
+                ${expensesByCategoryChart ? `<img src="${expensesByCategoryChart}" alt="Despesas por Categoria" />` : '<p>Gráfico não disponível</p>'}
+            </div>
+            <div class="chart-container">
+                <h4>Tendência de Gastos</h4>
+                ${expenseTrendsChart ? `<img src="${expenseTrendsChart}" alt="Tendência de Gastos" />` : '<p>Gráfico não disponível</p>'}
+            </div>
+        </div>
+        
+        <div class="category-analysis">
+            ${categoryData.slice(0, 6).map((category, index) => `
+                <div class="category-item">
+                    <span class="category-name">${index + 1}. ${category.name}</span>
+                    <span class="category-value">${formatCurrency(category.value)}</span>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <div class="section">
+        <h2 class="section-title">📊 Comparação Mensal</h2>
+        ${monthlyComparisonChart ? `
+        <div class="full-width-chart">
+            <h4>Evolução Mensal de Receitas e Despesas</h4>
+            <img src="${monthlyComparisonChart}" alt="Comparação Mensal" />
+        </div>
+        ` : '<p>Gráfico de comparação mensal não disponível</p>'}
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title">📋 Dados Mensais Detalhados</h2>
+        <div class="data-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mês</th>
+                        <th>Receitas</th>
+                        <th>Despesas</th>
+                        <th>Gastos Recorrentes</th>
+                        <th>Resultado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${monthlyData.slice(-6).map(month => {
+                        const resultado = month.receitas - month.despesas;
+                        return `
+                        <tr>
+                            <td>${month.mes}</td>
+                            <td style="color: #22c55e;">${formatCurrency(month.receitas)}</td>
+                            <td style="color: #ef4444;">${formatCurrency(month.despesas)}</td>
+                            <td style="color: #f59e0b;">${formatCurrency(month.gastosRecorrentes)}</td>
+                            <td style="color: ${resultado >= 0 ? '#22c55e' : '#ef4444'};">${formatCurrency(resultado)}</td>
+                        </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title">📈 Métricas de Performance</h2>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>Taxa de Poupança</h3>
+                <div class="value ${savingsRate >= 0 ? 'positive' : 'negative'}">${savingsRate.toFixed(1)}%</div>
+            </div>
+            <div class="metric-card">
+                <h3>Gastos Recorrentes</h3>
+                <div class="value neutral">${formatCurrency(monthlyRecurringExpenses)}</div>
+            </div>
+            <div class="metric-card">
+                <h3>% Gastos Recorrentes</h3>
+                <div class="value neutral">${monthlyExpenses > 0 ? ((monthlyRecurringExpenses / monthlyExpenses) * 100).toFixed(1) : 0}%</div>
+            </div>
+            <div class="metric-card">
+                <h3>Categorias Ativas</h3>
+                <div class="value neutral">${categoryData.length}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Relatório gerado automaticamente pelo <strong>Bolsofy</strong> • ${currentDate}</p>
+        <p>Mantenha suas finanças sempre organizadas e tome decisões inteligentes</p>
+    </div>
+</body>
+</html>
+    `;
+  };
+
+  const convertHTMLToPDF = async (html: string) => {
+    // Criar um elemento temporário para renderizar o HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '0';
+    tempDiv.style.width = '210mm'; // A4 width
+    document.body.appendChild(tempDiv);
+
     try {
-      // Logo do Bolsofy (simulada - você pode substituir pela URL real ou base64)
-      const logoData = '/bolsologodash.webp';
-      // Para uma implementação real, você deveria converter a logo para base64
-      // Por agora, vamos adicionar um placeholder de texto estilizado
-      pdf.setFontSize(12);
-      pdf.setTextColor(97, 113, 12); // #61710C
-      pdf.text('BOLSOFY', 15, 15);
-    } catch (error) {
-      console.error('Erro ao adicionar logo:', error);
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794, // A4 width in pixels at 96 DPI
+        windowWidth: 794,
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png', 0.9);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Adicionar primeira página
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      // Adicionar páginas adicionais se necessário
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      return pdf;
+    } finally {
+      document.body.removeChild(tempDiv);
     }
   };
 
@@ -57,203 +475,26 @@ export function useExportReport() {
     setIsExporting(true);
     
     try {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      let currentY = 25;
-
-      // Adicionar logo
-      addLogo(pdf);
-
-      // Header
-      pdf.setFontSize(24);
-      pdf.setTextColor(40, 40, 40);
-      pdf.text('Relatório Financeiro', pageWidth / 2, currentY, { align: 'center' });
-      
-      currentY += 10;
-      pdf.setFontSize(12);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth / 2, currentY, { align: 'center' });
-      
-      currentY += 20;
-
-      // Seção 1: Resumo Financeiro
-      pdf.setFontSize(18);
-      pdf.setTextColor(97, 113, 12); // #61710C
-      pdf.text('📊 Resumo Financeiro', 20, currentY);
-      currentY += 12;
-
-      // Cards de resumo em grid
-      const cardWidth = (pageWidth - 50) / 3;
-      const cardHeight = 25;
-      const cardStartY = currentY;
-
-      // Card 1: Receitas
-      pdf.setFillColor(34, 197, 94); // Green
-      pdf.roundedRect(20, cardStartY, cardWidth, cardHeight, 2, 2, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(8);
-      pdf.text('Receitas do Mês', 25, cardStartY + 8);
-      pdf.setFontSize(12);
-      pdf.text(formatCurrency(monthlyIncome), 25, cardStartY + 18);
-
-      // Card 2: Despesas
-      pdf.setFillColor(239, 68, 68); // Red
-      pdf.roundedRect(25 + cardWidth, cardStartY, cardWidth, cardHeight, 2, 2, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(8);
-      pdf.text('Despesas do Mês', 30 + cardWidth, cardStartY + 8);
-      pdf.setFontSize(12);
-      pdf.text(formatCurrency(monthlyExpenses), 30 + cardWidth, cardStartY + 18);
-
-      // Card 3: Saldo
-      const balanceColor = totalBalance >= 0 ? [34, 197, 94] : [239, 68, 68];
-      pdf.setFillColor(balanceColor[0], balanceColor[1], balanceColor[2]);
-      pdf.roundedRect(30 + (cardWidth * 2), cardStartY, cardWidth, cardHeight, 2, 2, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(8);
-      pdf.text('Saldo Total', 35 + (cardWidth * 2), cardStartY + 8);
-      pdf.setFontSize(12);
-      pdf.text(formatCurrency(totalBalance), 35 + (cardWidth * 2), cardStartY + 18);
-
-      currentY += 35;
-
-      // Capturar e adicionar gráficos
       toast({
         title: "Processando",
-        description: "Capturando gráficos para o relatório...",
+        description: "Preparando seu relatório financeiro...",
       });
 
-      // Gráfico de Fluxo de Caixa
-      const cashFlowChart = await captureChart('[data-chart] .recharts-wrapper');
-      if (cashFlowChart && currentY < pageHeight - 80) {
-        pdf.setFontSize(16);
-        pdf.setTextColor(97, 113, 12);
-        pdf.text('📈 Fluxo de Caixa', 20, currentY);
-        currentY += 10;
-        
-        try {
-          pdf.addImage(cashFlowChart, 'PNG', 20, currentY, pageWidth - 40, 60);
-          currentY += 70;
-        } catch (error) {
-          console.error('Erro ao adicionar gráfico de fluxo:', error);
-          currentY += 20;
-        }
-      }
-
-      // Nova página se necessário
-      if (currentY > pageHeight - 100) {
-        pdf.addPage();
-        currentY = 20;
-        addLogo(pdf);
-        currentY = 30;
-      }
-
-      // Seção 2: Dados Mensais Detalhados
-      pdf.setFontSize(16);
-      pdf.setTextColor(97, 113, 12);
-      pdf.text('📅 Evolução Mensal', 20, currentY);
-      currentY += 12;
-
-      // Tabela de dados mensais
-      pdf.setFontSize(10);
-      pdf.setTextColor(40, 40, 40);
+      const htmlContent = await generateHTMLReport();
       
-      // Cabeçalho da tabela
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(20, currentY, pageWidth - 40, 8, 'F');
-      pdf.text('Mês', 25, currentY + 6);
-      pdf.text('Receitas', 60, currentY + 6);
-      pdf.text('Despesas', 100, currentY + 6);
-      pdf.text('Resultado', 140, currentY + 6);
-      currentY += 10;
-
-      monthlyData.slice(-6).forEach((month, index) => {
-        if (currentY > pageHeight - 20) {
-          pdf.addPage();
-          currentY = 20;
-          addLogo(pdf);
-          currentY = 30;
-        }
-        
-        const resultado = month.receitas - month.despesas;
-        
-        // Linha alternada
-        if (index % 2 === 0) {
-          pdf.setFillColor(248, 250, 252);
-          pdf.rect(20, currentY - 2, pageWidth - 40, 8, 'F');
-        }
-        
-        pdf.setTextColor(40, 40, 40);
-        pdf.text(month.mes, 25, currentY + 4);
-        pdf.text(formatCurrency(month.receitas), 60, currentY + 4);
-        pdf.text(formatCurrency(month.despesas), 100, currentY + 4);
-        pdf.setTextColor(resultado >= 0 ? 34 : 239, resultado >= 0 ? 197 : 68, resultado >= 0 ? 94 : 68);
-        pdf.text(formatCurrency(resultado), 140, currentY + 4);
-        pdf.setTextColor(40, 40, 40);
-        currentY += 8;
+      toast({
+        title: "Processando",
+        description: "Gerando arquivo PDF...",
       });
 
-      currentY += 15;
-
-      // Nova página se necessário
-      if (currentY > pageHeight - 80) {
-        pdf.addPage();
-        currentY = 20;
-        addLogo(pdf);
-        currentY = 30;
-      }
-
-      // Seção 3: Top Categorias
-      pdf.setFontSize(16);
-      pdf.setTextColor(97, 113, 12);
-      pdf.text('🏷️ Top Categorias de Gastos', 20, currentY);
-      currentY += 12;
-
-      const totalCategoryExpenses = categoryData.reduce((sum, cat) => sum + cat.value, 0);
+      const pdf = await convertHTMLToPDF(htmlContent);
       
-      categoryData.slice(0, 8).forEach((category, index) => {
-        if (currentY > pageHeight - 20) {
-          pdf.addPage();
-          currentY = 20;
-          addLogo(pdf);
-          currentY = 30;
-        }
-        
-        const percentage = totalCategoryExpenses > 0 ? (category.value / totalCategoryExpenses * 100).toFixed(1) : '0';
-        
-        // Barra de progresso visual
-        const barWidth = (category.value / Math.max(...categoryData.map(c => c.value))) * 100;
-        pdf.setFillColor(97, 113, 12);
-        pdf.rect(20, currentY, barWidth, 4, 'F');
-        
-        // Dados da categoria
-        pdf.setFontSize(10);
-        pdf.setTextColor(40, 40, 40);
-        pdf.text(`${index + 1}. ${category.name}`, 25, currentY + 12);
-        pdf.text(formatCurrency(category.value), 120, currentY + 12);
-        pdf.text(`${percentage}%`, 160, currentY + 12);
-        currentY += 18;
-      });
-
-      // Footer em todas as páginas
-      const totalPages = pdf.internal.pages.length - 1;
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i);
-        const footerY = pageHeight - 10;
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text('Relatório gerado automaticamente pelo Bolsofy', pageWidth / 2, footerY, { align: 'center' });
-        pdf.text(`Página ${i} de ${totalPages}`, pageWidth - 20, footerY, { align: 'right' });
-      }
-
-      // Save PDF
-      const fileName = `relatorio-bolsofy-${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `relatorio-financeiro-bolsofy-${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
       
       toast({
         title: "Sucesso! 🎉",
-        description: "Relatório exportado com gráficos e design aprimorado!",
+        description: "Seu relatório foi exportado para PDF",
       });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
