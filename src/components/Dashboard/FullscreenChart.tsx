@@ -135,7 +135,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
               )}
               {showFuture && hasFutureData && (
                 <div className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-lg border border-green-200">
-                  Mostrando dados futuros
+                  Mostrando dados futuros incluindo receitas programadas
                 </div>
               )}
             </div>
