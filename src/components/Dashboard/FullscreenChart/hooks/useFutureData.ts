@@ -1,6 +1,7 @@
 
 import { useMemo } from 'react';
-import { useTransactions, useRecurringTransactions } from "@/hooks/useFinancialData";
+import { useTransactions } from "@/hooks/useFinancialData";
+import { useRecurringTransactions } from "@/hooks/useRecurringTransactions";
 
 export function useFutureData(showFuture: boolean) {
   const { data: transactions = [] } = useTransactions();
