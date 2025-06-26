@@ -1,54 +1,46 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinancialMetrics } from "@/hooks/useFinancialData";
 import { TrendingUp, TrendingDown, DollarSign, CreditCard } from "lucide-react";
-
 export function FinancialSummary() {
-  const { totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses } = useFinancialMetrics();
-
+  const {
+    totalBalance,
+    monthlyIncome,
+    monthlyExpenses,
+    monthlyRecurringExpenses
+  } = useFinancialMetrics();
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
   const monthlyNet = monthlyIncome - monthlyExpenses;
-  const savingsRate = monthlyIncome > 0 ? ((monthlyNet / monthlyIncome) * 100) : 0;
-
-  const cards = [
-    {
-      title: "Saldo Total",
-      value: formatCurrency(totalBalance),
-      icon: DollarSign,
-      color: totalBalance >= 0 ? "text-green-600" : "text-red-600"
-    },
-    {
-      title: "Receitas do Mês",
-      value: formatCurrency(monthlyIncome),
-      icon: TrendingUp,
-      color: "text-green-600"
-    },
-    {
-      title: "Despesas do Mês",
-      value: formatCurrency(monthlyExpenses),
-      icon: TrendingDown,
-      color: "text-red-600"
-    },
-    {
-      title: "Gastos Recorrentes",
-      value: formatCurrency(monthlyRecurringExpenses),
-      icon: CreditCard,
-      color: "text-orange-600"
-    }
-  ];
-
-  return (
-    <div className="space-y-6">
+  const savingsRate = monthlyIncome > 0 ? monthlyNet / monthlyIncome * 100 : 0;
+  const cards = [{
+    title: "Saldo Total",
+    value: formatCurrency(totalBalance),
+    icon: DollarSign,
+    color: totalBalance >= 0 ? "text-green-600" : "text-red-600"
+  }, {
+    title: "Receitas do Mês",
+    value: formatCurrency(monthlyIncome),
+    icon: TrendingUp,
+    color: "text-green-600"
+  }, {
+    title: "Despesas do Mês",
+    value: formatCurrency(monthlyExpenses),
+    icon: TrendingDown,
+    color: "text-red-600"
+  }, {
+    title: "Gastos Recorrentes",
+    value: formatCurrency(monthlyRecurringExpenses),
+    icon: CreditCard,
+    color: "text-orange-600"
+  }];
+  return <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((card, index) => (
-          <Card key={index} className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
+        {cards.map((card, index) => <Card key={index} className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
                 {card.title}
@@ -60,8 +52,7 @@ export function FinancialSummary() {
                 {card.value}
               </div>
             </CardContent>
-          </Card>
-        ))}
+          </Card>)}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -93,11 +84,10 @@ export function FinancialSummary() {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-blue-600">
-              {monthlyExpenses > 0 ? ((monthlyRecurringExpenses / monthlyExpenses) * 100).toFixed(1) : 0}%
+              {monthlyExpenses > 0 ? (monthlyRecurringExpenses / monthlyExpenses * 100).toFixed(1) : 0}%
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }
