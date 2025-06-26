@@ -18,7 +18,7 @@ export function TopCategories() {
   const topCategories = categoryData.slice(0, 5);
 
   return (
-    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
+    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900">Top 5 Categorias</CardTitle>
       </CardHeader>

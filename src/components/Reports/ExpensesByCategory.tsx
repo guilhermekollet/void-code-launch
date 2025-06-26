@@ -15,12 +15,12 @@ export function ExpensesByCategory() {
   };
 
   return (
-    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
+    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900">Despesas por Categoria</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-80" data-chart="expenses-by-category">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

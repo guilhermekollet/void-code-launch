@@ -1,6 +1,6 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ExpensesByCategory } from "@/components/Reports/ExpensesByCategory";
 import { MonthlyComparison } from "@/components/Reports/MonthlyComparison";
@@ -10,7 +10,8 @@ import { TopCategories } from "@/components/Reports/TopCategories";
 import { FinancialSummary } from "@/components/Reports/FinancialSummary";
 import { useExportReport } from "@/hooks/useExportReport";
 import { useFinancialMetrics } from "@/hooks/useFinancialData";
-import { FileDown, BarChart3, TrendingUp, PieChart, Calendar } from "lucide-react";
+import { FileDown, BarChart3, TrendingUp, PieChart } from "lucide-react";
+
 export default function Relatorios() {
   const {
     exportToPDF,
@@ -21,17 +22,21 @@ export default function Relatorios() {
     monthlyIncome,
     monthlyExpenses
   } = useFinancialMetrics();
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
+
   const currentMonth = new Date().toLocaleDateString('pt-BR', {
     month: 'long',
     year: 'numeric'
   });
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-8">
       {/* Header Section */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -42,7 +47,12 @@ export default function Relatorios() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Button onClick={exportToPDF} disabled={isExporting} className="bg-[#61710C] hover:bg-[#61710C]/90 text-white">
+          <Button 
+            onClick={exportToPDF} 
+            disabled={isExporting} 
+            className="bg-white hover:bg-gray-50 text-black border border-[#E2E8F0] shadow-sm"
+            variant="outline"
+          >
             <FileDown className="w-4 h-4 mr-2" />
             {isExporting ? 'Exportando...' : 'Exportar PDF'}
           </Button>
@@ -65,7 +75,7 @@ export default function Relatorios() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#E2E8F0] shadow-sm">
+        <Card className="border-[#E2E8F0] shadow-sm bg-white">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-red-600 rotate-180" />
@@ -79,7 +89,7 @@ export default function Relatorios() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#E2E8F0] shadow-sm">
+        <Card className="border-[#E2E8F0] shadow-sm bg-white">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-blue-600" />
@@ -94,122 +104,47 @@ export default function Relatorios() {
         </Card>
       </div>
 
-      {/* Main Content */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-50 border border-[#E2E8F0]">
-          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:border data-[state=active]:border-[#E2E8F0]">
-            <BarChart3 className="w-4 h-4" />
-            Visão Geral
-          </TabsTrigger>
-          <TabsTrigger value="expenses" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:border data-[state=active]:border-[#E2E8F0]">
-            <PieChart className="w-4 h-4" />
-            Despesas
-          </TabsTrigger>
-          <TabsTrigger value="trends" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:border data-[state=active]:border-[#E2E8F0]">
-            <TrendingUp className="w-4 h-4" />
-            Tendências
-          </TabsTrigger>
-          <TabsTrigger value="comparison" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:border data-[state=active]:border-[#E2E8F0]">
-            <Calendar className="w-4 h-4" />
-            Comparação
-          </TabsTrigger>
-        </TabsList>
+      {/* Seção 1: Resumo Financeiro */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-5 h-5 text-[#61710C]" />
+          <h2 className="text-xl font-semibold text-gray-900">Resumo Financeiro</h2>
+        </div>
+        <FinancialSummary />
+      </section>
 
-        <TabsContent value="overview" className="space-y-6">
-          <FinancialSummary />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CashFlow />
-            <TopCategories />
-          </div>
-        </TabsContent>
+      {/* Seção 2: Fluxo de Caixa e Top Categorias */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-5 h-5 text-[#61710C]" />
+          <h2 className="text-xl font-semibold text-gray-900">Análise de Fluxo</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CashFlow />
+          <TopCategories />
+        </div>
+      </section>
 
-        <TabsContent value="expenses" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ExpensesByCategory />
-            <Card className="border-[#E2E8F0] shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900">Distribuição por Período</CardTitle>
-                <CardDescription className="text-gray-600">Gastos distribuídos ao longo do tempo</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                  <div className="text-center">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p>Gráfico de distribuição temporal em desenvolvimento</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="trends" className="space-y-6">
+      {/* Seção 3: Despesas por Categoria e Tendências */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <PieChart className="w-5 h-5 text-[#61710C]" />
+          <h2 className="text-xl font-semibold text-gray-900">Análise de Gastos</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ExpensesByCategory />
           <ExpenseTrends />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-[#E2E8F0] shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900">Sazonalidade</CardTitle>
-                <CardDescription className="text-gray-600">Padrões sazonais nos seus gastos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                  <div className="text-center">
-                    <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p>Análise de sazonalidade em desenvolvimento</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-[#E2E8F0] shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900">Previsões</CardTitle>
-                <CardDescription className="text-gray-600">Projeções baseadas no histórico</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                  <div className="text-center">
-                    <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p>Gráfico de previsões em desenvolvimento</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+        </div>
+      </section>
 
-        <TabsContent value="comparison" className="space-y-6">
-          <MonthlyComparison />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-[#E2E8F0] shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900">Comparação Anual</CardTitle>
-                <CardDescription className="text-gray-600">Compare diferentes anos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                  <div className="text-center">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p>Comparação anual em desenvolvimento</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-[#E2E8F0] shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900">Metas vs Realizado</CardTitle>
-                <CardDescription className="text-gray-600">Performance contra suas metas</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                  <div className="text-center">
-                    <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p>Gráfico de metas em desenvolvimento</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>;
+      {/* Seção 4: Comparação Mensal */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-5 h-5 text-[#61710C]" />
+          <h2 className="text-xl font-semibold text-gray-900">Comparação Temporal</h2>
+        </div>
+        <MonthlyComparison />
+      </section>
+    </div>
+  );
 }

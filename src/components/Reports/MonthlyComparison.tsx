@@ -15,12 +15,12 @@ export function MonthlyComparison() {
   };
 
   return (
-    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
+    <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900">Comparação Mensal</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-80" data-chart="monthly-comparison">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
