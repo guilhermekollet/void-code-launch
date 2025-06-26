@@ -4,16 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+interface CheckoutParams {
+  planType: string;
+  price: number;
+  billingCycle: 'monthly' | 'yearly';
+}
+
 export function useCreateCheckout() {
   const { user } = useAuth();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (plan: 'premium') => {
+    mutationFn: async (params: CheckoutParams) => {
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { plan }
+        body: params
       });
 
       if (error) throw error;
