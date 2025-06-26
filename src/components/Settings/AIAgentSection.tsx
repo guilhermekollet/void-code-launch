@@ -51,7 +51,7 @@ export function AIAgentSection() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 bg-white">
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between p-4 rounded-lg bg-white">
           <div>
             <h3 className="font-medium">Ativar Agente de IA</h3>
             <p className="text-sm text-gray-600 mt-1">
