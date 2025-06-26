@@ -145,8 +145,8 @@ export function ChartControls({
             onCheckedChange={(checked) => toggleLine('fluxoLiquido')}
           />
           <label htmlFor="fluxoLiquido" className="text-sm flex items-center gap-1">
-            <div className="w-3 h-3 bg-[#000000] rounded-full"></div>
-            Saldo Total
+            <div className="w-3 h-3 bg-[#8B5CF6] rounded-full"></div>
+            Fluxo Líquido
           </label>
         </div>
       </div>

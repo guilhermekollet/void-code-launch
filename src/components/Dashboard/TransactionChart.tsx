@@ -11,12 +11,6 @@ export function TransactionChart() {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const { monthlyData } = useChartData();
 
-  // Add net flow calculation to the data
-  const chartData = monthlyData.map(month => ({
-    ...month,
-    fluxoLiquido: month.receitas - month.despesas
-  }));
-
   if (monthlyData.length === 0 || monthlyData.every(d => d.receitas === 0 && d.despesas === 0)) {
     return (
       <Card className="bg-white border-[#E2E8F0]">
@@ -48,7 +42,7 @@ export function TransactionChart() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
+            <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis 
                 dataKey="mes" 
@@ -104,15 +98,6 @@ export function TransactionChart() {
                 name="Gastos Recorrentes" 
                 dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }} 
                 activeDot={{ r: 5, fill: '#3B82F6' }} 
-              />
-              <Line 
-                type="monotone" 
-                dataKey="fluxoLiquido" 
-                stroke="#000000" 
-                strokeWidth={3} 
-                name="Saldo Total" 
-                dot={{ fill: '#000000', strokeWidth: 2, r: 4 }} 
-                activeDot={{ r: 6, fill: '#000000' }} 
               />
             </LineChart>
           </ResponsiveContainer>
