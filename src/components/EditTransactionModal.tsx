@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { useCategories } from "@/hooks/useCategories";
 
 interface Transaction {
@@ -40,7 +41,7 @@ export function EditTransactionModal({
     if (transaction) {
       setDescription(transaction.description);
       setCategory(transaction.category);
-      setAmount(transaction.amount.toString());
+      setAmount(transaction.amount.toFixed(2));
       setType(transaction.type || 'despesa');
     }
   }, [transaction]);
@@ -118,14 +119,11 @@ export function EditTransactionModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Valor (R$)</Label>
-            <Input
+            <Label htmlFor="amount">Valor</Label>
+            <CurrencyInput
               id="amount"
-              type="number"
-              step="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0,00"
+              onChange={setAmount}
               required
               className="h-10"
             />
