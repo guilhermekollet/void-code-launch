@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { IOSSwitch } from "@/components/ui/ios-switch";
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCreateCheckout, useCustomerPortal } from '@/hooks/useSubscriptionMutations';
 import { Crown, Zap, Star } from 'lucide-react';
@@ -39,7 +39,7 @@ const plans: Plan[] = [{
 }, {
   id: 'pro',
   name: 'PRO',
-  icon: <Crown className="h-5 w-5 text-yellow-500" />,
+  icon: <Crown className="h-5 w-5 text-amber-600" />,
   monthlyPrice: 29.90,
   yearlyPrice: 289.90,
   premium: true,
@@ -67,7 +67,7 @@ export function PlansSection() {
   };
 
   const triggerConfetti = () => {
-    const colors = ['#22c55e', '#16a34a', '#eab308', '#facc15']; // Green and yellow colors
+    const colors = ['#22c55e', '#16a34a', '#eab308', '#facc15'];
     
     const confettiSettings = {
       particleCount: 100,
@@ -76,10 +76,8 @@ export function PlansSection() {
       colors: colors
     };
 
-    // First burst
     confetti(confettiSettings);
     
-    // Additional bursts for 3.5 seconds
     const interval = setInterval(() => {
       confetti({
         ...confettiSettings,
@@ -93,9 +91,10 @@ export function PlansSection() {
     }, 3500);
   };
 
-  const handleBillingCycleChange = (value: 'monthly' | 'yearly') => {
-    setBillingCycle(value);
-    if (value === 'yearly') {
+  const handleBillingCycleChange = (checked: boolean) => {
+    const newCycle = checked ? 'yearly' : 'monthly';
+    setBillingCycle(newCycle);
+    if (newCycle === 'yearly') {
       triggerConfetti();
     }
   };
@@ -121,52 +120,76 @@ export function PlansSection() {
     return subscription.plan_type === planId;
   };
 
-  return <Card className="bg-white">
+  return (
+    <Card className="bg-white border-gray-200">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Planos e Assinatura</CardTitle>
-        <p className="text-gray-600">Escolha o plano ideal para suas necessidades</p>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={billingCycle} onValueChange={handleBillingCycleChange} className="mb-8">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-            <TabsTrigger value="monthly">Mensal</TabsTrigger>
-            <TabsTrigger value="yearly" className="relative">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-bold text-gray-900">Planos e Assinatura</CardTitle>
+            <p className="text-gray-600 mt-1">Escolha o plano ideal para suas necessidades</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-gray-900' : 'text-gray-500'}`}>
+              Mensal
+            </span>
+            <div className="relative">
+              <IOSSwitch
+                checked={billingCycle === 'yearly'}
+                onCheckedChange={handleBillingCycleChange}
+              />
+              {billingCycle === 'yearly' && (
+                <Badge 
+                  variant="secondary" 
+                  className="absolute -top-8 -right-2 text-xs bg-green-100 text-green-700 border-green-200"
+                >
+                  Economize 20%
+                </Badge>
+              )}
+            </div>
+            <span className={`text-sm font-medium ${billingCycle === 'yearly' ? 'text-gray-900' : 'text-gray-500'}`}>
               Anual
-              <Badge variant="secondary" className="absolute -top-2 -right-2 text-xs">
-                Economize 20%
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {plans.map(plan => (
+            <PlanCard 
+              key={plan.id} 
+              plan={plan} 
+              billingCycle={billingCycle}
+              onSubscribe={() => handleSubscribe(plan.id)} 
+              onManage={handleManageSubscription} 
+              isCurrentPlan={isCurrentPlan(plan.id)} 
+              isLoading={createCheckout.isPending || customerPortal.isPending}
+              discount={getDiscountPercentage(plan.monthlyPrice, plan.yearlyPrice)}
+            />
+          ))}
+        </div>
 
-          <TabsContent value="monthly" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map(plan => <PlanCard key={plan.id} plan={plan} price={plan.monthlyPrice} period="mês" billingCycle="monthly" onSubscribe={() => handleSubscribe(plan.id)} onManage={handleManageSubscription} isCurrentPlan={isCurrentPlan(plan.id)} isLoading={createCheckout.isPending || customerPortal.isPending} />)}
+        {subscription && subscription.status === 'active' && (
+          <div className="mt-8 p-4 bg-green-50 rounded-xl border border-green-200">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <p className="text-green-800 font-medium">
+                Sua assinatura está ativa
+              </p>
             </div>
-          </TabsContent>
-
-          <TabsContent value="yearly" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map(plan => <PlanCard key={plan.id} plan={plan} price={plan.yearlyPrice} period="ano" billingCycle="yearly" onSubscribe={() => handleSubscribe(plan.id)} onManage={handleManageSubscription} isCurrentPlan={isCurrentPlan(plan.id)} isLoading={createCheckout.isPending || customerPortal.isPending} discount={getDiscountPercentage(plan.monthlyPrice, plan.yearlyPrice)} />)}
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {subscription && subscription.status === 'active' && <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-            <p className="text-green-800 font-medium">
-              ✅ Sua assinatura está ativa
-            </p>
-            <p className="text-green-700 text-sm mt-1">
+            <p className="text-green-700 text-sm mt-1 ml-4">
               Plano atual: {subscription.plan_type === 'basic' ? 'Básico' : 'PRO'}
             </p>
-          </div>}
+          </div>
+        )}
       </CardContent>
-    </Card>;
+    </Card>
+  );
 }
 
 interface PlanCardProps {
   plan: Plan;
-  price: number;
-  period: string;
   billingCycle: 'monthly' | 'yearly';
   onSubscribe: () => void;
   onManage: () => void;
@@ -177,8 +200,6 @@ interface PlanCardProps {
 
 function PlanCard({
   plan,
-  price,
-  period,
   billingCycle,
   onSubscribe,
   onManage,
@@ -193,74 +214,108 @@ function PlanCard({
     }).format(price);
   };
 
+  const monthlyPrice = plan.monthlyPrice;
+  const yearlyPrice = plan.yearlyPrice;
+  const displayPrice = billingCycle === 'monthly' ? monthlyPrice : yearlyPrice;
+
   const getCardClassName = () => {
-    let baseClass = "relative p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg";
+    let baseClass = "relative p-8 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg bg-white";
     
     if (plan.premium) {
-      return `${baseClass} border-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 shadow-xl shadow-yellow-100/50 hover:shadow-2xl hover:shadow-yellow-200/50 ${isCurrentPlan ? 'ring-2 ring-yellow-500' : ''}`;
+      return `${baseClass} border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-2 ring-amber-400' : ''}`;
     }
     
     if (plan.popular) {
-      return `${baseClass} border-blue-500 bg-blue-50 ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`;
+      return `${baseClass} border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md hover:shadow-lg ${isCurrentPlan ? 'ring-2 ring-blue-400' : ''}`;
     }
     
-    return `${baseClass} border-gray-200 bg-white ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`;
+    return `${baseClass} border-gray-200 hover:border-gray-300 ${isCurrentPlan ? 'ring-2 ring-green-400 border-green-200' : ''}`;
   };
 
-  return <div className={getCardClassName()}>
-      {plan.premium && (
-        <div className="absolute -top-3 -left-3 -right-3 h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-xl"></div>
+  return (
+    <div className={getCardClassName()}>
+      {plan.popular && !plan.premium && (
+        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-1">
+          Mais Popular
+        </Badge>
       )}
       
-      {plan.popular && !plan.premium && <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-500">
-          Mais Popular
-        </Badge>}
-      
-      {plan.premium && <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg">
+      {plan.premium && (
+        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-1 shadow-lg">
           ⭐ Premium
-        </Badge>}
+        </Badge>
+      )}
       
-      {isCurrentPlan && <Badge variant="outline" className="absolute -top-3 right-4 bg-green-500 text-white border-green-500">
+      {isCurrentPlan && (
+        <Badge 
+          variant="outline" 
+          className="absolute -top-3 right-6 bg-green-500 text-white border-green-500 px-3 py-1"
+        >
           Plano Atual
-        </Badge>}
+        </Badge>
+      )}
 
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-2 mb-2">
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center gap-3 mb-4">
           {plan.icon}
-          <h3 className={`text-xl font-bold ${plan.premium ? 'text-yellow-700' : ''}`}>{plan.name}</h3>
+          <h3 className={`text-2xl font-bold ${plan.premium ? 'text-amber-700' : plan.popular ? 'text-blue-700' : 'text-gray-900'}`}>
+            {plan.name}
+          </h3>
         </div>
         
-        <div className="mb-2">
-          <span className={`text-3xl font-bold ${plan.premium ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 bg-clip-text text-transparent' : ''}`}>
-            {formatPrice(price)}
-          </span>
-          {price > 0 && <span className="text-gray-600">/{period}</span>}
+        <div className="mb-3">
+          <div className="flex items-baseline justify-center gap-1">
+            <span className={`text-4xl font-bold ${plan.premium ? 'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent' : 'text-gray-900'}`}>
+              {formatPrice(displayPrice)}
+            </span>
+            {displayPrice > 0 && (
+              <span className="text-gray-600 text-lg">
+                /{billingCycle === 'monthly' ? 'mês' : 'ano'}
+              </span>
+            )}
+          </div>
+          
+          {billingCycle === 'yearly' && yearlyPrice > 0 && (
+            <p className="text-sm text-gray-500 mt-1">
+              Cobrado anualmente por {formatPrice(yearlyPrice)}
+            </p>
+          )}
+          
+          {billingCycle === 'yearly' && discount && discount > 0 && (
+            <p className="text-green-600 text-sm font-medium mt-2">
+              Economize {discount}% no plano anual
+            </p>
+          )}
         </div>
-        
-        {discount && discount > 0 && <p className="text-green-600 text-sm font-medium">
-            Economize {discount}% no plano anual
-          </p>}
       </div>
 
-      <ul className="space-y-3 mb-6">
-        {plan.features.map((feature, index) => <li key={index} className="flex items-start gap-3 text-sm">
-            <span className="text-base">{feature}</span>
-          </li>)}
+      <ul className="space-y-4 mb-8">
+        {plan.features.map((feature, index) => (
+          <li key={index} className="flex items-start gap-3 text-sm text-gray-700">
+            <span className="text-base leading-none mt-0.5">{feature}</span>
+          </li>
+        ))}
       </ul>
 
       <Button 
         onClick={isCurrentPlan ? onManage : onSubscribe} 
-        disabled={isLoading || plan.id === 'free' && !isCurrentPlan} 
-        className={`w-full ${
+        disabled={isLoading || (plan.id === 'free' && !isCurrentPlan)} 
+        className={`w-full py-3 font-semibold transition-all duration-200 ${
           plan.premium 
-            ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl' 
+            ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
             : plan.popular 
-              ? 'bg-blue-600 hover:bg-blue-700' 
-              : ''
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5' 
+              : 'bg-gray-900 hover:bg-gray-800 text-white'
         }`} 
         variant={isCurrentPlan ? 'outline' : 'default'}
       >
-        {isCurrentPlan ? 'Gerenciar Assinatura' : plan.id === 'free' ? 'Plano Gratuito' : 'Assinar Agora'}
+        {isCurrentPlan 
+          ? 'Gerenciar Assinatura' 
+          : plan.id === 'free' 
+            ? 'Plano Gratuito' 
+            : 'Assinar Agora'
+        }
       </Button>
-    </div>;
+    </div>
+  );
 }
