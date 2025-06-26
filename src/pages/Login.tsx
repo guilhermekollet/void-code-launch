@@ -60,7 +60,7 @@ export default function Login() {
     }
   };
   return <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
-      <Card className="w-full max-w-md border-[#DEDEDE]">
+      <Card className="w-full max-w-md border-[#DEDEDE] bg-white">
         <CardHeader className="text-center py-[60px]">
           <div className="flex justify-center mb-4">
             <img src="/lovable-uploads/c8d5d691-6584-41b6-86ad-82dbbd10c1c5.png" alt="Bolsofy Logo" className="h-12 w-auto" />
