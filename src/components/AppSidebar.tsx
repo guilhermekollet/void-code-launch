@@ -1,4 +1,4 @@
-import { BarChart3, CreditCard, Settings, Home, Repeat, Crown } from "lucide-react";
+import { BarChart3, CreditCard, Settings, Home, Repeat } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 
 const items = [{
@@ -17,10 +17,6 @@ const items = [{
   title: "Relatórios",
   url: "/relatorios",
   icon: BarChart3
-}, {
-  title: "Assinatura",
-  url: "/assinatura",
-  icon: Crown
 }, {
   title: "Configurações",
   url: "/configuracoes",
