@@ -67,7 +67,7 @@ export function FinancialSummary() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200">
+        <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-gray-600">Taxa de Poupança</CardTitle>
           </CardHeader>
