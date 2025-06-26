@@ -185,7 +185,7 @@ export default function Transacoes() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transações</h1>
           <p className="text-gray-600">
-            {filteredAndSortedTransactions.length} transação{filteredAndSortedTransactions.length !== 1 ? 'ões' : ''} encontrada{filteredAndSortedTransactions.length !== 1 ? 's' : ''}
+            {filteredAndSortedTransactions.length} {filteredAndSortedTransactions.length > 1 ? 'transações encontradas' : 'transação encontrada'}
           </p>
         </div>
         
