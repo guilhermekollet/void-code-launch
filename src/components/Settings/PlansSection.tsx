@@ -31,7 +31,7 @@ const plans: Plan[] = [{
 }, {
   id: 'basic',
   name: 'Básico',
-  icon: <Zap className="h-6 w-6 text-blue-600" />,
+  icon: <Zap className="h-6 w-6 text-white" />,
   monthlyPrice: 19.90,
   yearlyPrice: 199.90,
   popular: true,
@@ -39,7 +39,7 @@ const plans: Plan[] = [{
 }, {
   id: 'pro',
   name: 'PRO',
-  icon: <Crown className="h-6 w-6 text-amber-600" />,
+  icon: <Crown className="h-6 w-6 text-white" />,
   monthlyPrice: 29.90,
   yearlyPrice: 289.90,
   premium: true,
@@ -61,25 +61,46 @@ export function PlansSection() {
     const colors = ['#22c55e', '#16a34a', '#eab308', '#facc15'];
     
     const confettiSettings = {
-      particleCount: 100,
+      particleCount: 150,
       spread: 70,
-      origin: { y: 0.6 },
-      colors: colors
+      origin: { x: 0.5, y: 0.5 },
+      colors: colors,
+      gravity: 0.8,
+      scalar: 1.2
     };
 
+    // Disparo inicial no centro
     confetti(confettiSettings);
     
+    // Disparos nas laterais
+    setTimeout(() => {
+      confetti({
+        ...confettiSettings,
+        origin: { x: 0.2, y: 0.6 },
+        angle: 60
+      });
+    }, 100);
+
+    setTimeout(() => {
+      confetti({
+        ...confettiSettings,
+        origin: { x: 0.8, y: 0.6 },
+        angle: 120
+      });
+    }, 200);
+
+    // Disparos adicionais por 2 segundos
     const interval = setInterval(() => {
       confetti({
         ...confettiSettings,
-        particleCount: 50,
-        spread: 60
+        particleCount: 75,
+        spread: 50
       });
-    }, 300);
+    }, 250);
 
     setTimeout(() => {
       clearInterval(interval);
-    }, 3500);
+    }, 2000);
   };
 
   const handleBillingCycleChange = (checked: boolean) => {
@@ -113,26 +134,28 @@ export function PlansSection() {
 
   return (
     <Card className="bg-white border-gray-200 shadow-sm">
-      <CardHeader className="pb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div>
-            <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
+      <CardHeader className="pb-6 px-4 sm:px-6">
+        <div className="flex flex-col space-y-4">
+          <div className="text-center sm:text-left">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Planos e Assinatura
             </CardTitle>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base sm:text-lg">
               Escolha o plano ideal para suas necessidades
             </p>
           </div>
           
-          <BillingToggle 
-            billingCycle={billingCycle}
-            onBillingCycleChange={handleBillingCycleChange}
-          />
+          <div className="flex justify-center sm:justify-end">
+            <BillingToggle 
+              billingCycle={billingCycle}
+              onBillingCycleChange={handleBillingCycleChange}
+            />
+          </div>
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      <CardContent className="pt-0 px-4 sm:px-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {plans.map(plan => (
             <PlanCard 
               key={plan.id} 

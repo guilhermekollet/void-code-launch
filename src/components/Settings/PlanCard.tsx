@@ -2,7 +2,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Zap, Star } from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -47,69 +46,83 @@ export function PlanCard({
   const displayPrice = billingCycle === 'monthly' ? monthlyPrice : yearlyPrice;
 
   const getCardClassName = () => {
-    let baseClass = "relative p-8 rounded-3xl border-2 transition-all duration-300 bg-white";
+    let baseClass = "relative p-6 sm:p-8 rounded-3xl border-2 transition-all duration-300 bg-white h-full flex flex-col";
     
     if (plan.premium) {
-      return `${baseClass} border-amber-200 bg-gradient-to-br from-white to-amber-50 shadow-xl hover:shadow-2xl ${isCurrentPlan ? 'ring-4 ring-amber-300' : ''}`;
+      return `${baseClass} border-black shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-4 ring-black/20' : ''}`;
     }
     
     if (plan.popular) {
-      return `${baseClass} border-blue-200 bg-gradient-to-br from-white to-blue-50 shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-4 ring-blue-300' : ''}`;
+      return `${baseClass} border-[#61710C] shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-4 ring-[#61710C]/20' : ''}`;
     }
     
     return `${baseClass} border-gray-200 hover:border-gray-300 shadow-md hover:shadow-lg ${isCurrentPlan ? 'ring-4 ring-green-300 border-green-200' : ''}`;
   };
 
+  const getIconBgClass = () => {
+    if (plan.premium) return 'bg-black';
+    if (plan.popular) return 'bg-[#61710C]';
+    return 'bg-gray-100';
+  };
+
+  const getButtonClass = () => {
+    if (plan.premium) {
+      return 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl';
+    }
+    if (plan.popular) {
+      return 'bg-[#61710C] hover:bg-[#4a5a09] text-white shadow-lg hover:shadow-xl';
+    }
+    return 'bg-gray-900 hover:bg-gray-800 text-white shadow-md hover:shadow-lg';
+  };
+
   return (
     <div className={getCardClassName()}>
       {plan.popular && !plan.premium && (
-        <Badge className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 text-sm font-semibold shadow-lg">
+        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#61710C] hover:bg-[#61710C] text-white px-4 py-1 text-sm font-semibold shadow-lg border-0">
           Mais Popular
         </Badge>
       )}
       
       {plan.premium && (
-        <Badge className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-2 text-sm font-semibold shadow-lg">
+        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-black hover:bg-black text-white px-4 py-1 text-sm font-semibold shadow-lg border-0">
           ⭐ Premium
+        </Badge>
+      )}
+      
+      {/* Badge de economia sempre visível quando anual */}
+      {billingCycle === 'yearly' && discount && discount > 0 && yearlyPrice > 0 && (
+        <Badge className="absolute -top-3 right-4 bg-green-500 hover:bg-green-500 text-white px-3 py-1 text-xs font-medium shadow-md border-0">
+          Economize {discount}%
         </Badge>
       )}
       
       {isCurrentPlan && (
         <Badge 
           variant="outline" 
-          className="absolute -top-4 right-8 bg-green-500 text-white border-green-500 px-4 py-2 font-semibold shadow-md"
+          className="absolute -top-3 right-4 bg-green-500 text-white border-green-500 px-3 py-1 font-semibold shadow-md"
+          style={{ right: billingCycle === 'yearly' && discount && discount > 0 && yearlyPrice > 0 ? '140px' : '16px' }}
         >
           Plano Atual
         </Badge>
       )}
 
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <div className={`p-3 rounded-2xl ${
-            plan.premium ? 'bg-amber-100' : plan.popular ? 'bg-blue-100' : 'bg-gray-100'
-          }`}>
+      <div className="text-center mb-6 flex-shrink-0">
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div className={`p-3 rounded-2xl ${getIconBgClass()}`}>
             {plan.icon}
           </div>
-          <h3 className={`text-2xl font-bold ${
-            plan.premium ? 'text-amber-700' : plan.popular ? 'text-blue-700' : 'text-gray-900'
-          }`}>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
             {plan.name}
           </h3>
         </div>
         
         <div className="mb-4">
-          <div className="flex items-baseline justify-center gap-2 mb-2">
-            <span className={`text-5xl font-bold leading-none ${
-              plan.premium 
-                ? 'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent' 
-                : plan.popular 
-                  ? 'text-blue-600' 
-                  : 'text-gray-900'
-            }`}>
+          <div className="flex items-baseline justify-center gap-1 mb-2">
+            <span className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-none text-gray-900">
               {formatPrice(displayPrice)}
             </span>
             {displayPrice > 0 && (
-              <span className="text-gray-500 text-lg font-medium">
+              <span className="text-gray-500 text-base sm:text-lg font-medium">
                 /{billingCycle === 'monthly' ? 'mês' : 'ano'}
               </span>
             )}
@@ -120,20 +133,13 @@ export function PlanCard({
               Cobrado anualmente por {formatPrice(yearlyPrice)}
             </p>
           )}
-          
-          {billingCycle === 'yearly' && discount && discount > 0 && (
-            <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-              <span className="text-green-500">💰</span>
-              Economize {discount}% no plano anual
-            </div>
-          )}
         </div>
       </div>
 
-      <div className="space-y-4 mb-8">
+      <div className="space-y-3 mb-6 flex-grow">
         {plan.features.map((feature, index) => (
-          <div key={index} className="flex items-start gap-3">
-            <span className="text-lg leading-none mt-0.5">{feature}</span>
+          <div key={index} className="flex items-start gap-2 text-sm sm:text-base">
+            <span className="leading-tight">{feature}</span>
           </div>
         ))}
       </div>
@@ -141,13 +147,7 @@ export function PlanCard({
       <Button 
         onClick={isCurrentPlan ? onManage : onSubscribe} 
         disabled={isLoading || (plan.id === 'free' && !isCurrentPlan)} 
-        className={`w-full py-4 text-lg font-semibold transition-all duration-300 ${
-          plan.premium 
-            ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl hover:shadow-2xl transform hover:-translate-y-1' 
-            : plan.popular 
-              ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1' 
-              : 'bg-gray-900 hover:bg-gray-800 text-white shadow-md hover:shadow-lg'
-        }`} 
+        className={`w-full py-3 sm:py-4 text-base sm:text-lg font-semibold transition-all duration-300 ${getButtonClass()}`}
         variant={isCurrentPlan ? 'outline' : 'default'}
       >
         {isCurrentPlan 

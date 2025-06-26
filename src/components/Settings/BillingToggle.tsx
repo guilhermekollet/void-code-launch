@@ -10,8 +10,8 @@ interface BillingToggleProps {
 
 export function BillingToggle({ billingCycle, onBillingCycleChange }: BillingToggleProps) {
   return (
-    <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2">
-      <span className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors ${
+    <div className="flex items-center gap-3 sm:gap-4 bg-gray-50 rounded-2xl p-2 relative">
+      <span className={`text-sm font-medium px-3 sm:px-4 py-2 rounded-xl transition-colors ${
         billingCycle === 'monthly' 
           ? 'bg-white text-gray-900 shadow-sm' 
           : 'text-gray-500'
@@ -24,17 +24,15 @@ export function BillingToggle({ billingCycle, onBillingCycleChange }: BillingTog
           checked={billingCycle === 'yearly'}
           onCheckedChange={onBillingCycleChange}
         />
-        {billingCycle === 'yearly' && (
-          <Badge 
-            variant="secondary" 
-            className="absolute -top-8 -right-6 text-xs bg-green-100 text-green-700 border-green-200 whitespace-nowrap"
-          >
-            Economize 20%
-          </Badge>
-        )}
+        <Badge 
+          variant="secondary" 
+          className="absolute -top-8 -right-4 sm:-right-6 text-xs bg-green-100 text-green-700 border-green-200 whitespace-nowrap px-2 py-1 font-medium"
+        >
+          Economize 20%
+        </Badge>
       </div>
       
-      <span className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors ${
+      <span className={`text-sm font-medium px-3 sm:px-4 py-2 rounded-xl transition-colors ${
         billingCycle === 'yearly' 
           ? 'bg-white text-gray-900 shadow-sm' 
           : 'text-gray-500'
