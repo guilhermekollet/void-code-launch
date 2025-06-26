@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useCategories } from "@/hooks/useCategories";
 
 interface Transaction {
@@ -34,6 +35,7 @@ export function EditTransactionModal({
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('');
+  const [date, setDate] = useState<Date>(new Date());
 
   const { data: categories = [] } = useCategories();
 
@@ -43,6 +45,7 @@ export function EditTransactionModal({
       setCategory(transaction.category);
       setAmount(transaction.amount.toFixed(2));
       setType(transaction.type || 'despesa');
+      setDate(new Date(transaction.tx_date));
     }
   }, [transaction]);
 
@@ -56,6 +59,7 @@ export function EditTransactionModal({
       category,
       amount: parseFloat(amount),
       type,
+      tx_date: date.toISOString(),
     };
 
     onSave(transaction.id, updates);
@@ -68,6 +72,7 @@ export function EditTransactionModal({
     setCategory('');
     setAmount('');
     setType('');
+    setDate(new Date());
   };
 
   return (
@@ -126,6 +131,16 @@ export function EditTransactionModal({
               onChange={setAmount}
               required
               className="h-10"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium block">Data da transação</Label>
+            <DatePicker
+              date={date}
+              onDateChange={(newDate) => setDate(newDate || new Date())}
+              placeholder="Selecionar data"
+              className="h-10 w-full"
             />
           </div>
 
