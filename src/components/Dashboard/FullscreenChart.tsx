@@ -266,7 +266,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
               <Checkbox
                 id="showFuture"
                 checked={showFuture}
-                onCheckedChange={setShowFuture}
+                onCheckedChange={(checked) => setShowFuture(checked === true)}
               />
               <label htmlFor="showFuture" className="text-sm font-medium flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
@@ -309,7 +309,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
                 <Checkbox
                   id="receitas"
                   checked={visibleLines.receitas}
-                  onCheckedChange={() => toggleLine('receitas')}
+                  onCheckedChange={(checked) => toggleLine('receitas')}
                 />
                 <label htmlFor="receitas" className="text-sm flex items-center gap-1">
                   <div className="w-3 h-3 bg-[#61710C] rounded-full"></div>
@@ -321,7 +321,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
                 <Checkbox
                   id="despesas"
                   checked={visibleLines.despesas}
-                  onCheckedChange={() => toggleLine('despesas')}
+                  onCheckedChange={(checked) => toggleLine('despesas')}
                 />
                 <label htmlFor="despesas" className="text-sm flex items-center gap-1">
                   <div className="w-3 h-3 bg-[#EF4444] rounded-full"></div>
@@ -333,7 +333,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
                 <Checkbox
                   id="gastosRecorrentes"
                   checked={visibleLines.gastosRecorrentes}
-                  onCheckedChange={() => toggleLine('gastosRecorrentes')}
+                  onCheckedChange={(checked) => toggleLine('gastosRecorrentes')}
                 />
                 <label htmlFor="gastosRecorrentes" className="text-sm flex items-center gap-1">
                   <div className="w-3 h-3 bg-[#3B82F6] rounded-full"></div>
@@ -345,7 +345,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
                 <Checkbox
                   id="fluxoLiquido"
                   checked={visibleLines.fluxoLiquido}
-                  onCheckedChange={() => toggleLine('fluxoLiquido')}
+                  onCheckedChange={(checked) => toggleLine('fluxoLiquido')}
                 />
                 <label htmlFor="fluxoLiquido" className="text-sm flex items-center gap-1">
                   <div className="w-3 h-3 bg-[#8B5CF6] rounded-full"></div>
