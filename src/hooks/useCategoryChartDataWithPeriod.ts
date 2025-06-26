@@ -23,7 +23,15 @@ export function useCategoryChartDataWithPeriod(period: string) {
       // Calculate date range based on period
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - parseInt(period));
+      
+      // Check if period is in days or months
+      if (period.endsWith('d')) {
+        const days = parseInt(period.replace('d', ''));
+        startDate.setDate(startDate.getDate() - days);
+      } else {
+        const months = parseInt(period);
+        startDate.setMonth(startDate.getMonth() - months);
+      }
 
       // Get transactions with category data for the specified period
       const { data: transactions, error: transactionsError } = await supabase

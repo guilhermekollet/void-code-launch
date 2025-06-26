@@ -160,3 +160,51 @@ export function useChartData() {
     categoryData: categoryChartData
   };
 }
+
+// New function to get daily data for specific periods
+export function useDailyData(days: number) {
+  const { data: transactions = [] } = useTransactions();
+
+  return useQuery({
+    queryKey: ['daily-data', days, transactions.length],
+    queryFn: () => {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - (days - 1));
+
+      const dailyData = Array.from({ length: days }, (_, i) => {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        
+        const dayTransactions = transactions.filter(t => {
+          const transactionDate = new Date(t.tx_date);
+          return transactionDate.toDateString() === date.toDateString();
+        });
+
+        const receitas = dayTransactions
+          .filter(t => t.type === 'receita')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const despesas = dayTransactions
+          .filter(t => t.type === 'despesa')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const gastosRecorrentes = dayTransactions
+          .filter(t => t.type === 'despesa' && t.is_recurring)
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        return {
+          mes: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+          receitas,
+          despesas,
+          gastosRecorrentes,
+          fluxoLiquido: receitas - despesas,
+          isFuture: false
+        };
+      });
+
+      return dailyData;
+    },
+    enabled: true,
+  });
+}

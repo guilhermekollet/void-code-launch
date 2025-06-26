@@ -1,68 +1,65 @@
 
 import { useMemo } from 'react';
-import { useChartData } from "@/hooks/useFinancialData";
+import { useChartData, useDailyData } from "@/hooks/useFinancialData";
 import { useFutureData } from './useFutureData';
+import { useTransactions } from "@/hooks/useFinancialData";
 
 export function useFullscreenChartData(period: string, showFuture: boolean) {
   const { monthlyData: originalData } = useChartData();
+  const { data: transactions = [] } = useTransactions();
   const futureData = useFutureData(showFuture);
 
-  return useMemo(() => {
-    const isDailyPeriod = period.endsWith('d');
-    const currentDate = new Date();
-    
-    if (isDailyPeriod) {
-      // Handle daily periods (7d, 30d)
-      const days = parseInt(period.replace('d', ''));
-      const dailyData = Array.from({ length: days }, (_, i) => {
-        const date = new Date(currentDate);
-        date.setDate(date.getDate() - (days - 1 - i));
-        
-        // Group transactions by day from original data
-        // For now, we'll create empty daily data structure
-        // In a real implementation, you'd need to modify useFinancialData to support daily grouping
-        return {
-          mes: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-          receitas: 0,
-          despesas: 0,
-          gastosRecorrentes: 0,
-          fluxoLiquido: 0,
-          isFuture: false
-        };
-      });
+  // Use daily data hook for daily periods
+  const isDailyPeriod = period.endsWith('d');
+  const days = isDailyPeriod ? parseInt(period.replace('d', '')) : 0;
+  const { data: dailyData = [] } = useDailyData(days);
 
+  return useMemo(() => {
+    if (isDailyPeriod) {
+      // Return daily data for 7d and 30d periods
       return dailyData;
     } else {
       // Handle monthly periods (3, 6, 12, 24)
       const months = parseInt(period);
+      const currentDate = new Date();
+      
       const expandedData = Array.from({ length: months }, (_, i) => {
         const date = new Date(currentDate);
         date.setMonth(date.getMonth() - i);
         
-        const existingData = originalData.find(d => d.mes === date.toLocaleDateString('pt-BR', { month: 'short' }));
+        // Get transactions for this specific month and year
+        const monthTransactions = transactions.filter(t => {
+          const transactionDate = new Date(t.tx_date);
+          return transactionDate.getMonth() === date.getMonth() && 
+                 transactionDate.getFullYear() === date.getFullYear();
+        });
+
+        const receitas = monthTransactions
+          .filter(t => t.type === 'receita')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const despesas = monthTransactions
+          .filter(t => t.type === 'despesa')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const gastosRecorrentes = monthTransactions
+          .filter(t => t.type === 'despesa' && t.is_recurring)
+          .reduce((sum, t) => sum + Number(t.amount), 0);
         
         // For 2-year period, include year in label to avoid confusion
         const monthLabel = months === 24 
           ? date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace(' de ', ' ')
           : date.toLocaleDateString('pt-BR', { month: 'short' });
         
-        return existingData ? {
-          ...existingData,
-          mes: monthLabel
-        } : {
+        return {
           mes: monthLabel,
-          receitas: 0,
-          despesas: 0,
-          gastosRecorrentes: 0,
+          receitas,
+          despesas,
+          gastosRecorrentes,
+          fluxoLiquido: receitas - despesas,
           isFuture: false
         };
       }).reverse();
-
-      // Add flow liquid calculation
-      const dataWithFlow = expandedData.map(item => ({
-        ...item,
-        fluxoLiquido: item.receitas - item.despesas
-      }));
 
       // Combine with future data if enabled
       if (showFuture && futureData.length > 0) {
@@ -75,6 +72,8 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
                                 .indexOf(item.mes.replace('.', ''));
               if (monthIndex !== -1) {
                 futureDate.setMonth(monthIndex);
+                // Add year to future data to distinguish from past data
+                futureDate.setFullYear(futureDate.getFullYear() + Math.floor(futureData.indexOf(item) / 12) + 1);
                 const yearLabel = futureDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace(' de ', ' ');
                 return { ...item, mes: yearLabel };
               }
@@ -82,10 +81,10 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
             })
           : futureData;
         
-        return [...dataWithFlow, ...adjustedFutureData];
+        return [...expandedData, ...adjustedFutureData];
       }
 
-      return dataWithFlow;
+      return expandedData;
     }
-  }, [period, originalData, showFuture, futureData]);
+  }, [period, transactions, showFuture, futureData, dailyData, isDailyPeriod]);
 }
