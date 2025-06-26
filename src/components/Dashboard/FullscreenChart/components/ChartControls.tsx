@@ -3,7 +3,8 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ZoomIn, ZoomOut, RotateCcw, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { IOSSwitch } from "@/components/ui/ios-switch";
+import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { VisibleLines } from '../types';
 
 interface ChartControlsProps {
@@ -59,18 +60,13 @@ export function ChartControls({
         </Select>
       </div>
 
-      {/* Future Toggle Button */}
+      {/* Future Toggle Switch */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">Futuro:</span>
-        <Button
-          size="sm"
-          variant={showFuture ? "default" : "outline"}
-          onClick={() => setShowFuture(!showFuture)}
-          className="flex items-center gap-1"
-        >
-          <Calendar className="w-4 h-4" />
-          {showFuture ? "Ativado" : "Desativado"}
-        </Button>
+        <IOSSwitch
+          checked={showFuture}
+          onCheckedChange={setShowFuture}
+        />
       </div>
 
       {/* Navigation Controls for Future Data */}
