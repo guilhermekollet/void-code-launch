@@ -77,7 +77,7 @@ export function TransactionItem({ transaction, onEdit, onDelete, formatCurrency 
         
         <div className="flex items-center gap-3">
           <span className={`text-lg font-semibold ${getAmountColor(transaction.type)}`}>
-            {transaction.type === 'receita' ? '+' : '-'}{formatCurrency(transaction.amount)}
+            {formatCurrency(transaction.amount)}
           </span>
           
           <div className="flex items-center gap-1">
