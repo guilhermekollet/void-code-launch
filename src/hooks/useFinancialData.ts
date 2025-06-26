@@ -42,6 +42,7 @@ export function useFinancialMetrics() {
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
+  const today = new Date();
 
   const currentMonthTransactions = transactions.filter(t => {
     const transactionDate = new Date(t.tx_date);
@@ -49,9 +50,12 @@ export function useFinancialMetrics() {
            transactionDate.getFullYear() === currentYear;
   });
 
-  const totalBalance = transactions.reduce((sum, t) => {
-    return t.type === 'receita' ? sum + Number(t.amount) : sum - Number(t.amount);
-  }, 0);
+  // Calculate total balance only with past and present transactions (not future)
+  const totalBalance = transactions
+    .filter(t => new Date(t.tx_date) <= today)
+    .reduce((sum, t) => {
+      return t.type === 'receita' ? sum + Number(t.amount) : sum - Number(t.amount);
+    }, 0);
 
   const monthlyIncome = currentMonthTransactions
     .filter(t => t.type === 'receita')

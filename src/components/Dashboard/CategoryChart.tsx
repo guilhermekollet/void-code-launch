@@ -1,11 +1,16 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Maximize } from "lucide-react";
 import { useCategoryChartData } from "@/hooks/useCategoryChartData";
+import { FullscreenCategoryChart } from "./FullscreenCategoryChart";
 import * as LucideIcons from "lucide-react";
 import { Tag } from "lucide-react";
 
 export function CategoryChart() {
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const {
     data: categoryData = [],
     isLoading
@@ -64,16 +69,6 @@ export function CategoryChart() {
             />
           </div>
         </foreignObject>
-        <text 
-          x={0} 
-          y={40} 
-          dy={16} 
-          textAnchor="middle" 
-          fill="#666" 
-          className="text-xs font-medium"
-        >
-          {payload.value.length > 8 ? payload.value.substring(0, 8) + '...' : payload.value}
-        </text>
       </g>
     );
   };
@@ -114,52 +109,69 @@ export function CategoryChart() {
       </Card>;
   }
 
-  return <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-[#121212] text-2xl font-semibold">
-          Gastos por Categoria
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-2">
-        <ResponsiveContainer width="100%" height={380}>
-          <BarChart
-            data={categoryData}
-            margin={{
-              top: 20,
-              right: 30,
-              left: 20,
-              bottom: 60,
-            }}
+  return (
+    <>
+      <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200">
+        <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-[#121212] text-2xl font-semibold">
+            Gastos por Categoria
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsFullscreenOpen(true)}
+            className="h-8 w-8 text-[#64748B] hover:text-[#121212] hover:bg-[#F8F9FA]"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis 
-              dataKey="name" 
-              axisLine={false}
-              tickLine={false}
-              tick={<CustomXAxisTick />}
-              height={80}
-            />
-            <YAxis 
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(value) => formatCurrency(value).replace('R$', 'R$').replace(',00', '')}
-              tick={{ fontSize: 12, fill: '#666' }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar 
-              dataKey="value" 
-              radius={[8, 8, 0, 0]}
-              stroke="none"
+            <Maximize className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <ResponsiveContainer width="100%" height={380}>
+            <BarChart
+              data={categoryData}
+              margin={{
+                top: 20,
+                right: 30,
+                left: 20,
+                bottom: 60,
+              }}
             >
-              {categoryData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.color}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>;
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false}
+                tickLine={false}
+                tick={<CustomXAxisTick />}
+                height={60}
+              />
+              <YAxis 
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(value) => formatCurrency(value).replace('R$', 'R$').replace(',00', '')}
+                tick={{ fontSize: 12, fill: '#666' }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar 
+                dataKey="value" 
+                radius={[8, 8, 0, 0]}
+                stroke="none"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <FullscreenCategoryChart 
+        isOpen={isFullscreenOpen}
+        onClose={() => setIsFullscreenOpen(false)}
+      />
+    </>
+  );
 }
