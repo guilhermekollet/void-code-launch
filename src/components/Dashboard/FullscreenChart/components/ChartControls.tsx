@@ -59,17 +59,18 @@ export function ChartControls({
         </Select>
       </div>
 
-      {/* Future Toggle */}
+      {/* Future Toggle Button */}
       <div className="flex items-center gap-2">
-        <Checkbox
-          id="showFuture"
-          checked={showFuture}
-          onCheckedChange={(checked) => setShowFuture(checked === true)}
-        />
-        <label htmlFor="showFuture" className="text-sm font-medium flex items-center gap-1">
+        <span className="text-sm font-medium">Futuro:</span>
+        <Button
+          size="sm"
+          variant={showFuture ? "default" : "outline"}
+          onClick={() => setShowFuture(!showFuture)}
+          className="flex items-center gap-1"
+        >
           <Calendar className="w-4 h-4" />
-          Ver Futuro
-        </label>
+          {showFuture ? "Ativado" : "Desativado"}
+        </Button>
       </div>
 
       {/* Navigation Controls for Future Data */}
