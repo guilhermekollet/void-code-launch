@@ -10,6 +10,7 @@ import * as LucideIcons from "lucide-react";
 interface CategoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCategoryCreated?: (categoryName: string) => void;
 }
 
 const AVAILABLE_ICONS = [
@@ -94,7 +95,7 @@ const AVAILABLE_ICONS = [
 
 const DEFAULT_COLOR = '#61710C';
 
-export function CategoryModal({ open, onOpenChange }: CategoryModalProps) {
+export function CategoryModal({ open, onOpenChange, onCategoryCreated }: CategoryModalProps) {
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('tag');
   
@@ -114,12 +115,17 @@ export function CategoryModal({ open, onOpenChange }: CategoryModalProps) {
   const handleSave = () => {
     if (!name.trim()) return;
 
+    const categoryName = name.trim();
+
     addCategory.mutate({
-      name: name.trim(),
+      name: categoryName,
       icon: selectedIcon,
       color: DEFAULT_COLOR,
     }, {
       onSuccess: () => {
+        if (onCategoryCreated) {
+          onCategoryCreated(categoryName);
+        }
         setName('');
         setSelectedIcon('tag');
         onOpenChange(false);
@@ -148,6 +154,7 @@ export function CategoryModal({ open, onOpenChange }: CategoryModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-10"
+              style={{ fontSize: '16px' }}
               autoFocus
             />
           </div>

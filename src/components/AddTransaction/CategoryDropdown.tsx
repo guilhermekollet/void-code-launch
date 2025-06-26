@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,10 @@ import * as LucideIcons from "lucide-react";
 interface CategoryDropdownProps {
   value: string;
   onChange: (value: string) => void;
+  onCategoryAdded?: (categoryName: string) => void;
 }
 
-export function CategoryDropdown({ value, onChange }: CategoryDropdownProps) {
+export function CategoryDropdown({ value, onChange, onCategoryAdded }: CategoryDropdownProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: categories = [], isLoading } = useCategories();
 
@@ -36,6 +38,12 @@ export function CategoryDropdown({ value, onChange }: CategoryDropdownProps) {
     
     console.log('Icon not found, using fallback Tag icon');
     return Tag;
+  };
+
+  const handleCategoryCreated = (categoryName: string) => {
+    if (onCategoryAdded) {
+      onCategoryAdded(categoryName);
+    }
   };
 
   return (
@@ -83,6 +91,7 @@ export function CategoryDropdown({ value, onChange }: CategoryDropdownProps) {
       <CategoryModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
+        onCategoryCreated={handleCategoryCreated}
       />
     </>
   );

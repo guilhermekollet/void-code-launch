@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -49,6 +48,10 @@ export function AddTransactionModal({
       setInstallmentStartDate('');
     }
   }, [open]);
+
+  const handleCategoryAdded = (categoryName: string) => {
+    setCategory(categoryName);
+  };
 
   const handleSave = () => {
     if (!amount) return;
@@ -150,7 +153,11 @@ export function AddTransactionModal({
               {/* Category */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Categoria</Label>
-                <CategoryDropdown value={category} onChange={setCategory} />
+                <CategoryDropdown 
+                  value={category} 
+                  onChange={setCategory}
+                  onCategoryAdded={handleCategoryAdded}
+                />
               </div>
 
               {/* Description */}
@@ -161,7 +168,8 @@ export function AddTransactionModal({
                   placeholder="Descrição da transação" 
                   value={description} 
                   onChange={e => setDescription(e.target.value)} 
-                  className="h-10" 
+                  className="h-10"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
 
@@ -194,7 +202,8 @@ export function AddTransactionModal({
                         placeholder="Dia (1-31)" 
                         value={recurringDate} 
                         onChange={e => setRecurringDate(e.target.value)} 
-                        className="h-10" 
+                        className="h-10"
+                        style={{ fontSize: '16px' }}
                       />
                     </div>
                   )}
@@ -221,7 +230,8 @@ export function AddTransactionModal({
                           type="date" 
                           value={installmentStartDate} 
                           onChange={e => setInstallmentStartDate(e.target.value)} 
-                          className="h-10" 
+                          className="h-10"
+                          style={{ fontSize: '16px' }}
                         />
                       </div>
                       <div className="space-y-2">
@@ -233,7 +243,8 @@ export function AddTransactionModal({
                           placeholder="Ex: 12" 
                           value={totalInstallments} 
                           onChange={e => setTotalInstallments(e.target.value)} 
-                          className="h-10" 
+                          className="h-10"
+                          style={{ fontSize: '16px' }}
                         />
                       </div>
                     </div>
