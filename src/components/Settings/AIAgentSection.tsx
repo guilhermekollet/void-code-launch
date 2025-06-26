@@ -82,7 +82,7 @@ export function AIAgentSection() {
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• O Agente suporta envio de várias mensagens simultâneamente.</li>
               <li>• Registre transações através de mensagens de texto, áudio ou PDF.</li>
-              <li>• Envia relatórios e lembretes personalizados</li>
+              <li>• Você pode solicitar resumos e insights financeiros.</li>
               <li>• Responde perguntas sobre suas finanças</li>
             </ul>
           </div>}
