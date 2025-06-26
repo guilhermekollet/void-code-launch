@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { Eye, EyeClosed } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -16,6 +18,8 @@ export default function Register() {
     password: '',
     confirmPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -106,7 +110,7 @@ export default function Register() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <img 
-              src="/lovable-uploads/c8d5d691-6584-41b6-86ad-82dbbd10c1c5.png" 
+              src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
               alt="Bolsofy Logo" 
               className="h-12 w-auto"
             />
@@ -128,7 +132,7 @@ export default function Register() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="border-[#DEDEDE] focus:border-[#61710C]"
+                className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50"
               />
             </div>
             <div className="space-y-2">
@@ -141,7 +145,7 @@ export default function Register() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="border-[#DEDEDE] focus:border-[#61710C]"
+                className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50"
               />
             </div>
             <div className="space-y-2">
@@ -154,34 +158,52 @@ export default function Register() {
                 value={formData.phone}
                 onChange={handleChange}
                 required
-                className="border-[#DEDEDE] focus:border-[#61710C]"
+                className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-[#121212]">Senha</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="border-[#DEDEDE] focus:border-[#61710C]"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#121212] transition-colors"
+                >
+                  {showPassword ? <EyeClosed size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword" className="text-[#121212]">Confirmar senha</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                className="border-[#DEDEDE] focus:border-[#61710C]"
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#121212] transition-colors"
+                >
+                  {showConfirmPassword ? <EyeClosed size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
             <Button 
               type="submit" 
