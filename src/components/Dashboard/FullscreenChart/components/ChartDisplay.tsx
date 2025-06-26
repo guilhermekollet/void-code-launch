@@ -19,7 +19,7 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
   };
 
   return (
-    <div className="flex-1 p-4">
+    <div className="h-full p-4">
       <Card className="h-full border-[#E2E8F0]">
         <CardContent className="p-4 h-full relative">
           <ResponsiveContainer width="100%" height="100%">
@@ -42,6 +42,9 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
+                angle={-45}
+                textAnchor="end"
+                height={60}
               />
               <YAxis 
                 stroke="#64748B"

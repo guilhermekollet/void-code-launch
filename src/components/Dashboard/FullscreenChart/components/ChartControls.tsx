@@ -52,9 +52,11 @@ export function ChartControls({
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-white border border-[#E2E8F0] shadow-lg z-50">
+            <SelectItem value="7d">7 dias</SelectItem>
+            <SelectItem value="30d">30 dias</SelectItem>
             <SelectItem value="3">3 meses</SelectItem>
             <SelectItem value="6">6 meses</SelectItem>
-            <SelectItem value="12">12 meses</SelectItem>
+            <SelectItem value="12">1 ano</SelectItem>
             <SelectItem value="24">2 anos</SelectItem>
           </SelectContent>
         </Select>

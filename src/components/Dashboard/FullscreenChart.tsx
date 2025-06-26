@@ -21,53 +21,6 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
 
   const chartData = useFullscreenChartData(period, showFuture);
 
-  const handleZoomIn = () => {
-    const dataLength = chartData.length;
-    const currentStart = zoomDomain.start || 0;
-    const currentEnd = zoomDomain.end || dataLength - 1;
-    const range = currentEnd - currentStart;
-    
-    if (range > 2) {
-      const newRange = Math.max(2, Math.floor(range * 0.7));
-      const center = (currentStart + currentEnd) / 2;
-      setZoomDomain({
-        start: Math.max(0, Math.floor(center - newRange / 2)),
-        end: Math.min(dataLength - 1, Math.floor(center + newRange / 2))
-      });
-    }
-  };
-
-  const handleZoomOut = () => {
-    const dataLength = chartData.length;
-    const currentStart = zoomDomain.start || 0;
-    const currentEnd = zoomDomain.end || dataLength - 1;
-    const range = currentEnd - currentStart;
-    
-    if (range < dataLength - 1) {
-      const newRange = Math.min(dataLength - 1, Math.ceil(range * 1.4));
-      const center = (currentStart + currentEnd) / 2;
-      const newStart = Math.max(0, Math.floor(center - newRange / 2));
-      const newEnd = Math.min(dataLength - 1, newStart + newRange);
-      
-      setZoomDomain({
-        start: newStart,
-        end: newEnd
-      });
-    }
-  };
-
-  const resetZoom = () => {
-    setZoomDomain({});
-    setScrollPosition(0);
-  };
-
-  const toggleLine = (lineKey: keyof VisibleLines) => {
-    setVisibleLines(prev => ({
-      ...prev,
-      [lineKey]: !prev[lineKey]
-    }));
-  };
-
   const scrollLeft = () => {
     setScrollPosition(prev => Math.max(0, prev - 3));
   };
@@ -120,12 +73,59 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
   const canScrollLeft = scrollPosition > 0;
   const canScrollRight = scrollPosition < chartData.length - 12;
 
+  const handleZoomIn = () => {
+    const dataLength = chartData.length;
+    const currentStart = zoomDomain.start || 0;
+    const currentEnd = zoomDomain.end || dataLength - 1;
+    const range = currentEnd - currentStart;
+    
+    if (range > 2) {
+      const newRange = Math.max(2, Math.floor(range * 0.7));
+      const center = (currentStart + currentEnd) / 2;
+      setZoomDomain({
+        start: Math.max(0, Math.floor(center - newRange / 2)),
+        end: Math.min(dataLength - 1, Math.floor(center + newRange / 2))
+      });
+    }
+  };
+
+  const handleZoomOut = () => {
+    const dataLength = chartData.length;
+    const currentStart = zoomDomain.start || 0;
+    const currentEnd = zoomDomain.end || dataLength - 1;
+    const range = currentEnd - currentStart;
+    
+    if (range < dataLength - 1) {
+      const newRange = Math.min(dataLength - 1, Math.ceil(range * 1.4));
+      const center = (currentStart + currentEnd) / 2;
+      const newStart = Math.max(0, Math.floor(center - newRange / 2));
+      const newEnd = Math.min(dataLength - 1, newStart + newRange);
+      
+      setZoomDomain({
+        start: newStart,
+        end: newEnd
+      });
+    }
+  };
+
+  const resetZoom = () => {
+    setZoomDomain({});
+    setScrollPosition(0);
+  };
+
+  const toggleLine = (lineKey: keyof VisibleLines) => {
+    setVisibleLines(prev => ({
+      ...prev,
+      [lineKey]: !prev[lineKey]
+    }));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-full max-h-full w-screen h-screen p-0 gap-0" hideCloseButton>
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0]">
+          <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0] flex-shrink-0">
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-semibold text-[#121212]">Fluxo Financeiro</h2>
               {showFuture && !hasFutureData && (
@@ -145,30 +145,34 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
           </div>
 
           {/* Controls */}
-          <ChartControls
-            period={period}
-            setPeriod={setPeriod}
-            showFuture={showFuture}
-            setShowFuture={setShowFuture}
-            scrollPosition={scrollPosition}
-            scrollLeft={scrollLeft}
-            scrollRight={scrollRight}
-            canScrollLeft={canScrollLeft}
-            canScrollRight={canScrollRight}
-            showScrollControls={showScrollControls}
-            handleZoomIn={handleZoomIn}
-            handleZoomOut={handleZoomOut}
-            resetZoom={resetZoom}
-            visibleLines={visibleLines}
-            toggleLine={toggleLine}
-          />
+          <div className="flex-shrink-0">
+            <ChartControls
+              period={period}
+              setPeriod={setPeriod}
+              showFuture={showFuture}
+              setShowFuture={setShowFuture}
+              scrollPosition={scrollPosition}
+              scrollLeft={scrollLeft}
+              scrollRight={scrollRight}
+              canScrollLeft={canScrollLeft}
+              canScrollRight={canScrollRight}
+              showScrollControls={showScrollControls}
+              handleZoomIn={handleZoomIn}
+              handleZoomOut={handleZoomOut}
+              resetZoom={resetZoom}
+              visibleLines={visibleLines}
+              toggleLine={toggleLine}
+            />
+          </div>
 
-          {/* Chart */}
-          <ChartDisplay
-            displayData={displayData}
-            visibleLines={visibleLines}
-            futureStartIndex={futureStartIndex}
-          />
+          {/* Chart - takes remaining height */}
+          <div className="flex-1 min-h-0">
+            <ChartDisplay
+              displayData={displayData}
+              visibleLines={visibleLines}
+              futureStartIndex={futureStartIndex}
+            />
+          </div>
         </div>
       </DialogContent>
     </Dialog>
