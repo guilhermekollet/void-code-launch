@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,22 +11,27 @@ import { FinancialSummary } from "@/components/Reports/FinancialSummary";
 import { useExportReport } from "@/hooks/useExportReport";
 import { useFinancialMetrics } from "@/hooks/useFinancialData";
 import { FileDown, BarChart3, TrendingUp, PieChart, Calendar } from "lucide-react";
-
 export default function Relatorios() {
-  const { exportToPDF, isExporting } = useExportReport();
-  const { totalBalance, monthlyIncome, monthlyExpenses } = useFinancialMetrics();
-
+  const {
+    exportToPDF,
+    isExporting
+  } = useExportReport();
+  const {
+    totalBalance,
+    monthlyIncome,
+    monthlyExpenses
+  } = useFinancialMetrics();
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
-  const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
-  return (
-    <div className="space-y-6">
+  const currentMonth = new Date().toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric'
+  });
+  return <div className="space-y-6">
       {/* Header Section */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -38,11 +42,7 @@ export default function Relatorios() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Button
-            onClick={exportToPDF}
-            disabled={isExporting}
-            className="bg-[#61710C] hover:bg-[#61710C]/90 text-white"
-          >
+          <Button onClick={exportToPDF} disabled={isExporting} className="bg-[#61710C] hover:bg-[#61710C]/90 text-white">
             <FileDown className="w-4 h-4 mr-2" />
             {isExporting ? 'Exportando...' : 'Exportar PDF'}
           </Button>
@@ -51,7 +51,7 @@ export default function Relatorios() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-[#E2E8F0] shadow-sm">
+        <Card className="border-[#E2E8F0] shadow-sm bg-white">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-green-600" />
@@ -211,6 +211,5 @@ export default function Relatorios() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 }
