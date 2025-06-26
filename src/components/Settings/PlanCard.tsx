@@ -46,31 +46,31 @@ export function PlanCard({
   const displayPrice = billingCycle === 'monthly' ? monthlyPrice : yearlyPrice;
 
   const getCardClassName = () => {
-    let baseClass = "relative p-6 sm:p-8 rounded-3xl border-2 transition-all duration-300 bg-white h-full flex flex-col";
+    let baseClass = "relative p-4 sm:p-6 lg:p-8 rounded-3xl border-2 transition-all duration-300 h-full flex flex-col";
     
     if (plan.premium) {
-      return `${baseClass} border-black shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-4 ring-black/20' : ''}`;
+      return `${baseClass} bg-black text-white border-black shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-4 ring-black/20' : ''}`;
     }
     
     if (plan.popular) {
-      return `${baseClass} border-[#61710C] shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-4 ring-[#61710C]/20' : ''}`;
+      return `${baseClass} bg-[#61710C] text-white border-[#61710C] shadow-lg hover:shadow-xl ${isCurrentPlan ? 'ring-4 ring-[#61710C]/20' : ''}`;
     }
     
-    return `${baseClass} border-gray-200 hover:border-gray-300 shadow-md hover:shadow-lg ${isCurrentPlan ? 'ring-4 ring-green-300 border-green-200' : ''}`;
+    return `${baseClass} bg-white border-gray-200 hover:border-gray-300 shadow-md hover:shadow-lg ${isCurrentPlan ? 'ring-4 ring-green-300 border-green-200' : ''}`;
   };
 
   const getIconBgClass = () => {
-    if (plan.premium) return 'bg-black';
-    if (plan.popular) return 'bg-[#61710C]';
+    if (plan.premium) return 'bg-white text-black';
+    if (plan.popular) return 'bg-white text-[#61710C]';
     return 'bg-gray-100';
   };
 
   const getButtonClass = () => {
     if (plan.premium) {
-      return 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl';
+      return 'bg-white hover:bg-gray-100 text-black shadow-lg hover:shadow-xl';
     }
     if (plan.popular) {
-      return 'bg-[#61710C] hover:bg-[#4a5a09] text-white shadow-lg hover:shadow-xl';
+      return 'bg-white hover:bg-gray-100 text-[#61710C] shadow-lg hover:shadow-xl';
     }
     return 'bg-gray-900 hover:bg-gray-800 text-white shadow-md hover:shadow-lg';
   };
@@ -78,13 +78,13 @@ export function PlanCard({
   return (
     <div className={getCardClassName()}>
       {plan.popular && !plan.premium && (
-        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#61710C] hover:bg-[#61710C] text-white px-4 py-1 text-sm font-semibold shadow-lg border-0">
+        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white text-[#61710C] hover:bg-white px-4 py-1 text-sm font-semibold shadow-lg border-0">
           Mais Popular
         </Badge>
       )}
       
       {plan.premium && (
-        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-black hover:bg-black text-white px-4 py-1 text-sm font-semibold shadow-lg border-0">
+        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white text-black hover:bg-white px-4 py-1 text-sm font-semibold shadow-lg border-0">
           ⭐ Premium
         </Badge>
       )}
@@ -111,29 +111,39 @@ export function PlanCard({
           <div className={`p-3 rounded-2xl ${getIconBgClass()}`}>
             {plan.icon}
           </div>
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+          <h3 className="text-xl sm:text-2xl font-bold">
             {plan.name}
           </h3>
         </div>
         
-        <div className="mb-4">
-          <div className="flex items-baseline justify-center gap-1 mb-2">
-            <span className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-none text-gray-900">
-              {formatPrice(displayPrice)}
-            </span>
-            {displayPrice > 0 && (
-              <span className="text-gray-500 text-base sm:text-lg font-medium">
+        {displayPrice > 0 && (
+          <div className="mb-4">
+            <div className="flex items-baseline justify-center gap-1 mb-2">
+              <span className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-none">
+                {formatPrice(displayPrice)}
+              </span>
+              <span className={`text-base sm:text-lg font-medium ${plan.premium || plan.popular ? 'text-white/80' : 'text-gray-500'}`}>
                 /{billingCycle === 'monthly' ? 'mês' : 'ano'}
               </span>
+            </div>
+            
+            {billingCycle === 'yearly' && yearlyPrice > 0 && (
+              <p className={`text-sm ${plan.premium || plan.popular ? 'text-white/70' : 'text-gray-500'}`}>
+                Cobrado anualmente por {formatPrice(yearlyPrice)}
+              </p>
             )}
           </div>
-          
-          {billingCycle === 'yearly' && yearlyPrice > 0 && (
-            <p className="text-gray-500 text-sm">
-              Cobrado anualmente por {formatPrice(yearlyPrice)}
-            </p>
-          )}
-        </div>
+        )}
+        
+        {displayPrice === 0 && (
+          <div className="mb-4">
+            <div className="flex items-baseline justify-center gap-1 mb-2">
+              <span className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-none">
+                Gratuito
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 mb-6 flex-grow">
