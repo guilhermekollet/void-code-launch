@@ -73,7 +73,7 @@ export function AIAgentSection() {
             </p>
           </div>
           
-          <Button type="submit" disabled={updateSettings.isPending || !formData.is_enabled} className="w-full md:w-auto">
+          <Button type="submit" disabled={updateSettings.isPending || !formData.is_enabled} className="w-full md:w-auto bg-gray-200 hover:bg-gray-100">
             {updateSettings.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Configurações
           </Button>
