@@ -23,7 +23,7 @@ interface Plan {
 
 const plans: Plan[] = [{
   id: 'free',
-  name: 'Free',
+  name: 'Gratuito',
   icon: <Star className="h-6 w-6 text-gray-600" />,
   monthlyPrice: 0,
   yearlyPrice: 0,
@@ -37,8 +37,8 @@ const plans: Plan[] = [{
   popular: true,
   features: ['🤖 Agente de IA Financeiro', '📝 Lançamentos Ilimitado via Texto, Áudio, Foto e PDF*', '📊 Relatório Avançados', '🔁 Agrupamento de Gastos Recorrentes', '🗂️ Categorias Ilimitadas']
 }, {
-  id: 'pro',
-  name: 'PRO',
+  id: 'premium',
+  name: 'Premium',
   icon: <Crown className="h-6 w-6 text-white" />,
   monthlyPrice: 29.90,
   yearlyPrice: 289.90,
@@ -113,12 +113,8 @@ export function PlansSection() {
 
   const handleSubscribe = (planId: string) => {
     if (planId === 'free') return;
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
-    const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
     createCheckout.mutate({
       planType: planId,
-      price: price * 100,
       billingCycle
     });
   };

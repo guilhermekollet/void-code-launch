@@ -15,16 +15,49 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
     return null;
   }
 
+  const getPlanDisplayName = (planType: string) => {
+    switch (planType) {
+      case 'basic':
+        return 'Básico';
+      case 'premium':
+        return 'Premium';
+      case 'free':
+      default:
+        return 'Gratuito';
+    }
+  };
+
+  const isFreePlan = subscription.plan_type === 'free';
+
   return (
-    <div className="mt-8 p-6 bg-green-50 rounded-2xl border border-green-200">
+    <div className={`mt-8 p-6 rounded-2xl border ${
+      isFreePlan 
+        ? 'bg-gray-50 border-gray-200' 
+        : 'bg-green-50 border-green-200'
+    }`}>
       <div className="flex items-center gap-3">
-        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-        <p className="text-green-800 font-semibold">
-          Sua assinatura está ativa
+        <div className={`w-3 h-3 rounded-full ${
+          isFreePlan 
+            ? 'bg-gray-500' 
+            : 'bg-green-500 animate-pulse'
+        }`}></div>
+        <p className={`font-semibold ${
+          isFreePlan 
+            ? 'text-gray-800' 
+            : 'text-green-800'
+        }`}>
+          {isFreePlan 
+            ? 'Você está usando o plano gratuito' 
+            : 'Sua assinatura está ativa'
+          }
         </p>
       </div>
-      <p className="text-green-700 text-sm mt-2 ml-6">
-        Plano atual: {subscription.plan_type === 'basic' ? 'Básico' : 'PRO'}
+      <p className={`text-sm mt-2 ml-6 ${
+        isFreePlan 
+          ? 'text-gray-700' 
+          : 'text-green-700'
+      }`}>
+        Plano atual: {getPlanDisplayName(subscription.plan_type)}
       </p>
     </div>
   );

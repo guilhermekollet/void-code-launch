@@ -1,7 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.21.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,77 +16,33 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
-
   try {
     logStep("Function started");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
+    const { planType, billingCycle } = await req.json();
+    logStep("Request received", { planType, billingCycle });
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
-    
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
-
-    const { plan } = await req.json();
-    if (!plan || (plan !== "premium")) {
-      throw new Error("Invalid plan specified");
-    }
-
-    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-    
-    // Check if customer exists
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      logStep("Existing customer found", { customerId });
-    } else {
-      logStep("Creating new customer");
-    }
-
-    const origin = req.headers.get("origin") || "http://localhost:3000";
-    
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      customer_email: customerId ? undefined : user.email,
-      line_items: [
-        {
-          price_data: {
-            currency: "brl",
-            product_data: { 
-              name: "Bolsofy Premium",
-              description: "Acesso completo a todas as funcionalidades premium"
-            },
-            unit_amount: 2990, // R$ 29,90
-            recurring: { interval: "month" },
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "subscription",
-      success_url: `${origin}/assinatura?success=true`,
-      cancel_url: `${origin}/assinatura?canceled=true`,
-      metadata: {
-        user_id: user.id,
-        plan: "premium"
+    // Map plan types and billing cycles to Stripe checkout URLs
+    const checkoutUrls = {
+      basic: {
+        monthly: "https://buy.stripe.com/test_bJe28r23b5uk7G3bUafQI00",
+        yearly: "https://buy.stripe.com/test_fZubJ16jrcWM2lJ8HYfQI01"
+      },
+      premium: {
+        monthly: "https://buy.stripe.com/test_8x28wP37f0a00dB3nEfQI02",
+        yearly: "https://buy.stripe.com/test_3cI4gz5fng8Ye4r1fwfQI03"
       }
-    });
+    };
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    const url = checkoutUrls[planType as keyof typeof checkoutUrls]?.[billingCycle as keyof typeof checkoutUrls.basic];
+    
+    if (!url) {
+      throw new Error(`Invalid plan configuration: ${planType} - ${billingCycle}`);
+    }
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    logStep("Checkout URL found", { url });
+
+    return new Response(JSON.stringify({ url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

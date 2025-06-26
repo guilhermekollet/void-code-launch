@@ -6,7 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 
 interface CheckoutParams {
   planType: string;
-  price: number;
   billingCycle: 'monthly' | 'yearly';
 }
 

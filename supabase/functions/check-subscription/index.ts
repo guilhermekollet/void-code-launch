@@ -102,13 +102,32 @@ serve(async (req) => {
 
     if (subscriptions.data.length > 0) {
       const subscription = subscriptions.data[0];
-      planType = "premium";
+      const priceId = subscription.items.data[0].price.id;
+      
+      // Map price IDs to plan types based on the Stripe checkout URLs
+      // We'll determine the plan type based on the amount since we don't have the exact price IDs
+      const price = await stripe.prices.retrieve(priceId);
+      const amount = price.unit_amount || 0;
+      
+      // Basic plans: R$ 19,90 (1990 cents) monthly, R$ 199,90 (19990 cents) yearly
+      // Premium plans: R$ 29,90 (2990 cents) monthly, R$ 289,90 (28990 cents) yearly
+      if (amount === 1990 || amount === 19990) {
+        planType = "basic";
+      } else if (amount === 2990 || amount === 28990) {
+        planType = "premium";
+      } else {
+        // Fallback to basic for any paid subscription
+        planType = "basic";
+      }
+      
       status = subscription.status;
       currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
       stripeSubscriptionId = subscription.id;
-      logStep("Active premium subscription found", { 
+      logStep("Active subscription found", { 
         subscriptionId: subscription.id, 
-        endDate: currentPeriodEnd 
+        endDate: currentPeriodEnd,
+        planType,
+        amount 
       });
     } else {
       logStep("No active subscription found, defaulting to free");
