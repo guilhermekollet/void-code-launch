@@ -1,3 +1,4 @@
+
 import { BarChart3, CreditCard, Settings, Home, Repeat } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 
@@ -29,7 +30,7 @@ export function AppSidebar() {
   }}>
       <SidebarHeader className="p-6 bg-white">
         <div className="flex items-center gap-3">
-          <img src="/lovable-uploads/c8d5d691-6584-41b6-86ad-82dbbd10c1c5.png" alt="Bolsofy Logo" className="h-10 w-auto" />
+          <img src="/lovable-uploads/549233e8-56e8-49c8-b3d7-3393077d8256.png" alt="Bolsofy Logo" className="h-10 w-auto" />
         </div>
       </SidebarHeader>
       <SidebarContent className="bg-white">
