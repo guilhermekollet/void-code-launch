@@ -80,48 +80,13 @@ export function useFinancialMetrics() {
 }
 
 export function useChartData() {
-  const { data: transactions = [] } = useTransactions();
+  const { data: chartData = [] } = useChartDataWithInstallments();
 
-  // Get last 6 months data
-  const last6Months = Array.from({ length: 6 }, (_, i) => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    return {
-      month: date.getMonth(),
-      year: date.getFullYear(),
-      name: date.toLocaleDateString('pt-BR', { month: 'short' })
-    };
-  }).reverse();
-
-  const monthlyData = last6Months.map(period => {
-    const monthTransactions = transactions.filter(t => {
-      const transactionDate = new Date(t.tx_date);
-      return transactionDate.getMonth() === period.month && 
-             transactionDate.getFullYear() === period.year;
-    });
-
-    const receitas = monthTransactions
-      .filter(t => t.type === 'receita')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    const despesas = monthTransactions
-      .filter(t => t.type === 'despesa')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    // Calculate recurring expenses for this month
-    const gastosRecorrentes = monthTransactions
-      .filter(t => t.type === 'despesa' && t.is_recurring)
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    return {
-      mes: period.name,
-      receitas,
-      despesas,
-      gastosRecorrentes
-    };
-  });
+  // For backward compatibility, return the data in the expected format
+  const monthlyData = chartData;
 
   // Category data with improved colors following the identity
+  const { data: transactions = [] } = useTransactions();
   const categoryData = transactions
     .filter(t => t.type === 'despesa')
     .reduce((acc, t) => {

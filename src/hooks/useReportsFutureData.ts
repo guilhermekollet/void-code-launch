@@ -63,6 +63,7 @@ export function useReportsFutureData(enabled: boolean = false) {
         };
       });
 
+      console.log('Future data generated:', futureData);
       return futureData;
     },
     enabled: enabled,

@@ -53,22 +53,40 @@ export function CategoryChart() {
   };
 
   const CustomXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
+    const { x, y, payload, width } = props;
     const categoryInfo = categoryData.find(cat => cat.name === payload.value);
     if (!categoryInfo) return null;
     
     const IconComponent = getIconComponent(categoryInfo.icon);
     
+    // Responsive logic: hide icons if category width is too small
+    const shouldShowIcon = width > 40;
+    const shouldShowText = width > 60;
+    
     return (
       <g transform={`translate(${x},${y})`}>
-        <foreignObject x={-15} y={0} width={30} height={30}>
-          <div className="flex justify-center">
-            <IconComponent 
-              className="w-5 h-5" 
-              style={{ color: categoryInfo.color }}
-            />
-          </div>
-        </foreignObject>
+        {shouldShowIcon && (
+          <foreignObject x={-15} y={0} width={30} height={30}>
+            <div className="flex justify-center">
+              <IconComponent 
+                className="w-4 h-4 sm:w-5 sm:h-5" 
+                style={{ color: categoryInfo.color }}
+              />
+            </div>
+          </foreignObject>
+        )}
+        {shouldShowText && (
+          <text 
+            x={0} 
+            y={shouldShowIcon ? 45 : 15} 
+            textAnchor="middle" 
+            fontSize={10}
+            fill="#666"
+            className="hidden sm:block"
+          >
+            {payload.value.length > 8 ? `${payload.value.substring(0, 6)}...` : payload.value}
+          </text>
+        )}
       </g>
     );
   };
@@ -113,7 +131,7 @@ export function CategoryChart() {
     <>
       <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200">
         <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-[#121212] text-2xl font-semibold">
+          <CardTitle className="text-[#121212] text-xl sm:text-2xl font-semibold">
             Gastos por Categoria
           </CardTitle>
           <Button
@@ -126,45 +144,48 @@ export function CategoryChart() {
           </Button>
         </CardHeader>
         <CardContent className="pt-2">
-          <ResponsiveContainer width="100%" height={380}>
-            <BarChart
-              data={categoryData}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 60,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false}
-                tickLine={false}
-                tick={<CustomXAxisTick />}
-                height={60}
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(value) => formatCurrency(value).replace('R$', 'R$').replace(',00', '')}
-                tick={{ fontSize: 12, fill: '#666' }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="value" 
-                radius={[8, 8, 0, 0]}
-                stroke="none"
+          <div className="overflow-x-auto">
+            <ResponsiveContainer width="100%" height={380} minWidth={300}>
+              <BarChart
+                data={categoryData}
+                margin={{
+                  top: 20,
+                  right: 10,
+                  left: 10,
+                  bottom: 80,
+                }}
               >
-                {categoryData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={<CustomXAxisTick />}
+                  height={80}
+                  interval={0}
+                />
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => formatCurrency(value).replace('R$', 'R$').replace(',00', '')}
+                  tick={{ fontSize: 12, fill: '#666' }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar 
+                  dataKey="value" 
+                  radius={[6, 6, 0, 0]}
+                  stroke="none"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 

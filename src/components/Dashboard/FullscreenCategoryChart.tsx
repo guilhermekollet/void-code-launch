@@ -69,22 +69,39 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
   };
 
   const CustomXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
+    const { x, y, payload, width } = props;
     const categoryInfo = categoryData.find(cat => cat.name === payload.value);
     if (!categoryInfo) return null;
     
     const IconComponent = getIconComponent(categoryInfo.icon);
     
+    // Responsive logic for fullscreen - more generous spacing
+    const shouldShowIcon = width > 30;
+    const shouldShowText = width > 50;
+    
     return (
       <g transform={`translate(${x},${y})`}>
-        <foreignObject x={-15} y={0} width={30} height={30}>
-          <div className="flex justify-center">
-            <IconComponent 
-              className="w-6 h-6" 
-              style={{ color: categoryInfo.color }}
-            />
-          </div>
-        </foreignObject>
+        {shouldShowIcon && (
+          <foreignObject x={-18} y={0} width={36} height={36}>
+            <div className="flex justify-center">
+              <IconComponent 
+                className="w-5 h-5 md:w-6 md:h-6" 
+                style={{ color: categoryInfo.color }}
+              />
+            </div>
+          </foreignObject>
+        )}
+        {shouldShowText && (
+          <text 
+            x={0} 
+            y={shouldShowIcon ? 50 : 15} 
+            textAnchor="middle" 
+            fontSize={12}
+            fill="#666"
+          >
+            {payload.value.length > 10 ? `${payload.value.substring(0, 8)}...` : payload.value}
+          </text>
+        )}
       </g>
     );
   };
@@ -109,7 +126,7 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
           <div className="flex flex-col h-full bg-white">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0]">
-              <h2 className="text-2xl font-semibold text-[#121212]">Gastos por Categoria</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-[#121212]">Gastos por Categoria</h2>
               <Button
                 variant="ghost"
                 size="icon"
@@ -121,7 +138,7 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4 p-4 border-b border-[#E2E8F0] bg-gray-50">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border-b border-[#E2E8F0] bg-gray-50">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Período:</span>
                 <Select value={period} onValueChange={setPeriod}>
@@ -138,13 +155,13 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
                   </SelectContent>
                 </Select>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-xs sm:text-sm text-gray-600">
                 Clique nas barras para editar as cores das categorias
               </div>
             </div>
 
             {/* Chart */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 md:p-6">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="flex flex-col items-center gap-3">
@@ -164,47 +181,50 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
                   </div>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={categoryData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 80,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={<CustomXAxisTick />}
-                      height={80}
-                    />
-                    <YAxis 
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(value) => formatCurrency(value).replace('R$', 'R$').replace(',00', '')}
-                      tick={{ fontSize: 12, fill: '#666' }}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar 
-                      dataKey="value" 
-                      radius={[8, 8, 0, 0]}
-                      stroke="none"
-                      onClick={handleBarClick}
-                      className="cursor-pointer"
+                <div className="overflow-x-auto h-full">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={400}>
+                    <BarChart
+                      data={categoryData}
+                      margin={{
+                        top: 20,
+                        right: 20,
+                        left: 20,
+                        bottom: 100,
+                      }}
                     >
-                      {categoryData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.color}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={<CustomXAxisTick />}
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => formatCurrency(value).replace('R$', 'R$').replace(',00', '')}
+                        tick={{ fontSize: 12, fill: '#666' }}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar 
+                        dataKey="value" 
+                        radius={[8, 8, 0, 0]}
+                        stroke="none"
+                        onClick={handleBarClick}
+                        className="cursor-pointer"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.color}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </div>
