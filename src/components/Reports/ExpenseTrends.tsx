@@ -76,7 +76,7 @@ export function ExpenseTrends() {
                 stackId="1" 
                 stroke="#EF4444" 
                 fill="#EF4444" 
-                fillOpacity={(entry) => entry?.isFuture ? 0.3 : 0.6}
+                fillOpacity={showFuture ? 0.4 : 0.6}
                 name="Despesas Totais"
               />
               <Area 
@@ -85,7 +85,7 @@ export function ExpenseTrends() {
                 stackId="2" 
                 stroke="#F59E0B" 
                 fill="#F59E0B" 
-                fillOpacity={(entry) => entry?.isFuture ? 0.4 : 0.8}
+                fillOpacity={showFuture ? 0.6 : 0.8}
                 name="Gastos Recorrentes"
               />
             </AreaChart>

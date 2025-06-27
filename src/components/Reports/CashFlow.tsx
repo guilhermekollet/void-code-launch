@@ -27,6 +27,10 @@ export function CashFlow() {
     }).format(value);
   };
 
+  // Separate data for historical and future
+  const historicalData = combinedData.filter(item => !item.isFuture);
+  const futureDataOnly = combinedData.filter(item => item.isFuture);
+
   return (
     <Card className="border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -71,26 +75,31 @@ export function CashFlow() {
                   return `${label}${isFuture ? ' (Projeção)' : ''}`;
                 }}
               />
+              {/* Historical data line */}
               <Line 
                 type="monotone" 
                 dataKey="fluxo" 
                 stroke="#61710C" 
                 strokeWidth={3}
                 name="Fluxo de Caixa"
-                dot={(props) => {
-                  const { payload } = props;
-                  return (
-                    <circle
-                      {...props}
-                      fill={payload?.isFuture ? '#84CC16' : '#61710C'}
-                      strokeWidth={2}
-                      r={4}
-                    />
-                  );
-                }}
-                strokeDasharray={(entry) => entry?.isFuture ? '5 5' : '0'}
+                connectNulls={false}
+                dot={{ fill: '#61710C', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6, stroke: '#61710C', strokeWidth: 2 }}
               />
+              {/* Future data line with dashed style */}
+              {showFuture && (
+                <Line 
+                  type="monotone" 
+                  dataKey="fluxo" 
+                  stroke="#84CC16" 
+                  strokeWidth={3}
+                  strokeDasharray="5 5"
+                  name="Fluxo de Caixa (Projeção)"
+                  connectNulls={false}
+                  dot={{ fill: '#84CC16', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: '#84CC16', strokeWidth: 2 }}
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>

@@ -73,24 +73,24 @@ export function MonthlyComparison() {
               <Legend />
               <Bar 
                 dataKey="receitas" 
-                fill={(entry) => entry?.isFuture ? "#86EFAC" : "#22C55E"}
+                fill={showFuture ? "#86EFAC" : "#22C55E"}
                 name="Receitas" 
                 radius={[2, 2, 0, 0]}
-                fillOpacity={(entry) => entry?.isFuture ? 0.7 : 1}
+                fillOpacity={showFuture ? 0.7 : 1}
               />
               <Bar 
                 dataKey="despesas" 
-                fill={(entry) => entry?.isFuture ? "#FCA5A5" : "#EF4444"}
+                fill={showFuture ? "#FCA5A5" : "#EF4444"}
                 name="Despesas" 
                 radius={[2, 2, 0, 0]}
-                fillOpacity={(entry) => entry?.isFuture ? 0.7 : 1}
+                fillOpacity={showFuture ? 0.7 : 1}
               />
               <Bar 
                 dataKey="gastosRecorrentes" 
-                fill={(entry) => entry?.isFuture ? "#FDE68A" : "#F59E0B"}
+                fill={showFuture ? "#FDE68A" : "#F59E0B"}
                 name="Gastos Recorrentes" 
                 radius={[2, 2, 0, 0]}
-                fillOpacity={(entry) => entry?.isFuture ? 0.7 : 1}
+                fillOpacity={showFuture ? 0.7 : 1}
               />
             </BarChart>
           </ResponsiveContainer>
