@@ -1,11 +1,10 @@
 
 import { useMemo } from 'react';
-import { useChartData, useDailyData } from "@/hooks/useFinancialData";
-import { useFutureData } from './useFutureData';
 import { useTransactions } from "@/hooks/useFinancialData";
+import { useFutureData } from './useFutureData';
+import { useDailyData } from "@/hooks/useFinancialData";
 
 export function useFullscreenChartData(period: string, showFuture: boolean) {
-  const { monthlyData: originalData } = useChartData();
   const { data: transactions = [] } = useTransactions();
   const futureData = useFutureData(showFuture);
 
@@ -27,20 +26,46 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
         const date = new Date(currentDate);
         date.setMonth(date.getMonth() - i);
         
-        // Get transactions for this specific month and year
+        // Get regular transactions for this specific month and year
         const monthTransactions = transactions.filter(t => {
           const transactionDate = new Date(t.tx_date);
           return transactionDate.getMonth() === date.getMonth() && 
                  transactionDate.getFullYear() === date.getFullYear();
         });
 
-        const receitas = monthTransactions
+        // Calculate installment transactions for this period
+        const installmentTransactions = transactions.filter(t => {
+          if (!t.is_installment || !t.installment_start_date) return false;
+          
+          const startDate = new Date(t.installment_start_date);
+          const currentPeriodDate = new Date(date.getFullYear(), date.getMonth(), 1);
+          
+          // Calculate which installment would fall in this period
+          const monthsDiff = (currentPeriodDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                           (currentPeriodDate.getMonth() - startDate.getMonth());
+          
+          return monthsDiff >= 0 && monthsDiff < (t.total_installments || 0);
+        });
+
+        const regularReceitas = monthTransactions
           .filter(t => t.type === 'receita')
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
-        const despesas = monthTransactions
+        const installmentReceitas = installmentTransactions
+          .filter(t => t.type === 'receita')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const totalReceitas = regularReceitas + installmentReceitas;
+
+        const regularDespesas = monthTransactions
           .filter(t => t.type === 'despesa')
           .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const installmentDespesas = installmentTransactions
+          .filter(t => t.type === 'despesa')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const totalDespesas = regularDespesas + installmentDespesas;
 
         const gastosRecorrentes = monthTransactions
           .filter(t => t.type === 'despesa' && t.is_recurring)
@@ -53,10 +78,10 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
         
         return {
           mes: monthLabel,
-          receitas,
-          despesas,
+          receitas: totalReceitas,
+          despesas: totalDespesas,
           gastosRecorrentes,
-          fluxoLiquido: receitas - despesas,
+          fluxoLiquido: totalReceitas - totalDespesas,
           isFuture: false
         };
       }).reverse();

@@ -99,7 +99,7 @@ export function RecentTransactions({
                       </div>
                       <div className="flex items-center gap-2">
                         <p className={`font-bold text-lg ${isReceita ? 'text-green-600' : 'text-red-600'}`}>
-                          {isReceita ? '+' : '-'} {formatCurrency(Number(transacao.amount))}
+                          {formatCurrency(Number(transacao.amount))}
                         </p>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -164,7 +164,7 @@ export function RecentTransactions({
                   <div className="flex items-center gap-3">
                     <div className="text-right">
                       <p className={`font-bold text-lg ${isReceita ? 'text-green-600' : 'text-red-600'}`}>
-                        {isReceita ? '+' : '-'} {formatCurrency(Number(transacao.amount))}
+                        {formatCurrency(Number(transacao.amount))}
                       </p>
                       <div className="flex items-center gap-1 justify-end">
                         <DollarSign className="h-3 w-3 text-[#64748B]" />

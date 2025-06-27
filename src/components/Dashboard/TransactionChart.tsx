@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Maximize } from "lucide-react";
-import { useChartData } from "@/hooks/useFinancialData";
+import { useChartDataWithInstallments } from "@/hooks/useFinancialData";
 import { FullscreenChart } from "./FullscreenChart";
 
 export function TransactionChart() {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
-  const { monthlyData } = useChartData();
+  const { data: monthlyData = [] } = useChartDataWithInstallments();
 
   if (monthlyData.length === 0 || monthlyData.every(d => d.receitas === 0 && d.despesas === 0)) {
     return (
