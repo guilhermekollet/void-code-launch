@@ -33,9 +33,9 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
                  transactionDate.getFullYear() === date.getFullYear();
         });
 
-        // Calculate installment transactions for this period
+        // Calculate installment transactions for this period - FIXED LOGIC
         const installmentTransactions = transactions.filter(t => {
-          if (!t.is_installment || !t.installment_start_date) return false;
+          if (!t.is_installment || !t.installment_start_date || !t.total_installments) return false;
           
           const startDate = new Date(t.installment_start_date);
           const currentPeriodDate = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -44,23 +44,28 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
           const monthsDiff = (currentPeriodDate.getFullYear() - startDate.getFullYear()) * 12 + 
                            (currentPeriodDate.getMonth() - startDate.getMonth());
           
-          return monthsDiff >= 0 && monthsDiff < (t.total_installments || 0);
+          // Only include if this month falls within the installment period
+          return monthsDiff >= 0 && monthsDiff < t.total_installments;
         });
 
+        // Regular income
         const regularReceitas = monthTransactions
-          .filter(t => t.type === 'receita')
+          .filter(t => t.type === 'receita' && !t.is_installment)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
+        // Installment income
         const installmentReceitas = installmentTransactions
           .filter(t => t.type === 'receita')
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
         const totalReceitas = regularReceitas + installmentReceitas;
 
+        // Regular expenses
         const regularDespesas = monthTransactions
-          .filter(t => t.type === 'despesa')
+          .filter(t => t.type === 'despesa' && !t.is_installment)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
+        // Installment expenses - each installment counts only once per period
         const installmentDespesas = installmentTransactions
           .filter(t => t.type === 'despesa')
           .reduce((sum, t) => sum + Number(t.amount), 0);

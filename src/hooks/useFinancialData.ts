@@ -209,7 +209,7 @@ export function useDailyData(days: number) {
   });
 }
 
-// New function to process installment transactions for chart data
+// Corrected function to process installment transactions for chart data
 export function useChartDataWithInstallments() {
   const { data: transactions = [] } = useTransactions();
 
@@ -228,16 +228,16 @@ export function useChartDataWithInstallments() {
       }).reverse();
 
       const monthlyData = last6Months.map(period => {
-        // Get transactions for this specific month and year
+        // Get regular transactions for this specific month and year
         const monthTransactions = transactions.filter(t => {
           const transactionDate = new Date(t.tx_date);
           return transactionDate.getMonth() === period.month && 
                  transactionDate.getFullYear() === period.year;
         });
 
-        // Calculate installment transactions for this period
+        // Calculate installment transactions for this period - FIXED LOGIC
         const installmentTransactions = transactions.filter(t => {
-          if (!t.is_installment || !t.installment_start_date) return false;
+          if (!t.is_installment || !t.installment_start_date || !t.total_installments) return false;
           
           const startDate = new Date(t.installment_start_date);
           const currentPeriodDate = new Date(period.year, period.month, 1);
@@ -246,18 +246,28 @@ export function useChartDataWithInstallments() {
           const monthsDiff = (currentPeriodDate.getFullYear() - startDate.getFullYear()) * 12 + 
                            (currentPeriodDate.getMonth() - startDate.getMonth());
           
-          return monthsDiff >= 0 && monthsDiff < (t.total_installments || 0);
+          // Only include if this month falls within the installment period
+          return monthsDiff >= 0 && monthsDiff < t.total_installments;
         });
 
-        const receitas = monthTransactions
+        // Regular income from transactions in this month
+        const regularReceitas = monthTransactions
+          .filter(t => t.type === 'receita' && !t.is_installment)
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Installment income for this period
+        const installmentReceitas = installmentTransactions
           .filter(t => t.type === 'receita')
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
+        const totalReceitas = regularReceitas + installmentReceitas;
+
+        // Regular expenses from transactions in this month
         const regularDespesas = monthTransactions
-          .filter(t => t.type === 'despesa')
+          .filter(t => t.type === 'despesa' && !t.is_installment)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
-        // Add installment amounts for this period
+        // Installment expenses for this period - each installment counts only once
         const installmentDespesas = installmentTransactions
           .filter(t => t.type === 'despesa')
           .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -271,7 +281,7 @@ export function useChartDataWithInstallments() {
 
         return {
           mes: period.name,
-          receitas,
+          receitas: totalReceitas,
           despesas: totalDespesas,
           gastosRecorrentes
         };
