@@ -53,7 +53,7 @@ export function TransactionsList({ transactions, onEdit, onDelete, formatCurrenc
           <div className="bg-gray-50 rounded-lg px-4 py-2 border border-[#E2E8F0]">
             <h2 className="text-lg font-semibold text-gray-900 capitalize">{monthYear}</h2>
             <p className="text-sm text-gray-600">
-              {monthTransactions.length} transação{monthTransactions.length !== 1 ? 'ões' : ''}
+              {monthTransactions.length} {monthTransactions.length === 1 ? 'transação' : 'transações'}
             </p>
           </div>
           

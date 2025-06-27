@@ -34,13 +34,22 @@ export function useReportsFutureData(enabled: boolean = false) {
         // Calculate recurring transactions for this future period
         const recurringTransactions = transactions.filter(t => t.is_recurring);
 
+        // For installment transactions, calculate the amount per installment
         const installmentReceitas = installmentTransactions
           .filter(t => t.type === 'receita')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => {
+            // Each installment should be amount / total_installments
+            const installmentAmount = Number(t.amount) / Number(t.total_installments);
+            return sum + installmentAmount;
+          }, 0);
 
         const installmentDespesas = installmentTransactions
           .filter(t => t.type === 'despesa')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => {
+            // Each installment should be amount / total_installments
+            const installmentAmount = Number(t.amount) / Number(t.total_installments);
+            return sum + installmentAmount;
+          }, 0);
 
         const recurringReceitas = recurringTransactions
           .filter(t => t.type === 'receita')
