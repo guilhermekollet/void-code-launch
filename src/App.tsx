@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Transacoes from "./pages/Transacoes";
+import Cartoes from "./pages/Cartoes";
 import Recorrentes from "./pages/Recorrentes";
 import Assinatura from "./pages/Assinatura";
 import Relatorios from "./pages/Relatorios";
@@ -40,6 +41,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <Transacoes />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/cartoes" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Cartoes />
                 </Layout>
               </ProtectedRoute>
             } />

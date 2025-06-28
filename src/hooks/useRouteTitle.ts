@@ -7,6 +7,7 @@ export function useRouteTitle() {
   const routeTitleMap: Record<string, string> = {
     '/': 'Dashboard Financeiro',
     '/transacoes': 'Transações',
+    '/cartoes': 'Cartões de Crédito',
     '/recorrentes': 'Gastos Recorrentes',
     '/assinatura': 'Assinatura',
     '/relatorios': 'Relatórios',

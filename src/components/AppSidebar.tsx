@@ -11,6 +11,10 @@ const items = [{
   url: "/transacoes",
   icon: CreditCard
 }, {
+  title: "Cartões",
+  url: "/cartoes",
+  icon: CreditCard
+}, {
   title: "Recorrentes",
   url: "/recorrentes",
   icon: Repeat
