@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, TrendingUp, TrendingDown } from "lucide-react";
+import { X, TrendingUp, TrendingDown, CreditCard } from "lucide-react";
 import { useTransactionsByMonth } from "@/hooks/useTransactionsByMonth";
 
 interface TransactionsSidebarProps {
@@ -79,16 +79,18 @@ export function TransactionsSidebar({ isOpen, onClose, selectedMonth }: Transact
                           <p className="text-xs text-[#64748B]">
                             {transaction.category} • {formatDate(transaction.tx_date)}
                           </p>
-                          {transaction.is_recurring && (
-                            <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                              Recorrente
-                            </span>
-                          )}
-                          {transaction.is_installment && (
-                            <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
-                              {transaction.installment_number}/{transaction.total_installments}
-                            </span>
-                          )}
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {transaction.is_recurring && (
+                              <span className="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                Recorrente
+                              </span>
+                            )}
+                            {transaction.is_installment && (
+                              <span className="inline-block px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                                {transaction.installment_number}/{transaction.total_installments}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="text-sm font-semibold text-[#61710C] ml-2">
                           +{formatCurrency(Number(transaction.amount))}
@@ -118,21 +120,24 @@ export function TransactionsSidebar({ isOpen, onClose, selectedMonth }: Transact
                           <p className="text-xs text-[#64748B]">
                             {transaction.category} • {formatDate(transaction.tx_date)}
                           </p>
-                          {transaction.is_recurring && (
-                            <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                              Recorrente
-                            </span>
-                          )}
-                          {transaction.is_installment && (
-                            <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
-                              {transaction.installment_number}/{transaction.total_installments}
-                            </span>
-                          )}
-                          {transaction.is_credit_card_expense && (
-                            <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full">
-                              Cartão
-                            </span>
-                          )}
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {transaction.is_recurring && (
+                              <span className="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                Recorrente
+                              </span>
+                            )}
+                            {transaction.is_installment && !transaction.is_credit_card_expense && (
+                              <span className="inline-block px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                                {transaction.installment_number}/{transaction.total_installments}
+                              </span>
+                            )}
+                            {transaction.is_credit_card_expense && (
+                              <span className="inline-block px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full flex items-center gap-1">
+                                <CreditCard className="h-3 w-3" />
+                                {transaction.total_installments > 1 ? `${transaction.installment_number}/${transaction.total_installments}` : 'Cartão'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="text-sm font-semibold text-[#EF4444] ml-2">
                           -{formatCurrency(Number(transaction.amount))}

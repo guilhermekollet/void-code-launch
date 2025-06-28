@@ -1,25 +1,27 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useTransactions } from "./useFinancialData";
+import { useCreditCards } from "./useCreditCards";
 
 export function useReportsFutureData(enabled: boolean = false) {
   const { data: transactions = [] } = useTransactions();
+  const { data: creditCards = [] } = useCreditCards();
 
   return useQuery({
-    queryKey: ['reports-future-data', transactions.length, enabled],
+    queryKey: ['reports-future-data', transactions.length, creditCards.length, enabled],
     queryFn: () => {
       if (!enabled) return [];
 
       const currentDate = new Date();
-      const futureMonths = 6; // Show next 6 months
+      const futureMonths = 24; // Show next 24 months
 
       const futureData = Array.from({ length: futureMonths }, (_, i) => {
         const date = new Date(currentDate);
         date.setMonth(date.getMonth() + i + 1);
         
-        // Calculate installment transactions that will be due in this specific month
+        // Calculate installment transactions (non-credit card) that will be due in this specific month
         const installmentTransactions = transactions.filter(t => {
-          if (!t.is_installment || !t.installment_start_date || !t.total_installments) return false;
+          if (!t.is_installment || !t.installment_start_date || !t.total_installments || t.is_credit_card_expense) return false;
           
           const startDate = new Date(t.installment_start_date);
           const futurePeriodDate = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -32,7 +34,43 @@ export function useReportsFutureData(enabled: boolean = false) {
         });
 
         // Calculate recurring transactions that will be due in this month
-        const recurringTransactions = transactions.filter(t => t.is_recurring);
+        const recurringTransactions = transactions.filter(t => t.is_recurring && !t.is_credit_card_expense);
+
+        // Calculate credit card expenses for this month
+        let creditCardExpenses = 0;
+        
+        transactions.filter(t => t.is_credit_card_expense && t.credit_card_id).forEach(transaction => {
+          const creditCard = creditCards.find(card => card.id === transaction.credit_card_id);
+          if (!creditCard) return;
+
+          const transactionDate = new Date(transaction.tx_date);
+          const installments = transaction.installments || 1;
+          const installmentValue = transaction.installment_value || transaction.amount;
+
+          // Calculate billing dates for each installment
+          for (let installmentIndex = 0; installmentIndex < installments; installmentIndex++) {
+            const installmentDate = new Date(transactionDate);
+            installmentDate.setMonth(installmentDate.getMonth() + installmentIndex);
+
+            // Calculate when this installment will be billed
+            const closeDate = Math.max(1, creditCard.due_date - 7); // Assumindo que fechamento é 7 dias antes do vencimento
+            let billMonth = installmentDate.getMonth();
+            let billYear = installmentDate.getFullYear();
+            
+            if (installmentDate.getDate() > closeDate) {
+              billMonth += 1;
+              if (billMonth > 11) {
+                billMonth = 0;
+                billYear += 1;
+              }
+            }
+
+            // Check if this installment bill falls in the current future month
+            if (billYear === date.getFullYear() && billMonth === date.getMonth()) {
+              creditCardExpenses += installmentValue;
+            }
+          }
+        });
 
         // For installment transactions, use the direct amount (each transaction already represents one installment)
         const installmentReceitas = installmentTransactions
@@ -53,7 +91,7 @@ export function useReportsFutureData(enabled: boolean = false) {
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
         const totalReceitas = installmentReceitas + recurringReceitas;
-        const totalDespesas = installmentDespesas + recurringDespesas;
+        const totalDespesas = installmentDespesas + recurringDespesas + creditCardExpenses;
 
         return {
           mes: date.toLocaleDateString('pt-BR', { month: 'short' }),
@@ -65,7 +103,7 @@ export function useReportsFutureData(enabled: boolean = false) {
         };
       });
 
-      console.log('Future data generated:', futureData);
+      console.log('Future data generated with credit cards:', futureData);
       return futureData;
     },
     enabled: enabled,

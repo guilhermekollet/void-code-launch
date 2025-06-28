@@ -2,10 +2,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCardBillItem } from "./CreditCardBillItem";
 import { useCreditCardBills } from "@/hooks/useCreditCardBills";
+import { useCreditCards } from "@/hooks/useCreditCards";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function CreditCardBillsSection() {
   const { data: bills = [], isLoading } = useCreditCardBills();
+  const { data: creditCards = [] } = useCreditCards();
 
   if (isLoading) {
     return (
@@ -24,6 +26,11 @@ export function CreditCardBillsSection() {
     );
   }
 
+  // Don't show the section if user has no credit cards
+  if (creditCards.length === 0) {
+    return null;
+  }
+
   if (bills.length === 0) {
     return (
       <Card className="bg-white border-[#E2E8F0]">
@@ -32,7 +39,7 @@ export function CreditCardBillsSection() {
         </CardHeader>
         <CardContent>
           <p className="text-[#64748B] text-center py-8">
-            Nenhuma fatura encontrada. As faturas serão geradas automaticamente com base nas suas compras.
+            Nenhuma fatura gerada ainda. As faturas aparecerão automaticamente após você registrar compras no cartão de crédito.
           </p>
         </CardContent>
       </Card>

@@ -39,8 +39,47 @@ export function useAddTransaction() {
 
       if (!userData) throw new Error('User not found');
 
+      // Se for despesa de cartão de crédito, criar uma única transação com as informações de parcelamento
+      if (transactionData.is_credit_card_expense && transactionData.credit_card_id) {
+        // Get credit card info to calculate billing dates
+        const { data: creditCard } = await supabase
+          .from('credit_cards')
+          .select('due_date, close_date')
+          .eq('id', transactionData.credit_card_id)
+          .single();
+
+        if (!creditCard) throw new Error('Credit card not found');
+
+        // Para cartão de crédito, criar uma única transação com as informações de parcelamento
+        const { data, error } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: userData.id,
+            amount: transactionData.amount,
+            type: transactionData.type,
+            category: transactionData.category,
+            description: transactionData.description,
+            tx_date: transactionData.tx_date,
+            is_credit_card_expense: true,
+            credit_card_id: transactionData.credit_card_id,
+            installments: transactionData.installments || 1,
+            installment_value: transactionData.installment_value || transactionData.amount,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error adding credit card transaction:', error);
+          throw error;
+        }
+
+        // Trigger bill generation after adding credit card transaction
+        queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
+
+        return data;
+      }
       // Se for despesa parcelada (não cartão), criar múltiplas transações
-      if (transactionData.is_installment && transactionData.total_installments && transactionData.installment_start_date && !transactionData.is_credit_card_expense) {
+      else if (transactionData.is_installment && transactionData.total_installments && transactionData.installment_start_date && !transactionData.is_credit_card_expense) {
         const installmentAmount = transactionData.amount / transactionData.total_installments;
         const transactions = [];
         
@@ -75,7 +114,7 @@ export function useAddTransaction() {
         
         return transactions;
       } else {
-        // Transação única (normal, recorrente ou cartão de crédito)
+        // Transação única (normal ou recorrente)
         const { data, error } = await supabase
           .from('transactions')
           .insert({
@@ -87,10 +126,6 @@ export function useAddTransaction() {
             tx_date: transactionData.tx_date,
             is_recurring: transactionData.is_recurring || false,
             recurring_date: transactionData.recurring_date,
-            is_credit_card_expense: transactionData.is_credit_card_expense || false,
-            credit_card_id: transactionData.credit_card_id,
-            installments: transactionData.installments || 1,
-            installment_value: transactionData.installment_value,
           })
           .select()
           .single();
