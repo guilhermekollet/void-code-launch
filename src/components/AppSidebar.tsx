@@ -1,5 +1,5 @@
+
 import React from "react";
-import { Sidebar } from "flowbite-react";
 import {
   Home,
   Receipt,
@@ -14,6 +14,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useSubscription } from "@/hooks/useSubscription";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate();
@@ -66,58 +79,75 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   ];
 
   return (
-    <Sidebar aria-label="Application sidebar" className="h-full" {...props}>
-      <Sidebar.Items>
+    <Sidebar {...props}>
+      <SidebarHeader>
         <div className="flex items-center justify-center py-4 border-b border-gray-200">
           <Avatar className="w-16 h-16">
             <AvatarImage src={user?.user_metadata?.avatar_url as string} />
             <AvatarFallback>{userProfile?.name?.charAt(0).toUpperCase() || '??'}</AvatarFallback>
           </Avatar>
         </div>
-        <Sidebar.ItemGroup>
-          {menuItems.map((item) => (
-            <Sidebar.Item
-              key={item.title}
-              href="#"
-              active={location.pathname === item.url}
-              onClick={() => handleNavigation(item.url)}
-              icon={item.icon}
-            >
-              {item.title}
-            </Sidebar.Item>
-          ))}
-        </Sidebar.ItemGroup>
-        <Sidebar.ItemGroup>
-          <Sidebar.Item
-            href="#"
-            onClick={() => handleNavigation("/configuracoes")}
-            icon={Settings}
-          >
-            Configurações
-          </Sidebar.Item>
-          <Sidebar.Item
-            href="#"
-            onClick={handleSignOut}
-            icon={LogOut}
-          >
-            Sair
-          </Sidebar.Item>
-        </Sidebar.ItemGroup>
-        {!isPremiumUser && (
-          <div className="p-4 mt-4 bg-yellow-50 rounded-md">
-            <p className="text-sm text-yellow-800">
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    onClick={() => handleNavigation(item.url)}
+                    isActive={location.pathname === item.url}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNavigation("/configuracoes")}
+                  isActive={location.pathname === "/configuracoes"}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Configurações</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4" />
+                  <span>Sair</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {!isPremiumUser && (
+        <SidebarFooter>
+          <div className="p-4 bg-yellow-50 rounded-md">
+            <p className="text-sm text-yellow-800 mb-2">
               Desbloqueie recursos premium e tenha uma experiência completa!
             </p>
-            <Sidebar.Item
-              href="#"
+            <Button
               onClick={() => handleNavigation("/assinatura")}
-              className="mt-2 text-blue-500 hover:text-blue-700"
+              variant="outline"
+              size="sm"
+              className="w-full text-blue-500 hover:text-blue-700"
             >
               Assinar
-            </Sidebar.Item>
+            </Button>
           </div>
-        )}
-      </Sidebar.Items>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
