@@ -6,10 +6,12 @@ import { CategoryChart } from "@/components/Dashboard/CategoryChart";
 import { RecentTransactions } from "@/components/Dashboard/RecentTransactions";
 import { CreditCardBillsSection } from "@/components/Dashboard/CreditCardBillsSection";
 import { useFinancialMetrics, useTransactions } from "@/hooks/useFinancialData";
+import { useCreditCards } from "@/hooks/useCreditCards";
 
 export default function Dashboard() {
   const { totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses, isLoading } = useFinancialMetrics();
   const { data: transactions = [] } = useTransactions();
+  const { data: creditCards = [] } = useCreditCards();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -50,8 +52,8 @@ export default function Dashboard() {
         formatCurrency={formatCurrency}
       />
 
-      {/* Credit Card Bills Section */}
-      <CreditCardBillsSection />
+      {/* Credit Card Bills Section - only show if user has credit cards */}
+      {creditCards.length > 0 && <CreditCardBillsSection />}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

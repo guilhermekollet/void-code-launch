@@ -12,7 +12,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CategoryDropdown } from "./CategoryDropdown";
 import { CreditCardDropdown } from "@/components/CreditCards/CreditCardDropdown";
-import { InstallmentSimulator } from "./InstallmentSimulator";
+import { InstallmentSelect } from "./InstallmentSelect";
 import { useAddTransaction } from "@/hooks/useAddTransaction";
 import { useCreditCards } from "@/hooks/useCreditCards";
 import { useLastUsedCreditCard, useUpdateLastUsedCreditCard } from "@/hooks/useLastUsedCreditCard";
@@ -131,7 +131,6 @@ export function AddTransactionModal({
     (!isCreditCardExpense || (isCreditCardExpense && selectedCreditCard));
 
   const parsedAmount = parseFloat(amount) || 0;
-  const installmentsNumber = parseInt(creditCardInstallments) || 1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,27 +210,12 @@ export function AddTransactionModal({
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Número de parcelas</Label>
-                    <Select value={creditCardInstallments} onValueChange={setCreditCardInstallments}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 18 }, (_, i) => i + 1).map((num) => (
-                          <SelectItem key={num} value={num.toString()}>
-                            {num}x
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Installment Simulator */}
-                  {parsedAmount > 0 && (
-                    <InstallmentSimulator 
-                      amount={parsedAmount} 
-                      installments={installmentsNumber} 
+                    <InstallmentSelect
+                      value={creditCardInstallments}
+                      onChange={setCreditCardInstallments}
+                      amount={parsedAmount}
                     />
-                  )}
+                  </div>
                 </div>
               )}
 
