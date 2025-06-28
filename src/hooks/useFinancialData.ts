@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -227,14 +226,19 @@ export function useChartDataWithInstallments() {
 
         const totalReceitas = regularReceitas + installmentReceitas;
 
-        // Regular expenses from transactions in this month
+        // Regular expenses from transactions in this month (excluding credit card expenses)
         const regularDespesas = monthTransactions
-          .filter(t => t.type === 'despesa' && !t.is_installment)
+          .filter(t => t.type === 'despesa' && !t.is_installment && !t.is_credit_card_expense)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
-        // Installment expenses for this period - each installment counts only once
+        // Installment expenses for this period - each installment counts only once (excluding credit card expenses)
         const installmentDespesas = installmentTransactions
-          .filter(t => t.type === 'despesa')
+          .filter(t => t.type === 'despesa' && !t.is_credit_card_expense)
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Credit card expenses for this period
+        const creditCardDespesas = monthTransactions
+          .filter(t => t.type === 'despesa' && t.is_credit_card_expense)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
         const totalDespesas = regularDespesas + installmentDespesas;
@@ -248,7 +252,8 @@ export function useChartDataWithInstallments() {
           mes: period.name,
           receitas: totalReceitas,
           despesas: totalDespesas,
-          gastosRecorrentes
+          gastosRecorrentes,
+          gastosCartao: creditCardDespesas
         };
       });
 

@@ -99,6 +99,16 @@ export function TransactionChart() {
                 dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }} 
                 activeDot={{ r: 5, fill: '#3B82F6' }} 
               />
+              <Line 
+                type="monotone" 
+                dataKey="gastosCartao" 
+                stroke="#8B5CF6" 
+                strokeWidth={2} 
+                strokeDasharray="3 3" 
+                name="Gastos com Cartão" 
+                dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 3 }} 
+                activeDot={{ r: 5, fill: '#8B5CF6' }} 
+              />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>

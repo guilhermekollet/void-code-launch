@@ -1,275 +1,343 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { IOSSwitch } from "@/components/ui/ios-switch";
-import { CurrencyInput } from "@/components/ui/currency-input";
-import { DatePicker } from "@/components/ui/date-picker";
+import { Switch } from "@/components/ui/switch";
 import { CategoryDropdown } from "./CategoryDropdown";
+import { CreditCardSection } from "./CreditCardSection";
 import { useAddTransaction } from "@/hooks/useAddTransaction";
 
 interface AddTransactionModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function AddTransactionModal({
-  open,
-  onOpenChange
-}: AddTransactionModalProps) {
-  const [amount, setAmount] = useState('');
-  const [type, setType] = useState<'receita' | 'despesa'>('despesa');
-  const [category, setCategory] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState<Date>(new Date());
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringDate, setRecurringDate] = useState('');
-  const [isInstallment, setIsInstallment] = useState(false);
-  const [totalInstallments, setTotalInstallments] = useState('');
-  const [installmentStartDate, setInstallmentStartDate] = useState('');
-  
-  const addTransaction = useAddTransaction();
+export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProps) {
+  const [activeTab, setActiveTab] = useState<'receita' | 'despesa'>('despesa');
+  const [formData, setFormData] = useState({
+    amount: '',
+    category: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    isRecurring: false,
+    recurringDate: '',
+    isInstallment: false,
+    totalInstallments: '',
+    installmentStartDate: '',
+    creditCardId: '',
+    isInstallmentCreditCard: false,
+    installmentBillingDate: '',
+    installmentCreditCardCount: '',
+  });
 
-  // Reset form when modal opens
-  useEffect(() => {
-    if (open) {
-      setAmount('');
-      setType('despesa');
-      setCategory('');
-      setDescription('');
-      setDate(new Date());
-      setIsRecurring(false);
-      setRecurringDate('');
-      setIsInstallment(false);
-      setTotalInstallments('');
-      setInstallmentStartDate('');
-    }
-  }, [open]);
+  const addTransactionMutation = useAddTransaction();
 
-  const handleCategoryAdded = (categoryName: string) => {
-    setCategory(categoryName);
-  };
-
-  const handleSave = () => {
-    if (!amount) return;
-
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Prepare transaction data based on whether it's credit card or regular transaction
     const baseData = {
-      amount: parseFloat(amount),
-      type,
-      category: category || 'Outros',
-      description: description || 'Sem descrição',
-      tx_date: date.toISOString()
+      amount: parseFloat(formData.amount),
+      type: activeTab,
+      category: formData.category,
+      description: formData.description,
+      tx_date: formData.date,
     };
 
-    // Criar o objeto final com todas as propriedades necessárias
-    const transactionData = {
-      ...baseData,
-      ...(type === 'despesa' && isRecurring && recurringDate && {
-        is_recurring: true,
-        recurring_date: parseInt(recurringDate)
-      }),
-      ...(type === 'despesa' && isInstallment && totalInstallments && installmentStartDate && {
-        is_installment: true,
-        total_installments: parseInt(totalInstallments),
-        installment_start_date: installmentStartDate
-      })
-    };
+    if (formData.creditCardId) {
+      // Credit card transaction
+      const transactionData = {
+        ...baseData,
+        credit_card_id: parseInt(formData.creditCardId),
+        is_credit_card_expense: true,
+        is_installment: formData.isInstallmentCreditCard,
+        installment_billing_date: formData.isInstallmentCreditCard ? formData.installmentBillingDate : undefined,
+        total_installments: formData.isInstallmentCreditCard ? parseInt(formData.installmentCreditCardCount) : undefined,
+      };
 
-    addTransaction.mutate(transactionData, {
-      onSuccess: () => {
-        onOpenChange(false);
-      }
-    });
+      addTransactionMutation.mutate(transactionData, {
+        onSuccess: () => {
+          onClose();
+          resetForm();
+        },
+      });
+    } else {
+      // Regular transaction (existing logic)
+      const transactionData = {
+        ...baseData,
+        is_recurring: formData.isRecurring,
+        recurring_date: formData.isRecurring ? parseInt(formData.recurringDate) : undefined,
+        is_installment: formData.isInstallment,
+        total_installments: formData.isInstallment ? parseInt(formData.totalInstallments) : undefined,
+        installment_start_date: formData.isInstallment ? formData.installmentStartDate : undefined,
+      };
+
+      addTransactionMutation.mutate(transactionData, {
+        onSuccess: () => {
+          onClose();
+          resetForm();
+        },
+      });
+    }
   };
 
-  const isFormValid = amount && 
-    (!isRecurring || (isRecurring && recurringDate)) && 
-    (!isInstallment || (isInstallment && totalInstallments && installmentStartDate));
+  const resetForm = () => {
+    setFormData({
+      amount: '',
+      category: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      isRecurring: false,
+      recurringDate: '',
+      isInstallment: false,
+      totalInstallments: '',
+      installmentStartDate: '',
+      creditCardId: '',
+      isInstallmentCreditCard: false,
+      installmentBillingDate: '',
+      installmentCreditCardCount: '',
+    });
+    setActiveTab('despesa');
+  };
+
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const isFormValid = () => {
+    const baseValid = formData.amount && formData.category && formData.description;
+    
+    if (formData.creditCardId && formData.isInstallmentCreditCard) {
+      return baseValid && formData.installmentBillingDate && formData.installmentCreditCardCount;
+    }
+    
+    if (formData.isRecurring) {
+      return baseValid && formData.recurringDate;
+    }
+    
+    if (formData.isInstallment) {
+      return baseValid && formData.totalInstallments && formData.installmentStartDate;
+    }
+    
+    return baseValid;
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-auto p-0 rounded-xl max-h-[90vh] flex flex-col bg-white border-[#DEDEDE]">
-        {/* Fixed Header */}
-        <div className="p-6 pb-4 flex-shrink-0 border-b border-[#DEDEDE]">
-          <h2 className="text-2xl font-semibold text-gray-900">
-            Nova Transação
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Adicione uma nova receita ou despesa
-          </p>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nova Transação</DialogTitle>
+        </DialogHeader>
 
-        {/* Scrollable Content */}
-        <ScrollArea className="flex-1 overflow-auto">
-          <div className="p-6 space-y-6">
-            {/* Type Tabs */}
-            <Tabs value={type} onValueChange={value => setType(value as 'receita' | 'despesa')}>
-              <TabsList className="grid w-full grid-cols-2 h-11">
-                <TabsTrigger 
-                  value="despesa" 
-                  className="data-[state=active]:bg-red-100 data-[state=active]:text-red-700 data-[state=inactive]:border data-[state=inactive]:border-[#DEDEDE] h-9"
-                >
-                  Despesa
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="receita" 
-                  className="data-[state=active]:bg-green-100 data-[state=active]:text-green-700 data-[state=inactive]:border data-[state=inactive]:border-[#DEDEDE] h-9"
-                >
-                  Receita
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="despesa" className="mt-4" />
-              <TabsContent value="receita" className="mt-4" />
-            </Tabs>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'receita' | 'despesa')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="receita" className="text-green-600 data-[state=active]:bg-green-50">
+                Receita
+              </TabsTrigger>
+              <TabsTrigger value="despesa" className="text-red-600 data-[state=active]:bg-red-50">
+                Despesa
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Form Fields */}
-            <div className="space-y-5">
-              {/* Amount */}
+            <TabsContent value="receita" className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="amount" className="text-sm font-medium">Valor *</Label>
-                <CurrencyInput
+                <Label htmlFor="amount">Valor *</Label>
+                <Input
                   id="amount"
-                  value={amount}
-                  onChange={setAmount}
-                  autoFocus
-                  className="h-10"
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => handleInputChange('amount', e.target.value)}
+                  placeholder="0,00"
+                  required
                 />
               </div>
 
-              {/* Date */}
+              <CategoryDropdown
+                value={formData.category}
+                onChange={(value) => handleInputChange('category', value)}
+              />
+
               <div className="space-y-2">
-                <Label className="text-sm font-medium block">Data da transação</Label>
-                <DatePicker
-                  date={date}
-                  onDateChange={(newDate) => setDate(newDate || new Date())}
-                  placeholder="Selecionar data"
-                  className="h-10 w-full"
+                <Label htmlFor="description">Descrição *</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Descrição da receita"
+                  required
                 />
               </div>
 
-              {/* Category */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Categoria</Label>
-                <CategoryDropdown 
-                  value={category} 
-                  onChange={setCategory}
-                  onCategoryAdded={handleCategoryAdded}
+                <Label htmlFor="date">Data *</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  required
                 />
               </div>
 
-              {/* Description */}
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="recurring"
+                  checked={formData.isRecurring}
+                  onCheckedChange={(checked) => handleInputChange('isRecurring', checked)}
+                />
+                <Label htmlFor="recurring">Receita recorrente</Label>
+              </div>
+
+              {formData.isRecurring && (
+                <div className="space-y-2">
+                  <Label htmlFor="recurring-date">Dia do mês para recorrência</Label>
+                  <Input
+                    id="recurring-date"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.recurringDate}
+                    onChange={(e) => handleInputChange('recurringDate', e.target.value)}
+                    placeholder="Ex: 15"
+                  />
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="despesa" className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">Descrição</Label>
-                <Input 
-                  id="description" 
-                  placeholder="Descrição da transação" 
-                  value={description} 
-                  onChange={e => setDescription(e.target.value)} 
-                  className="h-10"
-                  style={{ fontSize: '16px' }}
+                <Label htmlFor="amount">Valor *</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => handleInputChange('amount', e.target.value)}
+                  placeholder="0,00"
+                  required
                 />
               </div>
 
-              {/* Opções para Despesas */}
-              {type === 'despesa' && (
-                <div className="space-y-5 border-t border-[#DEDEDE] pt-5">
-                  <h3 className="text-sm font-medium text-gray-700">Opções Avançadas</h3>
-                  
-                  {/* Gasto Recorrente */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <Label htmlFor="recurring" className="text-sm font-medium">Gasto Recorrente</Label>
-                      <span className="text-xs text-gray-500">Repetir mensalmente</span>
-                    </div>
-                    <IOSSwitch 
-                      id="recurring" 
-                      checked={isRecurring} 
-                      onCheckedChange={setIsRecurring} 
+              <CategoryDropdown
+                value={formData.category}
+                onChange={(value) => handleInputChange('category', value)}
+              />
+
+              <CreditCardSection
+                selectedCardId={formData.creditCardId}
+                onCardChange={(cardId) => handleInputChange('creditCardId', cardId)}
+                isInstallment={formData.isInstallmentCreditCard}
+                onInstallmentChange={(isInstallment) => handleInputChange('isInstallmentCreditCard', isInstallment)}
+                installmentDate={formData.installmentBillingDate}
+                onInstallmentDateChange={(date) => handleInputChange('installmentBillingDate', date)}
+                installmentCount={formData.installmentCreditCardCount}
+                onInstallmentCountChange={(count) => handleInputChange('installmentCreditCardCount', count)}
+                transactionAmount={parseFloat(formData.amount) || 0}
+              />
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição *</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Descrição da despesa"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date">Data *</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  required
+                />
+              </div>
+
+              {!formData.creditCardId && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="recurring"
+                      checked={formData.isRecurring}
+                      onCheckedChange={(checked) => handleInputChange('isRecurring', checked)}
                     />
+                    <Label htmlFor="recurring">Despesa recorrente</Label>
                   </div>
 
-                  {isRecurring && (
-                    <div className="space-y-2 pl-4 border-l-2 border-green-200">
-                      <Label htmlFor="recurringDate" className="text-sm font-medium">Dia da cobrança mensal</Label>
-                      <Input 
-                        id="recurringDate" 
-                        type="number" 
-                        min="1" 
-                        max="31" 
-                        placeholder="Dia (1-31)" 
-                        value={recurringDate} 
-                        onChange={e => setRecurringDate(e.target.value)} 
-                        className="h-10"
-                        style={{ fontSize: '16px' }}
+                  {formData.isRecurring && (
+                    <div className="space-y-2">
+                      <Label htmlFor="recurring-date">Dia do mês para recorrência</Label>
+                      <Input
+                        id="recurring-date"
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={formData.recurringDate}
+                        onChange={(e) => handleInputChange('recurringDate', e.target.value)}
+                        placeholder="Ex: 15"
                       />
                     </div>
                   )}
 
-                  {/* Despesa Parcelada */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <Label htmlFor="installment" className="text-sm font-medium">Despesa Parcelada</Label>
-                      <span className="text-xs text-gray-500">Dividir em parcelas</span>
-                    </div>
-                    <IOSSwitch 
-                      id="installment" 
-                      checked={isInstallment} 
-                      onCheckedChange={setIsInstallment} 
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="installment"
+                      checked={formData.isInstallment}
+                      onCheckedChange={(checked) => handleInputChange('isInstallment', checked)}
                     />
+                    <Label htmlFor="installment">Despesa parcelada</Label>
                   </div>
 
-                  {isInstallment && (
-                    <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                  {formData.isInstallment && (
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="installmentStartDate" className="text-sm font-medium">Data de início</Label>
-                        <Input 
-                          id="installmentStartDate" 
-                          type="date" 
-                          value={installmentStartDate} 
-                          onChange={e => setInstallmentStartDate(e.target.value)} 
-                          className="h-10"
-                          style={{ fontSize: '16px' }}
+                        <Label htmlFor="installment-start">Data de início</Label>
+                        <Input
+                          id="installment-start"
+                          type="date"
+                          value={formData.installmentStartDate}
+                          onChange={(e) => handleInputChange('installmentStartDate', e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="totalInstallments" className="text-sm font-medium">Número de parcelas</Label>
-                        <Input 
-                          id="totalInstallments" 
-                          type="number" 
-                          min="2" 
-                          placeholder="Ex: 12" 
-                          value={totalInstallments} 
-                          onChange={e => setTotalInstallments(e.target.value)} 
-                          className="h-10"
-                          style={{ fontSize: '16px' }}
+                        <Label htmlFor="installments">Número de parcelas</Label>
+                        <Input
+                          id="installments"
+                          type="number"
+                          min="2"
+                          value={formData.totalInstallments}
+                          onChange={(e) => handleInputChange('totalInstallments', e.target.value)}
+                          placeholder="Ex: 12"
                         />
                       </div>
                     </div>
                   )}
-                </div>
+                </>
               )}
-            </div>
-          </div>
-        </ScrollArea>
+            </TabsContent>
+          </Tabs>
 
-        {/* Fixed Action Button */}
-        <div className="p-6 pt-4 flex-shrink-0 border-t border-[#DEDEDE]">
-          <Button 
-            onClick={handleSave} 
-            disabled={!isFormValid || addTransaction.isPending} 
-            className="w-full h-12 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]" 
-            style={{
-              backgroundColor: '#61710C',
-              color: '#CFF500',
-              border: 'none'
-            }}
-          >
-            {addTransaction.isPending ? 'Salvando...' : 'Salvar Transação'}
-          </Button>
-        </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={!isFormValid() || addTransactionMutation.isPending}
+            >
+              {addTransactionMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
