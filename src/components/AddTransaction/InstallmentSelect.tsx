@@ -1,6 +1,5 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/utils";
 
 interface InstallmentSelectProps {
   value: string;
