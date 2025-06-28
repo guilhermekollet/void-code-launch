@@ -1,8 +1,10 @@
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuickStats } from "@/components/Dashboard/QuickStats";
 import { TransactionChart } from "@/components/Dashboard/TransactionChart";
 import { CategoryChart } from "@/components/Dashboard/CategoryChart";
 import { RecentTransactions } from "@/components/Dashboard/RecentTransactions";
+import { CreditCardsSection } from "@/components/Dashboard/CreditCardsSection";
 import { useFinancialMetrics, useTransactions } from "@/hooks/useFinancialData";
 
 export default function Dashboard() {
@@ -47,6 +49,9 @@ export default function Dashboard() {
         monthlyRecurringExpenses={monthlyRecurringExpenses}
         formatCurrency={formatCurrency}
       />
+
+      {/* Credit Cards Section */}
+      <CreditCardsSection />
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

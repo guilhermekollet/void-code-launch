@@ -141,6 +141,53 @@ export type Database = {
           },
         ]
       }
+      credit_cards: {
+        Row: {
+          bank_name: string
+          card_name: string | null
+          card_type: string
+          close_date: number | null
+          color: string
+          created_at: string
+          due_date: number
+          id: number
+          updated_at: string
+          user_id: number
+        }
+        Insert: {
+          bank_name: string
+          card_name?: string | null
+          card_type?: string
+          close_date?: number | null
+          color?: string
+          created_at?: string
+          due_date: number
+          id?: number
+          updated_at?: string
+          user_id: number
+        }
+        Update: {
+          bank_name?: string
+          card_name?: string | null
+          card_type?: string
+          close_date?: number | null
+          color?: string
+          created_at?: string
+          due_date?: number
+          id?: number
+          updated_at?: string
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_cards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           id: number
@@ -234,10 +281,13 @@ export type Database = {
           amount: number
           category: string
           created_at: string
+          credit_card_id: number | null
           description: string
           id: number
+          installment_billing_date: string | null
           installment_number: number | null
           installment_start_date: string | null
+          is_credit_card_expense: boolean | null
           is_installment: boolean | null
           is_recurring: boolean | null
           parent_transaction_id: number | null
@@ -251,10 +301,13 @@ export type Database = {
           amount: number
           category: string
           created_at?: string
+          credit_card_id?: number | null
           description: string
           id?: number
+          installment_billing_date?: string | null
           installment_number?: number | null
           installment_start_date?: string | null
+          is_credit_card_expense?: boolean | null
           is_installment?: boolean | null
           is_recurring?: boolean | null
           parent_transaction_id?: number | null
@@ -268,10 +321,13 @@ export type Database = {
           amount?: number
           category?: string
           created_at?: string
+          credit_card_id?: number | null
           description?: string
           id?: number
+          installment_billing_date?: string | null
           installment_number?: number | null
           installment_start_date?: string | null
+          is_credit_card_expense?: boolean | null
           is_installment?: boolean | null
           is_recurring?: boolean | null
           parent_transaction_id?: number | null
@@ -282,6 +338,13 @@ export type Database = {
           user_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_user_id_users_id_fk"
             columns: ["user_id"]
