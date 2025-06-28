@@ -44,7 +44,7 @@ export function useCreditCards() {
         return [];
       }
 
-      return data || [];
+      return (data || []) as CreditCard[];
     },
     enabled: !!user,
   });
