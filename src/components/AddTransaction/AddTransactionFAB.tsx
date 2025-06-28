@@ -29,8 +29,8 @@ export function AddTransactionFAB() {
       </Button>
 
       <AddTransactionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
       />
     </>
   );

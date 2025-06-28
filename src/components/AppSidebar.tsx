@@ -1,153 +1,60 @@
 
-import React from "react";
-import {
-  Home,
-  Receipt,
-  BarChart3,
-  RotateCcw,
-  Settings,
-  LogOut,
-  CreditCard,
-} from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/contexts/AuthContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useSubscription } from "@/hooks/useSubscription";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import { BarChart3, CreditCard, Settings, Home, Repeat } from "lucide-react";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user, signOut } = useAuth();
-  const { data: userProfile } = useUserProfile();
-  const { data: subscription } = useSubscription();
+const items = [{
+  title: "Dashboard",
+  url: "/",
+  icon: Home
+}, {
+  title: "Transações",
+  url: "/transacoes",
+  icon: CreditCard
+}, {
+  title: "Recorrentes",
+  url: "/recorrentes",
+  icon: Repeat
+}, {
+  title: "Relatórios",
+  url: "/relatorios",
+  icon: BarChart3
+}, {
+  title: "Configurações",
+  url: "/configuracoes",
+  icon: Settings
+}];
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Error during sign out:', error);
-    }
-  };
-
-  const handleNavigation = (url: string) => {
-    navigate(url);
-  };
-
-  const isPremiumUser = subscription?.status === 'active' || subscription?.status === 'trialing';
-
-  const menuItems = [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: Home,
-    },
-    {
-      title: "Transações",
-      url: "/transacoes",
-      icon: Receipt,
-    },
-    {
-      title: "Cartões",
-      url: "/cartoes",
-      icon: CreditCard,
-    },
-    {
-      title: "Recorrentes",
-      url: "/recorrentes",
-      icon: RotateCcw,
-    },
-    {
-      title: "Relatórios",
-      url: "/relatorios",
-      icon: BarChart3,
-    },
-  ];
-
-  return (
-    <Sidebar {...props}>
-      <SidebarHeader>
-        <div className="flex items-center justify-center py-4 border-b border-gray-200">
-          <Avatar className="w-16 h-16">
-            <AvatarImage src={user?.user_metadata?.avatar_url as string} />
-            <AvatarFallback>{userProfile?.name?.charAt(0).toUpperCase() || '??'}</AvatarFallback>
-          </Avatar>
+export function AppSidebar() {
+  return <Sidebar className="border-r bg-white" style={{
+    borderColor: '#DEDEDE'
+  }}>
+      <SidebarHeader className="p-6 bg-white">
+        <div className="flex items-center gap-3">
+          <img src="/lovable-uploads/549233e8-56e8-49c8-b3d7-3393077d8256.png" alt="Bolsofy Logo" className="h-10 w-auto" />
         </div>
       </SidebarHeader>
-
-      <SidebarContent>
+      <SidebarContent className="bg-white">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => handleNavigation(item.url)}
-                    isActive={location.pathname === item.url}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
+            <SidebarMenu style={{
+            gap: '10px'
+          }}>
+              {items.map(item => <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild size="lg" className="h-14">
+                    <a href={item.url} className="flex items-center gap-4 text-[#121212] bg-white hover:bg-[#F6F6F6] py-4 text-base font-medium px-[16px]">
+                      <item.icon className="h-7 w-7 text-[#121212]" />
+                      <span>{item.title}</span>
+                    </a>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation("/configuracoes")}
-                  isActive={location.pathname === "/configuracoes"}
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>Configurações</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4" />
-                  <span>Sair</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                </SidebarMenuItem>)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      {!isPremiumUser && (
-        <SidebarFooter>
-          <div className="p-4 bg-yellow-50 rounded-md">
-            <p className="text-sm text-yellow-800 mb-2">
-              Desbloqueie recursos premium e tenha uma experiência completa!
-            </p>
-            <Button
-              onClick={() => handleNavigation("/assinatura")}
-              variant="outline"
-              size="sm"
-              className="w-full text-blue-500 hover:text-blue-700"
-            >
-              Assinar
-            </Button>
-          </div>
-        </SidebarFooter>
-      )}
-    </Sidebar>
-  );
+      <SidebarFooter className="p-6 bg-white">
+        <div className="text-sm text-[#64748B]">
+          ©2025 Bolsofy
+        </div>
+      </SidebarFooter>
+    </Sidebar>;
 }
