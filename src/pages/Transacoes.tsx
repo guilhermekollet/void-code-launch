@@ -22,6 +22,8 @@ interface Transaction {
   is_installment?: boolean;
   installment_number?: number;
   total_installments?: number;
+  credit_card_id?: number;
+  is_credit_card_expense?: boolean;
 }
 
 export default function Transacoes() {
@@ -33,6 +35,7 @@ export default function Transacoes() {
   const [filters, setFilters] = useState({
     type: 'all',
     category: 'all',
+    creditCard: 'all',
     search: '',
     startDate: undefined as Date | undefined,
     endDate: undefined as Date | undefined,
@@ -71,6 +74,18 @@ export default function Transacoes() {
       // Filter by category
       if (filters.category !== 'all' && transaction.category !== filters.category) {
         return false;
+      }
+
+      // Filter by credit card
+      if (filters.creditCard !== 'all') {
+        if (filters.creditCard === 'none') {
+          // Show only transactions without credit card
+          if (transaction.credit_card_id || transaction.is_credit_card_expense) return false;
+        } else {
+          // Show only transactions with specific credit card
+          const creditCardId = parseInt(filters.creditCard);
+          if (transaction.credit_card_id !== creditCardId) return false;
+        }
       }
 
       // Filter by search
@@ -125,6 +140,7 @@ export default function Transacoes() {
     setFilters({
       type: 'all',
       category: 'all',
+      creditCard: 'all',
       search: '',
       startDate: undefined,
       endDate: undefined,

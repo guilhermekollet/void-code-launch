@@ -8,9 +8,10 @@ interface ChartDisplayProps {
   displayData: ChartDataPoint[];
   visibleLines: VisibleLines;
   futureStartIndex: number;
+  onPointClick?: (month: string) => void;
 }
 
-export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: ChartDisplayProps) {
+export function ChartDisplay({ displayData, visibleLines, futureStartIndex, onPointClick }: ChartDisplayProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -18,12 +19,18 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
     }).format(value);
   };
 
+  const handleClick = (data: any) => {
+    if (data && data.activeLabel && onPointClick) {
+      onPointClick(data.activeLabel);
+    }
+  };
+
   return (
     <div className="h-full p-4">
       <Card className="h-full border-[#E2E8F0]">
         <CardContent className="p-4 h-full relative">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={displayData}>
+            <LineChart data={displayData} onClick={handleClick}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               
               {/* Background differentiation for future data */}
@@ -67,7 +74,7 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
                 ]}
                 labelFormatter={(label) => {
                   const dataPoint = displayData.find(d => d.mes === label);
-                  return `${label}${dataPoint?.isFuture ? ' (Projeção)' : ''}`;
+                  return `${label}${dataPoint?.isFuture ? ' (Projeção)' : ''} - Clique para ver detalhes`;
                 }}
               />
               
@@ -86,10 +93,11 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
                         fill={payload.isFuture ? "#61710C80" : "#61710C"}
                         strokeWidth={2}
                         r={4}
+                        style={{ cursor: 'pointer' }}
                       />
                     );
                   }}
-                  activeDot={{ r: 6, fill: '#61710C' }}
+                  activeDot={{ r: 6, fill: '#61710C', cursor: 'pointer' }}
                 />
               )}
               
@@ -108,10 +116,11 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
                         fill={payload.isFuture ? "#EF444480" : "#EF4444"}
                         strokeWidth={2}
                         r={4}
+                        style={{ cursor: 'pointer' }}
                       />
                     );
                   }}
-                  activeDot={{ r: 6, fill: '#EF4444' }}
+                  activeDot={{ r: 6, fill: '#EF4444', cursor: 'pointer' }}
                 />
               )}
               
@@ -131,10 +140,11 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
                         fill={payload.isFuture ? "#3B82F680" : "#3B82F6"}
                         strokeWidth={2}
                         r={3}
+                        style={{ cursor: 'pointer' }}
                       />
                     );
                   }}
-                  activeDot={{ r: 5, fill: '#3B82F6' }}
+                  activeDot={{ r: 5, fill: '#3B82F6', cursor: 'pointer' }}
                 />
               )}
               
@@ -153,10 +163,11 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
                         fill={payload.isFuture ? "#8B5CF680" : "#8B5CF6"}
                         strokeWidth={2}
                         r={4}
+                        style={{ cursor: 'pointer' }}
                       />
                     );
                   }}
-                  activeDot={{ r: 6, fill: '#8B5CF6' }}
+                  activeDot={{ r: 6, fill: '#8B5CF6', cursor: 'pointer' }}
                 />
               )}
             </LineChart>
@@ -171,6 +182,13 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex }: Ch
               </div>
             </div>
           )}
+
+          {/* Click instruction */}
+          <div className="absolute bottom-4 right-4 bg-white border border-[#E2E8F0] rounded-lg p-2 shadow-sm">
+            <div className="flex items-center gap-2 text-xs text-[#64748B]">
+              <span>💡 Clique nos pontos para ver detalhes</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

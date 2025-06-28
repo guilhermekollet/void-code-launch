@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { FullscreenChartProps, VisibleLines, ZoomDomain } from './FullscreenChar
 import { useFullscreenChartData } from './FullscreenChart/hooks/useChartData';
 import { ChartControls } from './FullscreenChart/components/ChartControls';
 import { ChartDisplay } from './FullscreenChart/components/ChartDisplay';
+import { TransactionsSidebar } from './FullscreenChart/components/TransactionsSidebar';
 
 export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
   const [period, setPeriod] = useState('6');
@@ -18,6 +20,8 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     gastosRecorrentes: true,
     fluxoLiquido: true
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('');
 
   const chartData = useFullscreenChartData(period, showFuture);
 
@@ -58,7 +62,11 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      onClose();
+      if (sidebarOpen) {
+        setSidebarOpen(false);
+      } else {
+        onClose();
+      }
     }
   };
 
@@ -67,7 +75,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen]);
+  }, [isOpen, sidebarOpen]);
 
   const showScrollControls = showFuture && chartData.length > 12;
   const canScrollLeft = scrollPosition > 0;
@@ -120,61 +128,81 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     }));
   };
 
+  const handlePointClick = (month: string) => {
+    setSelectedMonth(month);
+    setSidebarOpen(true);
+  };
+
+  const handleCloseSidebar = () => {
+    setSidebarOpen(false);
+    setSelectedMonth('');
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-full max-h-full w-screen h-screen p-0 gap-0" hideCloseButton>
-        <div className="flex flex-col h-full bg-white">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0] flex-shrink-0">
-            <div className="flex items-center gap-4">
-              <h2 className="text-2xl font-semibold text-[#121212]">Fluxo Financeiro</h2>
-              {showFuture && !hasFutureData && (
-                <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
-                  Nenhuma transação futura encontrada
-                </div>
-              )}
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-full max-h-full w-screen h-screen p-0 gap-0" hideCloseButton>
+          <div className="flex flex-col h-full bg-white">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0] flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <h2 className="text-2xl font-semibold text-[#121212]">Fluxo Financeiro</h2>
+                {showFuture && !hasFutureData && (
+                  <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+                    Nenhuma transação futura encontrada
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
 
-          {/* Controls */}
-          <div className="flex-shrink-0">
-            <ChartControls
-              period={period}
-              setPeriod={setPeriod}
-              showFuture={showFuture}
-              setShowFuture={setShowFuture}
-              scrollPosition={scrollPosition}
-              scrollLeft={scrollLeft}
-              scrollRight={scrollRight}
-              canScrollLeft={canScrollLeft}
-              canScrollRight={canScrollRight}
-              showScrollControls={showScrollControls}
-              handleZoomIn={handleZoomIn}
-              handleZoomOut={handleZoomOut}
-              resetZoom={resetZoom}
-              visibleLines={visibleLines}
-              toggleLine={toggleLine}
-            />
-          </div>
+            {/* Controls */}
+            <div className="flex-shrink-0">
+              <ChartControls
+                period={period}
+                setPeriod={setPeriod}
+                showFuture={showFuture}
+                setShowFuture={setShowFuture}
+                scrollPosition={scrollPosition}
+                scrollLeft={scrollLeft}
+                scrollRight={scrollRight}
+                canScrollLeft={canScrollLeft}
+                canScrollRight={canScrollRight}
+                showScrollControls={showScrollControls}
+                handleZoomIn={handleZoomIn}
+                handleZoomOut={handleZoomOut}
+                resetZoom={resetZoom}
+                visibleLines={visibleLines}
+                toggleLine={toggleLine}
+              />
+            </div>
 
-          {/* Chart - takes remaining height */}
-          <div className="flex-1 min-h-0">
-            <ChartDisplay
-              displayData={displayData}
-              visibleLines={visibleLines}
-              futureStartIndex={futureStartIndex}
-            />
+            {/* Chart - takes remaining height */}
+            <div className="flex-1 min-h-0">
+              <ChartDisplay
+                displayData={displayData}
+                visibleLines={visibleLines}
+                futureStartIndex={futureStartIndex}
+                onPointClick={handlePointClick}
+              />
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transactions Sidebar */}
+      <TransactionsSidebar
+        isOpen={sidebarOpen}
+        onClose={handleCloseSidebar}
+        selectedMonth={selectedMonth}
+      />
+    </>
   );
 }

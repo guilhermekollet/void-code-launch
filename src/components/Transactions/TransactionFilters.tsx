@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useCategories } from "@/hooks/useCategories";
+import { useCreditCards } from "@/hooks/useCreditCards";
 import { X } from "lucide-react";
 
 interface TransactionFiltersProps {
   filters: {
     type: string;
     category: string;
+    creditCard: string;
     search: string;
     startDate?: Date;
     endDate?: Date;
@@ -21,8 +23,9 @@ interface TransactionFiltersProps {
 
 export function TransactionFilters({ filters, onFiltersChange, onClearFilters }: TransactionFiltersProps) {
   const { data: categories = [] } = useCategories();
+  const { data: creditCards = [] } = useCreditCards();
 
-  const hasActiveFilters = filters.type || filters.category || filters.search || filters.startDate || filters.endDate;
+  const hasActiveFilters = filters.type || filters.category || filters.creditCard || filters.search || filters.startDate || filters.endDate;
 
   return (
     <div className="bg-white rounded-lg border border-[#E2E8F0] p-6 space-y-4">
@@ -79,6 +82,30 @@ export function TransactionFilters({ filters, onFiltersChange, onClearFilters }:
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.name}>
                   {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Cartão de Crédito</label>
+          <Select value={filters.creditCard} onValueChange={(value) => onFiltersChange({ ...filters, creditCard: value })}>
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="Todos os cartões" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border border-[#DEDEDE] shadow-lg z-50">
+              <SelectItem value="all">Todos os cartões</SelectItem>
+              <SelectItem value="none">Sem cartão</SelectItem>
+              {creditCards.map((card) => (
+                <SelectItem key={card.id} value={card.id.toString()}>
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded"
+                      style={{ backgroundColor: card.color }}
+                    />
+                    {card.card_name || card.bank_name} - {card.bank_name}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

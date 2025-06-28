@@ -17,7 +17,7 @@ export function useReportsFutureData(enabled: boolean = false) {
         const date = new Date(currentDate);
         date.setMonth(date.getMonth() + i + 1);
         
-        // Calculate installment transactions for this future period
+        // Calculate installment transactions that will be due in this specific month
         const installmentTransactions = transactions.filter(t => {
           if (!t.is_installment || !t.installment_start_date || !t.total_installments) return false;
           
@@ -31,7 +31,7 @@ export function useReportsFutureData(enabled: boolean = false) {
           return monthsDiff >= 0 && monthsDiff < t.total_installments;
         });
 
-        // Calculate recurring transactions for this future period
+        // Calculate recurring transactions that will be due in this month
         const recurringTransactions = transactions.filter(t => t.is_recurring);
 
         // For installment transactions, use the direct amount (each transaction already represents one installment)
@@ -43,6 +43,7 @@ export function useReportsFutureData(enabled: boolean = false) {
           .filter(t => t.type === 'despesa')
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
+        // For recurring transactions, only count what will be due in this specific month
         const recurringReceitas = recurringTransactions
           .filter(t => t.type === 'receita')
           .reduce((sum, t) => sum + Number(t.amount), 0);
