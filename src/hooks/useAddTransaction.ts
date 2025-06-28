@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +15,10 @@ interface TransactionData {
   is_installment?: boolean;
   total_installments?: number;
   installment_start_date?: string;
+  is_credit_card_expense?: boolean;
+  credit_card_id?: number;
+  installments?: number;
+  installment_value?: number;
 }
 
 export function useAddTransaction() {
@@ -34,8 +39,8 @@ export function useAddTransaction() {
 
       if (!userData) throw new Error('User not found');
 
-      // Se for despesa parcelada, criar múltiplas transações
-      if (transactionData.is_installment && transactionData.total_installments && transactionData.installment_start_date) {
+      // Se for despesa parcelada (não cartão), criar múltiplas transações
+      if (transactionData.is_installment && transactionData.total_installments && transactionData.installment_start_date && !transactionData.is_credit_card_expense) {
         const installmentAmount = transactionData.amount / transactionData.total_installments;
         const transactions = [];
         
@@ -70,7 +75,7 @@ export function useAddTransaction() {
         
         return transactions;
       } else {
-        // Transação única (normal ou recorrente)
+        // Transação única (normal, recorrente ou cartão de crédito)
         const { data, error } = await supabase
           .from('transactions')
           .insert({
@@ -82,6 +87,10 @@ export function useAddTransaction() {
             tx_date: transactionData.tx_date,
             is_recurring: transactionData.is_recurring || false,
             recurring_date: transactionData.recurring_date,
+            is_credit_card_expense: transactionData.is_credit_card_expense || false,
+            credit_card_id: transactionData.credit_card_id,
+            installments: transactionData.installments || 1,
+            installment_value: transactionData.installment_value,
           })
           .select()
           .single();
@@ -97,6 +106,7 @@ export function useAddTransaction() {
     onSuccess: () => {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
       toast({
         title: "Sucesso",
         description: "Transação adicionada com sucesso!",

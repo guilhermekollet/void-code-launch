@@ -4,6 +4,7 @@ import { QuickStats } from "@/components/Dashboard/QuickStats";
 import { TransactionChart } from "@/components/Dashboard/TransactionChart";
 import { CategoryChart } from "@/components/Dashboard/CategoryChart";
 import { RecentTransactions } from "@/components/Dashboard/RecentTransactions";
+import { CreditCardBillsSection } from "@/components/Dashboard/CreditCardBillsSection";
 import { useFinancialMetrics, useTransactions } from "@/hooks/useFinancialData";
 
 export default function Dashboard() {
@@ -48,6 +49,9 @@ export default function Dashboard() {
         monthlyRecurringExpenses={monthlyRecurringExpenses}
         formatCurrency={formatCurrency}
       />
+
+      {/* Credit Card Bills Section */}
+      <CreditCardBillsSection />
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

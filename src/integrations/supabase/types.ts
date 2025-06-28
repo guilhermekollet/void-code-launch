@@ -141,6 +141,60 @@ export type Database = {
           },
         ]
       }
+      credit_card_bills: {
+        Row: {
+          bill_amount: number
+          created_at: string
+          credit_card_id: number
+          due_date: string
+          id: number
+          paid_amount: number
+          remaining_amount: number
+          status: string
+          updated_at: string
+          user_id: number
+        }
+        Insert: {
+          bill_amount?: number
+          created_at?: string
+          credit_card_id: number
+          due_date: string
+          id?: number
+          paid_amount?: number
+          remaining_amount?: number
+          status?: string
+          updated_at?: string
+          user_id: number
+        }
+        Update: {
+          bill_amount?: number
+          created_at?: string
+          credit_card_id?: number
+          due_date?: string
+          id?: number
+          paid_amount?: number
+          remaining_amount?: number
+          status?: string
+          updated_at?: string
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_bills_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_card_bills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_cards: {
         Row: {
           bank_name: string
@@ -287,6 +341,8 @@ export type Database = {
           installment_billing_date: string | null
           installment_number: number | null
           installment_start_date: string | null
+          installment_value: number | null
+          installments: number | null
           is_credit_card_expense: boolean | null
           is_installment: boolean | null
           is_recurring: boolean | null
@@ -307,6 +363,8 @@ export type Database = {
           installment_billing_date?: string | null
           installment_number?: number | null
           installment_start_date?: string | null
+          installment_value?: number | null
+          installments?: number | null
           is_credit_card_expense?: boolean | null
           is_installment?: boolean | null
           is_recurring?: boolean | null
@@ -327,6 +385,8 @@ export type Database = {
           installment_billing_date?: string | null
           installment_number?: number | null
           installment_start_date?: string | null
+          installment_value?: number | null
+          installments?: number | null
           is_credit_card_expense?: boolean | null
           is_installment?: boolean | null
           is_recurring?: boolean | null
@@ -360,6 +420,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: number
+          last_used_credit_card_id: number | null
           name: string | null
           phone_number: string
           plan_type: string | null
@@ -370,6 +431,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: number
+          last_used_credit_card_id?: number | null
           name?: string | null
           phone_number: string
           plan_type?: string | null
@@ -380,12 +442,21 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: number
+          last_used_credit_card_id?: number | null
           name?: string | null
           phone_number?: string
           plan_type?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_last_used_credit_card_id_fkey"
+            columns: ["last_used_credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

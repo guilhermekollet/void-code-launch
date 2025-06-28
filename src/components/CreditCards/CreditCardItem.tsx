@@ -1,9 +1,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, CreditCard } from "lucide-react";
+import { Edit, Trash2, CreditCard, Eye } from "lucide-react";
 import { useCreditCardTransactions } from "@/hooks/useCreditCards";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { EditCreditCardModal } from "./EditCreditCardModal";
 import { DeleteCreditCardDialog } from "./DeleteCreditCardDialog";
 
@@ -36,6 +37,7 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { data: transactions = [] } = useCreditCardTransactions(card.id);
+  const navigate = useNavigate();
 
   const monthlySpent = transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   const cardName = card.card_name || card.bank_name;
@@ -47,6 +49,13 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  };
+
+  const handleViewTransactions = () => {
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    navigate(`/transacoes?cardId=${card.id}&month=${year}-${month}`);
   };
 
   return (
@@ -64,6 +73,15 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
             </span>
           </div>
           <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-black/10"
+              onClick={handleViewTransactions}
+              title="Ver transações"
+            >
+              <Eye className="h-4 w-4" style={{ color: textColor }} />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -108,6 +126,16 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
               {formatCurrency(monthlySpent)}
             </p>
           </div>
+
+          <Button
+            onClick={handleViewTransactions}
+            variant="outline"
+            size="sm"
+            className="w-full mt-2"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Ver Transações
+          </Button>
         </CardContent>
       </Card>
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -5,11 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CategoryDropdown } from "./CategoryDropdown";
+import { CreditCardDropdown } from "@/components/CreditCards/CreditCardDropdown";
+import { InstallmentSimulator } from "./InstallmentSimulator";
 import { useAddTransaction } from "@/hooks/useAddTransaction";
+import { useCreditCards } from "@/hooks/useCreditCards";
+import { useLastUsedCreditCard, useUpdateLastUsedCreditCard } from "@/hooks/useLastUsedCreditCard";
 
 interface AddTransactionModalProps {
   open: boolean;
@@ -31,7 +37,28 @@ export function AddTransactionModal({
   const [totalInstallments, setTotalInstallments] = useState('');
   const [installmentStartDate, setInstallmentStartDate] = useState('');
   
+  // Credit card related states
+  const [isCreditCardExpense, setIsCreditCardExpense] = useState(false);
+  const [selectedCreditCard, setSelectedCreditCard] = useState('');
+  const [creditCardInstallments, setCreditCardInstallments] = useState('1');
+  
   const addTransaction = useAddTransaction();
+  const { data: creditCards = [] } = useCreditCards();
+  const { data: lastUsedCard } = useLastUsedCreditCard();
+  const updateLastUsedCard = useUpdateLastUsedCreditCard();
+
+  // Auto-select credit card logic
+  useEffect(() => {
+    if (isCreditCardExpense && creditCards.length > 0) {
+      if (creditCards.length === 1) {
+        // If only one card, select it automatically
+        setSelectedCreditCard(creditCards[0].id.toString());
+      } else if (lastUsedCard && !selectedCreditCard) {
+        // If multiple cards and last used exists, select it
+        setSelectedCreditCard(lastUsedCard.id.toString());
+      }
+    }
+  }, [isCreditCardExpense, creditCards, lastUsedCard, selectedCreditCard]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -46,6 +73,9 @@ export function AddTransactionModal({
       setIsInstallment(false);
       setTotalInstallments('');
       setInstallmentStartDate('');
+      setIsCreditCardExpense(false);
+      setSelectedCreditCard('');
+      setCreditCardInstallments('1');
     }
   }, [open]);
 
@@ -61,10 +91,16 @@ export function AddTransactionModal({
       type,
       category: category || 'Outros',
       description: description || 'Sem descrição',
-      tx_date: date.toISOString()
+      tx_date: date.toISOString(),
+      ...(isCreditCardExpense && selectedCreditCard && {
+        is_credit_card_expense: true,
+        credit_card_id: parseInt(selectedCreditCard),
+        installments: parseInt(creditCardInstallments),
+        installment_value: parseFloat(amount) / parseInt(creditCardInstallments)
+      })
     };
 
-    // Criar o objeto final com todas as propriedades necessárias
+    // Create the final transaction object with all necessary properties
     const transactionData = {
       ...baseData,
       ...(type === 'despesa' && isRecurring && recurringDate && {
@@ -80,6 +116,10 @@ export function AddTransactionModal({
 
     addTransaction.mutate(transactionData, {
       onSuccess: () => {
+        // Update last used credit card
+        if (isCreditCardExpense && selectedCreditCard) {
+          updateLastUsedCard.mutate(parseInt(selectedCreditCard));
+        }
         onOpenChange(false);
       }
     });
@@ -87,7 +127,11 @@ export function AddTransactionModal({
 
   const isFormValid = amount && 
     (!isRecurring || (isRecurring && recurringDate)) && 
-    (!isInstallment || (isInstallment && totalInstallments && installmentStartDate));
+    (!isInstallment || (isInstallment && totalInstallments && installmentStartDate)) &&
+    (!isCreditCardExpense || (isCreditCardExpense && selectedCreditCard));
+
+  const parsedAmount = parseFloat(amount) || 0;
+  const installmentsNumber = parseInt(creditCardInstallments) || 1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,6 +183,58 @@ export function AddTransactionModal({
                 />
               </div>
 
+              {/* Credit Card Switch - only for expenses */}
+              {type === 'despesa' && (
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <Label htmlFor="credit-card" className="text-sm font-medium">Compra no cartão</Label>
+                    <span className="text-xs text-gray-500">Despesa feita no cartão de crédito</span>
+                  </div>
+                  <IOSSwitch 
+                    id="credit-card" 
+                    checked={isCreditCardExpense} 
+                    onCheckedChange={setIsCreditCardExpense} 
+                  />
+                </div>
+              )}
+
+              {/* Credit Card Selection */}
+              {type === 'despesa' && isCreditCardExpense && (
+                <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Cartão de crédito</Label>
+                    <CreditCardDropdown
+                      value={selectedCreditCard}
+                      onChange={setSelectedCreditCard}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Número de parcelas</Label>
+                    <Select value={creditCardInstallments} onValueChange={setCreditCardInstallments}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 18 }, (_, i) => i + 1).map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num}x
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Installment Simulator */}
+                  {parsedAmount > 0 && (
+                    <InstallmentSimulator 
+                      amount={parsedAmount} 
+                      installments={installmentsNumber} 
+                    />
+                  )}
+                </div>
+              )}
+
               {/* Date */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium block">Data da transação</Label>
@@ -173,12 +269,12 @@ export function AddTransactionModal({
                 />
               </div>
 
-              {/* Opções para Despesas */}
-              {type === 'despesa' && (
+              {/* Advanced Options for Expenses - only show if not credit card expense */}
+              {type === 'despesa' && !isCreditCardExpense && (
                 <div className="space-y-5 border-t border-[#DEDEDE] pt-5">
                   <h3 className="text-sm font-medium text-gray-700">Opções Avançadas</h3>
                   
-                  {/* Gasto Recorrente */}
+                  {/* Recurring Expense */}
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <Label htmlFor="recurring" className="text-sm font-medium">Gasto Recorrente</Label>
@@ -208,7 +304,7 @@ export function AddTransactionModal({
                     </div>
                   )}
 
-                  {/* Despesa Parcelada */}
+                  {/* Installment Expense */}
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <Label htmlFor="installment" className="text-sm font-medium">Despesa Parcelada</Label>
