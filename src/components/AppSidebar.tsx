@@ -1,6 +1,8 @@
 
-import { BarChart3, CreditCard, Settings, Home, Repeat } from "lucide-react";
+import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
+import confetti from 'canvas-confetti';
 
 const items = [{
   title: "Dashboard",
@@ -28,6 +30,24 @@ const items = [{
   icon: Settings
 }];
 
+const handleBetaClick = () => {
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#61710C', '#4a5709', '#92CB0B', '#A8E6CF'],
+    startVelocity: 30,
+    decay: 0.9,
+    gravity: 1,
+    drift: 0,
+    ticks: 200
+  });
+};
+
+const handleBolsofyIAClick = () => {
+  window.open('https://wa.me/5551995915520', '_blank');
+};
+
 export function AppSidebar() {
   return <Sidebar className="border-r bg-white" style={{
     borderColor: '#DEDEDE'
@@ -51,13 +71,35 @@ export function AppSidebar() {
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
+              
+              {/* Bolsofy IA Button */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild size="lg" className="h-14">
+                  <button 
+                    onClick={handleBolsofyIAClick}
+                    className="flex items-center gap-4 text-[#121212] bg-white hover:bg-[#F6F6F6] py-4 text-base font-medium px-[16px] w-full"
+                  >
+                    <MessageCircle className="h-7 w-7 text-[#121212]" />
+                    <span>Bolsofy IA</span>
+                  </button>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-6 bg-white">
-        <div className="text-sm text-[#64748B]">
-          ©2025 Bolsofy
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-[#64748B]">
+            ©2025 Bolsofy
+          </div>
+          <Badge 
+            variant="outline" 
+            className="bg-transparent border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white cursor-pointer transition-colors"
+            onClick={handleBetaClick}
+          >
+            beta
+          </Badge>
         </div>
       </SidebarFooter>
     </Sidebar>;

@@ -111,9 +111,10 @@ export default function Register() {
       if (data.user) {
         toast({
           title: "Cadastro realizado!",
-          description: "Sua conta foi criada com sucesso. Fazendo login..."
+          description: "Conta criada com sucesso. Verifique seu email para confirmar."
         });
-        navigate('/', { replace: true });
+        // Redirect to email confirmation page instead of dashboard
+        navigate('/confirm-email', { replace: true });
       }
     } catch (error) {
       toast({
