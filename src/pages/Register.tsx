@@ -4,15 +4,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeClosed } from 'lucide-react';
+
 export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    phone: '+55',
     password: '',
     confirmPassword: ''
   });
@@ -37,6 +39,12 @@ export default function Register() {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
+    });
+  };
+  const handlePhoneChange = (phone: string) => {
+    setFormData({
+      ...formData,
+      phone: phone
     });
   };
   const handleRegister = async (e: React.FormEvent) => {
@@ -125,7 +133,12 @@ export default function Register() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-[#121212]">Telefone</Label>
-              <Input id="phone" name="phone" type="tel" placeholder="(11) 99999-9999" value={formData.phone} onChange={handleChange} required className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" />
+              <PhoneInput
+                id="phone"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-[#121212]">Senha</Label>
