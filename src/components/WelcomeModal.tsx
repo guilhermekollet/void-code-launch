@@ -30,7 +30,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
             Bem-vindo ao Bolsofy! 🎉
           </DialogTitle>
           <DialogDescription className="text-center text-[#64748B] mt-2">
-            Para te ajudar a começar da melhor forma, que tal conversar com nosso agente inteligente?
+            Para facilitar seu controle financeiro, fixe no seu WhatsApp nosso agente de IA
           </DialogDescription>
         </DialogHeader>
         
@@ -43,17 +43,16 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
               <h3 className="font-semibold text-[#121212]">Bolsofy IA</h3>
             </div>
             <p className="text-sm text-[#64748B]">
-              Nosso assistente inteligente pode te ajudar com dúvidas sobre o app, 
-              dicas de organização financeira e muito mais!
+              Nosso assistente inteligente permite registrar despesas e receitas através de mensagens, áudios e fotos. Experimente!
             </p>
           </div>
           
           <div className="flex space-x-3">
             <Button
               onClick={handleContactIA}
-              className="flex-1 bg-[#61710C] hover:bg-[#4a5709] text-white"
+              className="flex-1 bg-[#61710C] hover:bg-[#4a5709] text-[#CFF500]"
             >
-              <MessageCircle className="h-4 w-4 mr-2" />
+              <MessageCircle className="h-4 w-4 mr-2 text-[#CFF500]" />
               Falar com Bolsofy IA
             </Button>
             <Button
