@@ -43,6 +43,13 @@ export function useCreditCardBills() {
       // Generate bills based on actual transactions
       await generateRealBills(userData.id);
 
+      // Fetch current and upcoming bills (last 1 month + next 2 months)
+      const today = new Date();
+      const oneMonthAgo = new Date(today);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const twoMonthsAhead = new Date(today);
+      twoMonthsAhead.setMonth(twoMonthsAhead.getMonth() + 2);
+
       const { data, error } = await supabase
         .from('credit_card_bills')
         .select(`
@@ -56,7 +63,8 @@ export function useCreditCardBills() {
           )
         `)
         .eq('user_id', userData.id)
-        .gte('due_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]) // Last 3 months
+        .gte('due_date', oneMonthAgo.toISOString().split('T')[0])
+        .lte('due_date', twoMonthsAhead.toISOString().split('T')[0])
         .order('due_date', { ascending: true });
 
       if (error) {
@@ -79,16 +87,16 @@ async function generateRealBills(userId: number) {
 
   if (!creditCards || creditCards.length === 0) return;
 
-  // Get all credit card transactions from the last 6 months
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  // Get all credit card transactions from the last 12 months
+  const twelveMonthsAgo = new Date();
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
   const { data: transactions } = await supabase
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
     .eq('is_credit_card_expense', true)
-    .gte('tx_date', sixMonthsAgo.toISOString())
+    .gte('tx_date', twelveMonthsAgo.toISOString())
     .order('tx_date', { ascending: true });
 
   if (!transactions || transactions.length === 0) return;
@@ -133,6 +141,18 @@ async function generateRealBills(userId: number) {
 
     // Insert or update bills
     for (const bill of billPeriods.values()) {
+      // Only create bills that are within the relevant time frame
+      const billDate = new Date(bill.due_date);
+      const today = new Date();
+      const threeMonthsAgo = new Date(today);
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const sixMonthsAhead = new Date(today);
+      sixMonthsAhead.setMonth(sixMonthsAhead.getMonth() + 6);
+
+      if (billDate < threeMonthsAgo || billDate > sixMonthsAhead) {
+        continue;
+      }
+
       const { data: existingBill } = await supabase
         .from('credit_card_bills')
         .select('id, paid_amount')
@@ -148,7 +168,7 @@ async function generateRealBills(userId: number) {
           .update({
             bill_amount: bill.bill_amount,
             remaining_amount: bill.bill_amount - existingBill.paid_amount,
-            status: bill.status,
+            status: getBillStatus(bill.close_date, bill.due_date),
             close_date: bill.close_date
           })
           .eq('id', existingBill.id);

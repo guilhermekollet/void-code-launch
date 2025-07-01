@@ -62,7 +62,7 @@ export default function Dashboard() {
       <WelcomeModal isOpen={showWelcomeModal} onClose={handleCloseWelcome} />
       
       <div className="space-y-8">
-        {/* Quick Stats Cards - improved spacing */}
+        {/* Quick Stats Cards with Carousel */}
         <QuickStats
           totalBalance={totalBalance}
           monthlyIncome={monthlyIncome}
@@ -71,16 +71,16 @@ export default function Dashboard() {
           formatCurrency={formatCurrency}
         />
 
-        {/* Credit Card Bills Section - more compact layout */}
+        {/* Credit Card Bills Section */}
         {creditCards.length > 0 && <CreditCardBillsSection />}
 
-        {/* Charts Section - improved spacing */}
+        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <TransactionChart />
           <CategoryChart />
         </div>
 
-        {/* Recent Transactions - full width with better spacing */}
+        {/* Recent Transactions */}
         <div className="w-full">
           <RecentTransactions
             transactions={recentTransactions}

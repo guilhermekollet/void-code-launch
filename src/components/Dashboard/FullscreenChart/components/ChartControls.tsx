@@ -140,6 +140,18 @@ export function ChartControls({
 
         <div className="flex items-center space-x-2">
           <Checkbox
+            id="faturas"
+            checked={visibleLines.faturas}
+            onCheckedChange={(checked) => toggleLine('faturas')}
+          />
+          <label htmlFor="faturas" className="text-sm flex items-center gap-1">
+            <div className="w-3 h-3 bg-[#F59E0B] rounded-full"></div>
+            Faturas
+          </label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
             id="fluxoLiquido"
             checked={visibleLines.fluxoLiquido}
             onCheckedChange={(checked) => toggleLine('fluxoLiquido')}
