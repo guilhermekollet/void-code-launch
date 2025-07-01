@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useCategoryChartDataWithPeriod } from '@/hooks/useCategoryChartDataWithPeriod';
 import { EditCategoryColorModal } from './EditCategoryColorModal';
@@ -16,11 +16,21 @@ interface FullscreenCategoryChartProps {
 }
 
 export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryChartProps) {
-  const [period, setPeriod] = useState('6');
+  // Período padrão alterado para 30 dias (mês vigente)
+  const [period, setPeriod] = useState('30d');
   const [selectedCategory, setSelectedCategory] = useState<{ id: number; name: string; color: string } | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  // Estados para paginação
+  const [currentPage, setCurrentPage] = useState(0);
+  const categoriesPerPage = 3;
 
-  const { data: categoryData = [], isLoading } = useCategoryChartDataWithPeriod(period);
+  const { data: allCategoryData = [], isLoading } = useCategoryChartDataWithPeriod(period);
+
+  // Lógica de paginação
+  const totalPages = Math.ceil(allCategoryData.length / categoriesPerPage);
+  const startIndex = currentPage * categoriesPerPage;
+  const categoryData = allCategoryData.slice(startIndex, startIndex + categoriesPerPage);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -42,7 +52,7 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
   };
 
   const handleBarClick = (data: any) => {
-    const categoryInfo = categoryData.find(cat => cat.name === data.name);
+    const categoryInfo = allCategoryData.find(cat => cat.name === data.name);
     if (categoryInfo && categoryInfo.id) {
       setSelectedCategory({
         id: categoryInfo.id,
@@ -51,6 +61,20 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
       });
       setIsEditModalOpen(true);
     }
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages - 1, prev + 1));
+  };
+
+  // Reset da página quando o período muda
+  const handlePeriodChange = (newPeriod: string) => {
+    setPeriod(newPeriod);
+    setCurrentPage(0);
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -75,33 +99,26 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
     
     const IconComponent = getIconComponent(categoryInfo.icon);
     
-    // Responsive logic for fullscreen - more generous spacing
-    const shouldShowIcon = width > 30;
-    const shouldShowText = width > 50;
-    
     return (
       <g transform={`translate(${x},${y})`}>
-        {shouldShowIcon && (
-          <foreignObject x={-18} y={0} width={36} height={36}>
-            <div className="flex justify-center">
-              <IconComponent 
-                className="w-5 h-5 md:w-6 md:h-6" 
-                style={{ color: categoryInfo.color }}
-              />
-            </div>
-          </foreignObject>
-        )}
-        {shouldShowText && (
-          <text 
-            x={0} 
-            y={shouldShowIcon ? 50 : 15} 
-            textAnchor="middle" 
-            fontSize={12}
-            fill="#666"
-          >
-            {payload.value.length > 10 ? `${payload.value.substring(0, 8)}...` : payload.value}
-          </text>
-        )}
+        <foreignObject x={-20} y={0} width={40} height={40}>
+          <div className="flex justify-center">
+            <IconComponent 
+              className="w-6 h-6 md:w-7 md:h-7" 
+              style={{ color: categoryInfo.color }}
+            />
+          </div>
+        </foreignObject>
+        <text 
+          x={0} 
+          y={55} 
+          textAnchor="middle" 
+          fontSize={13}
+          fill="#666"
+          className="font-medium"
+        >
+          {payload.value.length > 12 ? `${payload.value.substring(0, 10)}...` : payload.value}
+        </text>
       </g>
     );
   };
@@ -124,24 +141,24 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-full max-h-full w-screen h-screen p-0 gap-0" hideCloseButton>
           <div className="flex flex-col h-full bg-white">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0]">
-              <h2 className="text-xl md:text-2xl font-semibold text-[#121212]">Gastos por Categoria</h2>
+            {/* Header com botão de fechar sempre visível */}
+            <div className="sticky top-0 z-50 flex items-center justify-between p-4 md:p-6 border-b border-[#E2E8F0] bg-white shadow-sm">
+              <h2 className="text-lg md:text-2xl font-semibold text-[#121212]">Gastos por Categoria</h2>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="h-8 w-8"
+                className="h-10 w-10 md:h-8 md:w-8 flex-shrink-0 hover:bg-gray-100"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5 md:h-4 md:w-4" />
               </Button>
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border-b border-[#E2E8F0] bg-gray-50">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 md:p-6 border-b border-[#E2E8F0] bg-gray-50">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Período:</span>
-                <Select value={period} onValueChange={setPeriod}>
+                <Select value={period} onValueChange={handlePeriodChange}>
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -160,8 +177,39 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
               </div>
             </div>
 
+            {/* Paginação e indicadores */}
+            {allCategoryData.length > 0 && (
+              <div className="flex items-center justify-between p-4 md:p-6 border-b border-[#E2E8F0] bg-white">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 0}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Anterior</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage >= totalPages - 1}
+                    className="flex items-center gap-1"
+                  >
+                    <span className="hidden sm:inline">Próximo</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Página {currentPage + 1} de {totalPages} • {allCategoryData.length} categorias
+                </div>
+              </div>
+            )}
+
             {/* Chart */}
-            <div className="flex-1 p-4 md:p-6">
+            <div className="flex-1 p-4 md:p-6 overflow-hidden">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="flex flex-col items-center gap-3">
@@ -169,7 +217,7 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
                     <span className="text-sm">Carregando...</span>
                   </div>
                 </div>
-              ) : categoryData.length === 0 ? (
+              ) : allCategoryData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-gray-500">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
@@ -181,8 +229,8 @@ export function FullscreenCategoryChart({ isOpen, onClose }: FullscreenCategoryC
                   </div>
                 </div>
               ) : (
-                <div className="overflow-x-auto h-full">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={400}>
+                <div className="h-full">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={300}>
                     <BarChart
                       data={categoryData}
                       margin={{
