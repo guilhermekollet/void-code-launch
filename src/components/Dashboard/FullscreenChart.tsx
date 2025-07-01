@@ -18,8 +18,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     receitas: true,
     despesas: true,
     gastosRecorrentes: true,
-    fluxoLiquido: true,
-    faturas: true
+    fluxoLiquido: true
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');

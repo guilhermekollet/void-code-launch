@@ -148,29 +148,6 @@ export function ChartDisplay({ displayData, visibleLines, futureStartIndex, onPo
                 />
               )}
               
-              {visibleLines.faturas && (
-                <Line
-                  type="monotone"
-                  dataKey="faturas"
-                  stroke="#F59E0B"
-                  strokeWidth={2}
-                  name="Faturas"
-                  dot={(props) => {
-                    const { payload } = props;
-                    return (
-                      <circle
-                        {...props}
-                        fill={payload.isFuture ? "#F59E0B80" : "#F59E0B"}
-                        strokeWidth={2}
-                        r={3}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    );
-                  }}
-                  activeDot={{ r: 5, fill: '#F59E0B', cursor: 'pointer' }}
-                />
-              )}
-              
               {visibleLines.fluxoLiquido && (
                 <Line
                   type="monotone"

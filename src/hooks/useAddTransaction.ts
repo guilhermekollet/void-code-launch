@@ -73,6 +73,9 @@ export function useAddTransaction() {
           throw error;
         }
 
+        // Trigger bill generation after adding credit card transaction
+        queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
+
         return data;
       }
       // Se for despesa parcelada (não cartão), criar múltiplas transações
@@ -135,16 +138,10 @@ export function useAddTransaction() {
         return data;
       }
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      
-      // Se for despesa de cartão de crédito, invalidar também as queries de faturas
-      if (variables.is_credit_card_expense) {
-        queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
-        queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
-      }
-      
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
       toast({
         title: "Sucesso",
         description: "Transação adicionada com sucesso!",

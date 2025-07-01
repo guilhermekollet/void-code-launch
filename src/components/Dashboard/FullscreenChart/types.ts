@@ -9,7 +9,6 @@ export interface VisibleLines {
   despesas: boolean;
   gastosRecorrentes: boolean;
   fluxoLiquido: boolean;
-  faturas: boolean;
 }
 
 export interface ChartDataPoint {
@@ -18,7 +17,6 @@ export interface ChartDataPoint {
   despesas: number;
   gastosRecorrentes: number;
   fluxoLiquido: number;
-  faturas: number;
   isFuture?: boolean;
 }
 
