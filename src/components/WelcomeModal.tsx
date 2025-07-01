@@ -38,7 +38,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
           <div className="bg-[#F8F9FA] rounded-lg p-4 border border-[#E2E8F0]">
             <div className="flex items-center space-x-3 mb-2">
               <div className="bg-[#61710C] rounded-full p-2">
-                <MessageCircle className="h-4 w-4 text-white" />
+                <MessageCircle className="h-4 w-4 text-[#CFF500]" />
               </div>
               <h3 className="font-semibold text-[#121212]">Bolsofy IA</h3>
             </div>
