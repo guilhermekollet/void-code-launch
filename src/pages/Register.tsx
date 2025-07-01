@@ -14,7 +14,7 @@ export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '+55',
+    phone: '55', // Start with just the country code numbers
     password: '',
     confirmPassword: ''
   });
@@ -42,14 +42,18 @@ export default function Register() {
     });
   };
   const handlePhoneChange = (phone: string) => {
+    // Ensure phone contains only numbers
+    const numericPhone = phone.replace(/\D/g, '');
+    console.log('Phone value being saved:', numericPhone); // Debug log
     setFormData({
       ...formData,
-      phone: phone
+      phone: numericPhone
     });
   };
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Erro no cadastro",
@@ -59,6 +63,7 @@ export default function Register() {
       setLoading(false);
       return;
     }
+
     if (formData.password.length < 6) {
       toast({
         title: "Erro no cadastro",
@@ -68,21 +73,32 @@ export default function Register() {
       setLoading(false);
       return;
     }
+
+    // Validate phone number (must have at least country code + some digits)
+    if (formData.phone.length < 10) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Por favor, insira um número de telefone válido",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      const {
-        data,
-        error
-      } = await supabase.auth.signUp({
+      console.log('Submitting phone number:', formData.phone); // Debug log
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
             name: formData.name,
-            phone_number: formData.phone
+            phone_number: formData.phone // This will be only numbers now
           },
           emailRedirectTo: `${window.location.origin}/`
         }
       });
+
       if (error) {
         toast({
           title: "Erro no cadastro",
@@ -91,14 +107,13 @@ export default function Register() {
         });
         return;
       }
+
       if (data.user) {
         toast({
           title: "Cadastro realizado!",
           description: "Sua conta foi criada com sucesso. Fazendo login..."
         });
-        navigate('/', {
-          replace: true
-        });
+        navigate('/', { replace: true });
       }
     } catch (error) {
       toast({
@@ -125,11 +140,29 @@ export default function Register() {
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-[#121212]">Nome completo</Label>
-              <Input id="name" name="name" type="text" placeholder="Seu nome completo" value={formData.name} onChange={handleChange} required className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" />
+              <Input 
+                id="name" 
+                name="name" 
+                type="text" 
+                placeholder="Seu nome completo" 
+                value={formData.name} 
+                onChange={handleChange} 
+                required 
+                className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-[#121212]">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} required className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" />
+              <Input 
+                id="email" 
+                name="email" 
+                type="email" 
+                placeholder="seu@email.com" 
+                value={formData.email} 
+                onChange={handleChange} 
+                required 
+                className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-[#121212]">Telefone</Label>
@@ -143,8 +176,21 @@ export default function Register() {
             <div className="space-y-2">
               <Label htmlFor="password" className="text-[#121212]">Senha</Label>
               <div className="relative">
-                <Input id="password" name="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={formData.password} onChange={handleChange} required className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50 pr-10" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#121212] transition-colors">
+                <Input 
+                  id="password" 
+                  name="password" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="••••••••" 
+                  value={formData.password} 
+                  onChange={handleChange} 
+                  required 
+                  className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50 pr-10" 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#121212] transition-colors"
+                >
                   {showPassword ? <EyeClosed size={20} /> : <Eye size={20} />}
                 </button>
               </div>
@@ -152,13 +198,30 @@ export default function Register() {
             <div className="space-y-2">
               <Label htmlFor="confirmPassword" className="text-[#121212]">Confirmar senha</Label>
               <div className="relative">
-                <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} required className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50 pr-10" />
-                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#121212] transition-colors">
+                <Input 
+                  id="confirmPassword" 
+                  name="confirmPassword" 
+                  type={showConfirmPassword ? "text" : "password"} 
+                  placeholder="••••••••" 
+                  value={formData.confirmPassword} 
+                  onChange={handleChange} 
+                  required 
+                  className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50 pr-10" 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#121212] transition-colors"
+                >
                   {showConfirmPassword ? <EyeClosed size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white" 
+              disabled={loading}
+            >
               {loading ? 'Criando conta...' : 'Criar conta'}
             </Button>
           </form>

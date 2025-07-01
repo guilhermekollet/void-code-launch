@@ -36,13 +36,20 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
 
     // Parse initial value if provided
     React.useEffect(() => {
-      if (value && value !== `${countryCode}${phoneNumber}`) {
-        const country = countries.find(c => value.startsWith(c.code))
+      if (value && value !== `${countryCode.replace('+', '')}${phoneNumber}`) {
+        const country = countries.find(c => value.startsWith(c.code.replace('+', '')))
         if (country) {
           setCountryCode(country.code)
-          setPhoneNumber(value.substring(country.code.length))
+          setPhoneNumber(value.substring(country.code.length - 1))
         } else {
-          setPhoneNumber(value)
+          // Try to find country by length and common patterns
+          const numericValue = value.replace(/\D/g, '')
+          if (numericValue.startsWith('55')) {
+            setCountryCode('+55')
+            setPhoneNumber(numericValue.substring(2))
+          } else {
+            setPhoneNumber(numericValue)
+          }
         }
       }
     }, [value])
@@ -51,15 +58,34 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
 
     const handleCountryChange = (newCountryCode: string) => {
       setCountryCode(newCountryCode)
-      const fullNumber = `${newCountryCode}${phoneNumber}`
+      // Send only numbers (DDI + phone number) to database
+      const numericCountryCode = newCountryCode.replace('+', '')
+      const numericPhone = phoneNumber.replace(/\D/g, '')
+      const fullNumber = `${numericCountryCode}${numericPhone}`
       onChange?.(fullNumber)
     }
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newPhoneNumber = e.target.value
-      setPhoneNumber(newPhoneNumber)
-      const fullNumber = `${countryCode}${newPhoneNumber}`
+      const inputValue = e.target.value
+      // Allow only numbers, spaces, parentheses, and hyphens for display
+      const cleanedValue = inputValue.replace(/[^\d\s()-]/g, '')
+      
+      // Extract only numbers for storage
+      const numericValue = cleanedValue.replace(/\D/g, '')
+      setPhoneNumber(cleanedValue)
+      
+      // Send only numbers (DDI + phone number) to database
+      const numericCountryCode = countryCode.replace('+', '')
+      const fullNumber = `${numericCountryCode}${numericValue}`
       onChange?.(fullNumber)
+    }
+
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Allow only numbers and common phone formatting characters
+      const allowedChars = /[0-9\s()-]/
+      if (!allowedChars.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+        e.preventDefault()
+      }
     }
 
     return (
@@ -91,6 +117,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
           type="tel"
           value={phoneNumber}
           onChange={handlePhoneChange}
+          onKeyPress={handleKeyPress}
           placeholder={selectedCountry.placeholder}
           className="flex-1 border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50"
         />
