@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { PayBillModal } from "./PayBillModal";
-import type { CreditCardBill } from "@/hooks/useCreditCardBills";
+import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
 
 interface CreditCardBillItemProps {
   bill: CreditCardBill;
@@ -25,23 +25,23 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
   };
 
   const isOverdue = () => {
-    const today = new Date();
-    const dueDate = new Date(bill.due_date);
-    return dueDate < today && bill.status !== 'paid';
+    return bill.status === 'overdue';
   };
 
   const isDueSoon = () => {
+    if (bill.status === 'paid' || bill.status === 'overdue') return false;
     const today = new Date();
     const dueDate = new Date(bill.due_date);
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3 && diffDays >= 0 && bill.status !== 'paid';
+    return diffDays <= 3 && diffDays >= 0;
   };
 
   const cardName = bill.credit_cards.card_name || bill.credit_cards.bank_name;
   const statusColor = isOverdue() ? 'border-red-500 bg-red-50' : 
                      isDueSoon() ? 'border-yellow-500 bg-yellow-50' : 
                      bill.status === 'paid' ? 'border-green-500 bg-green-50' :
+                     bill.status === 'open' ? 'border-blue-500 bg-blue-50' :
                      'border-[#E2E8F0] bg-white';
 
   return (
@@ -57,7 +57,9 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-[#121212] text-sm">{cardName}</h3>
-              <p className="text-xs text-[#64748B]">Vence em {formatDate(bill.due_date)}</p>
+              <p className="text-xs text-[#64748B]">
+                {bill.status === 'open' ? 'Fatura em aberto' : `Vence em ${formatDate(bill.due_date)}`}
+              </p>
             </div>
             {isOverdue() && (
               <AlertTriangle className="h-4 w-4 text-red-500" />

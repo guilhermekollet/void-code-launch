@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCardBillItem } from "./CreditCardBillItem";
-import { useCreditCardBills } from "@/hooks/useCreditCardBills";
+import { useCreditCardBills } from "@/hooks/useCreditCardBillsNew";
 import { useCreditCards } from "@/hooks/useCreditCards";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -39,7 +39,7 @@ export function CreditCardBillsSection() {
         </CardHeader>
         <CardContent>
           <p className="text-[#64748B] text-center py-8">
-            Nenhuma fatura gerada ainda. As faturas aparecerão automaticamente após você registrar compras no cartão de crédito.
+            Nenhuma fatura encontrada. As faturas aparecerão automaticamente quando houver compras registradas no cartão de crédito.
           </p>
         </CardContent>
       </Card>

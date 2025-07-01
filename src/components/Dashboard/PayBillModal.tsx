@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { usePayBill } from "@/hooks/useCreditCardBills";
-import type { CreditCardBill } from "@/hooks/useCreditCardBills";
+import { usePayBill } from "@/hooks/useCreditCardBillsNew";
+import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
 
 interface PayBillModalProps {
   open: boolean;

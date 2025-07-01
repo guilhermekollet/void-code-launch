@@ -1,4 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useBillExpenses } from "@/hooks/useCreditCardBillsNew";
+
 interface QuickStatsProps {
   totalBalance: number;
   monthlyIncome: number;
@@ -13,7 +15,9 @@ export function QuickStats({
   monthlyRecurringExpenses,
   formatCurrency
 }: QuickStatsProps) {
-  return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  const { totalBillExpenses } = useBillExpenses();
+  
+  return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {/* Saldo Total - cor condicional baseada no valor */}
       <Card className={`bg-white border-[#DEDEDE] ${totalBalance >= 0 ? '' : 'border-red-300'}`}>
         <CardHeader className="space-y-0 pb-2">
@@ -51,6 +55,16 @@ export function QuickStats({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-red-600">{formatCurrency(monthlyRecurringExpenses)}</div>
+        </CardContent>
+      </Card>
+
+      {/* Despesas em Fatura */}
+      <Card className="bg-white border-[#DEDEDE]">
+        <CardHeader className="space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-black">Despesas em Fatura</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-orange-600">{formatCurrency(totalBillExpenses)}</div>
         </CardContent>
       </Card>
     </div>;

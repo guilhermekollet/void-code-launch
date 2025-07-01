@@ -91,14 +91,15 @@ export function useReportsFutureData(enabled: boolean = false) {
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
         const totalReceitas = installmentReceitas + recurringReceitas;
-        const totalDespesas = installmentDespesas + recurringDespesas + creditCardExpenses;
+        const totalDespesas = installmentDespesas + recurringDespesas;
 
         return {
           mes: date.toLocaleDateString('pt-BR', { month: 'short' }),
           receitas: totalReceitas,
           despesas: totalDespesas,
           gastosRecorrentes: recurringDespesas,
-          fluxo: totalReceitas - totalDespesas,
+          faturas: creditCardExpenses,
+          fluxo: totalReceitas - totalDespesas - creditCardExpenses,
           isFuture: true
         };
       });

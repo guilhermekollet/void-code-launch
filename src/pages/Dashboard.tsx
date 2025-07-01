@@ -9,7 +9,7 @@ import { useFinancialMetrics, useTransactions } from "@/hooks/useFinancialData";
 import { useCreditCards } from "@/hooks/useCreditCards";
 
 export default function Dashboard() {
-  const { totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses, isLoading } = useFinancialMetrics();
+  const { totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses, monthlyBillExpenses, isLoading } = useFinancialMetrics();
   const { data: transactions = [] } = useTransactions();
   const { data: creditCards = [] } = useCreditCards();
 
@@ -25,8 +25,8 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="bg-white rounded-lg border border-[#E2E8F0] p-6">
               <Skeleton className="h-4 w-24 mb-2" />
               <Skeleton className="h-8 w-32" />

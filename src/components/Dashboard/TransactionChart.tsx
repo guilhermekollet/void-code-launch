@@ -89,7 +89,7 @@ export function TransactionChart() {
                 dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }} 
                 activeDot={{ r: 6, fill: '#EF4444' }} 
               />
-              <Line 
+               <Line 
                 type="monotone" 
                 dataKey="gastosRecorrentes" 
                 stroke="#3B82F6" 
@@ -98,7 +98,16 @@ export function TransactionChart() {
                 name="Gastos Recorrentes" 
                 dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }} 
                 activeDot={{ r: 5, fill: '#3B82F6' }} 
-              />
+               />
+               <Line 
+                type="monotone" 
+                dataKey="faturas" 
+                stroke="#F59E0B" 
+                strokeWidth={2} 
+                name="Faturas" 
+                dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }} 
+                activeDot={{ r: 5, fill: '#F59E0B' }} 
+               />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>

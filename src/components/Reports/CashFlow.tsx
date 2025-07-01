@@ -14,7 +14,7 @@ export function CashFlow() {
 
   const cashFlowData = monthlyData.map(month => ({
     ...month,
-    fluxo: month.receitas - month.despesas,
+    fluxo: month.receitas - month.despesas - (month.faturas || 0),
     isFuture: false
   }));
 
@@ -86,20 +86,31 @@ export function CashFlow() {
                 dot={{ fill: '#61710C', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6, stroke: '#61710C', strokeWidth: 2 }}
               />
-              {/* Future data line with dashed style */}
-              {showFuture && (
-                <Line 
-                  type="monotone" 
-                  dataKey="fluxo" 
-                  stroke="#84CC16" 
-                  strokeWidth={3}
-                  strokeDasharray="5 5"
-                  name="Fluxo de Caixa (Projeção)"
-                  connectNulls={false}
-                  dot={{ fill: '#84CC16', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: '#84CC16', strokeWidth: 2 }}
-                />
-              )}
+               {/* Bills line */}
+               <Line 
+                 type="monotone" 
+                 dataKey="faturas" 
+                 stroke="#F59E0B" 
+                 strokeWidth={2}
+                 name="Faturas"
+                 connectNulls={false}
+                 dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
+                 activeDot={{ r: 5, stroke: '#F59E0B', strokeWidth: 2 }}
+               />
+               {/* Future data line with dashed style */}
+               {showFuture && (
+                 <Line 
+                   type="monotone" 
+                   dataKey="fluxo" 
+                   stroke="#84CC16" 
+                   strokeWidth={3}
+                   strokeDasharray="5 5"
+                   name="Fluxo de Caixa (Projeção)"
+                   connectNulls={false}
+                   dot={{ fill: '#84CC16', strokeWidth: 2, r: 4 }}
+                   activeDot={{ r: 6, stroke: '#84CC16', strokeWidth: 2 }}
+                 />
+               )}
             </LineChart>
           </ResponsiveContainer>
         </div>

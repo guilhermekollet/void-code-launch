@@ -144,6 +144,7 @@ export type Database = {
       credit_card_bills: {
         Row: {
           bill_amount: number
+          close_date: string | null
           created_at: string
           credit_card_id: number
           due_date: string
@@ -156,6 +157,7 @@ export type Database = {
         }
         Insert: {
           bill_amount?: number
+          close_date?: string | null
           created_at?: string
           credit_card_id: number
           due_date: string
@@ -168,6 +170,7 @@ export type Database = {
         }
         Update: {
           bill_amount?: number
+          close_date?: string | null
           created_at?: string
           credit_card_id?: number
           due_date?: string

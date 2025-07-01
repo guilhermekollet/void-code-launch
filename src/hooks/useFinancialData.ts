@@ -50,9 +50,9 @@ export function useFinancialMetrics() {
            transactionDate.getFullYear() === currentYear;
   });
 
-  // Calculate total balance only with past and present transactions (not future)
+  // Calculate total balance excluding credit card expenses (they don't impact balance until bill is paid)
   const totalBalance = transactions
-    .filter(t => new Date(t.tx_date) <= today)
+    .filter(t => new Date(t.tx_date) <= today && !t.is_credit_card_expense)
     .reduce((sum, t) => {
       return t.type === 'receita' ? sum + Number(t.amount) : sum - Number(t.amount);
     }, 0);
@@ -61,13 +61,19 @@ export function useFinancialMetrics() {
     .filter(t => t.type === 'receita')
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
+  // Monthly expenses exclude credit card expenses (they are tracked in bills)
   const monthlyExpenses = currentMonthTransactions
-    .filter(t => t.type === 'despesa')
+    .filter(t => t.type === 'despesa' && !t.is_credit_card_expense)
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
-  // Calculate recurring expenses - transactions marked as recurring
+  // Calculate recurring expenses - transactions marked as recurring (excluding credit card)
   const monthlyRecurringExpenses = currentMonthTransactions
-    .filter(t => t.type === 'despesa' && t.is_recurring)
+    .filter(t => t.type === 'despesa' && t.is_recurring && !t.is_credit_card_expense)
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  // Calculate credit card expenses that are in bills
+  const monthlyBillExpenses = currentMonthTransactions
+    .filter(t => t.is_credit_card_expense)
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   return {
@@ -75,6 +81,7 @@ export function useFinancialMetrics() {
     monthlyIncome,
     monthlyExpenses,
     monthlyRecurringExpenses,
+    monthlyBillExpenses,
     isLoading,
   };
 }
@@ -227,28 +234,34 @@ export function useChartDataWithInstallments() {
 
         const totalReceitas = regularReceitas + installmentReceitas;
 
-        // Regular expenses from transactions in this month
+        // Regular expenses from transactions in this month (excluding credit card)
         const regularDespesas = monthTransactions
-          .filter(t => t.type === 'despesa' && !t.is_installment)
+          .filter(t => t.type === 'despesa' && !t.is_installment && !t.is_credit_card_expense)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
-        // Installment expenses for this period - each installment counts only once
+        // Installment expenses for this period - each installment counts only once (excluding credit card)
         const installmentDespesas = installmentTransactions
-          .filter(t => t.type === 'despesa')
+          .filter(t => t.type === 'despesa' && !t.is_credit_card_expense)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
         const totalDespesas = regularDespesas + installmentDespesas;
 
-        // Calculate recurring expenses for this month
+        // Calculate recurring expenses for this month (excluding credit card)
         const gastosRecorrentes = monthTransactions
-          .filter(t => t.type === 'despesa' && t.is_recurring)
+          .filter(t => t.type === 'despesa' && t.is_recurring && !t.is_credit_card_expense)
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Calculate bill expenses (credit card expenses accumulated in this period)
+        const billExpenses = monthTransactions
+          .filter(t => t.is_credit_card_expense)
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
         return {
           mes: period.name,
           receitas: totalReceitas,
           despesas: totalDespesas,
-          gastosRecorrentes
+          gastosRecorrentes,
+          faturas: billExpenses
         };
       });
 
