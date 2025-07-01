@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -50,9 +49,8 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
           <div className="flex space-x-3">
             <Button
               onClick={handleContactIA}
-              className="flex-1 bg-[#61710C] hover:bg-[#4a5709] text-[#CFF500]"
+              className="flex-1 bg-[#61710C] hover:bg-[#4a5709] text-[#CFF500] justify-center"
             >
-              <MessageCircle className="h-4 w-4 mr-2 text-[#CFF500]" />
               Falar com Bolsofy IA
             </Button>
             <Button
