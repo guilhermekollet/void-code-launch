@@ -24,3 +24,15 @@ export interface ZoomDomain {
   start?: number;
   end?: number;
 }
+
+export interface ChartData {
+  period: string;
+  receitas: number;
+  despesas: number;
+  gastosRecorrentes: number;
+  fluxoLiquido: number;
+  isFuture?: boolean;
+}
+
+export type ChartType = 'receitas' | 'despesas' | 'saldo';
+export type TimeRange = 'month' | 'year';

@@ -10,7 +10,7 @@ import { TimeRange } from '../types';
 import { useState } from "react";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
-import { useTransactionMutations } from "@/hooks/useTransactionMutations";
+import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface TransactionModalProps {
@@ -24,7 +24,8 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-  const { updateTransaction, deleteTransaction } = useTransactionMutations();
+  const updateTransaction = useUpdateTransaction();
+  const deleteTransaction = useDeleteTransaction();
 
   // Parse period to get month and year
   const [month, year] = period.includes('/') 

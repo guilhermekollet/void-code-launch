@@ -1,4 +1,3 @@
-
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,9 +60,9 @@ export function ChartDisplay({
 
   if (currentData && previousData) {
     const currentValue = chartType === 'receitas' ? currentData.receitas : 
-                        chartType === 'despesas' ? currentData.despesas : currentData.saldo;
+                        chartType === 'despesas' ? currentData.despesas : currentData.fluxoLiquido;
     const previousValue = chartType === 'receitas' ? previousData.receitas : 
-                         chartType === 'despesas' ? previousData.despesas : previousData.saldo;
+                         chartType === 'despesas' ? previousData.despesas : previousData.fluxoLiquido;
     
     if (previousValue !== 0) {
       trend = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
@@ -114,12 +113,12 @@ export function ChartDisplay({
       case 'despesas':
         return currentData.despesas;
       case 'saldo':
-        return currentData.saldo;
+        return currentData.fluxoLiquido;
       default:
         return 0;
     }
   };
-
+  
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

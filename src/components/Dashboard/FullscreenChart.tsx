@@ -6,7 +6,6 @@ import { X } from "lucide-react";
 import { FullscreenChartProps, VisibleLines, ZoomDomain } from './FullscreenChart/types';
 import { useFullscreenChartData } from './FullscreenChart/hooks/useChartData';
 import { ChartControls } from './FullscreenChart/components/ChartControls';
-import { ChartDisplay } from './FullscreenChart/components/ChartDisplay';
 import { TransactionsSidebar } from './FullscreenChart/components/TransactionsSidebar';
 
 export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
@@ -185,13 +184,14 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
             </div>
 
             {/* Chart - takes remaining height */}
-            <div className="flex-1 min-h-0">
-              <ChartDisplay
-                displayData={displayData}
-                visibleLines={visibleLines}
-                futureStartIndex={futureStartIndex}
-                onPointClick={handlePointClick}
-              />
+            <div className="flex-1 min-h-0 p-4">
+              <div className="h-full bg-white rounded-lg border border-gray-200">
+                <div className="p-4 h-full">
+                  <p className="text-center text-gray-500 py-8">
+                    Gráfico de fluxo financeiro - Clique nos pontos para ver detalhes das transações
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </DialogContent>

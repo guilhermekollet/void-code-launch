@@ -91,3 +91,13 @@ export function useDeleteTransaction() {
     },
   });
 }
+
+export function useTransactionMutations() {
+  const updateTransaction = useUpdateTransaction();
+  const deleteTransaction = useDeleteTransaction();
+
+  return {
+    updateTransaction,
+    deleteTransaction,
+  };
+}
