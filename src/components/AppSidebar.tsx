@@ -1,5 +1,6 @@
 
 import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import confetti from 'canvas-confetti';
@@ -65,10 +66,19 @@ export function AppSidebar() {
           }}>
               {items.map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="lg" className="h-14">
-                    <a href={item.url} className="flex items-center gap-4 text-[#121212] bg-white hover:bg-[#F6F6F6] py-4 text-base font-medium px-[16px]">
-                      <item.icon className="h-7 w-7 text-[#121212]" />
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        `flex items-center gap-4 py-4 text-base font-medium px-[16px] ${
+                          isActive 
+                            ? 'text-[#61710C] bg-[#F0F8E8]' 
+                            : 'text-[#121212] bg-white hover:bg-[#F6F6F6]'
+                        }`
+                      }
+                    >
+                      <item.icon className="h-7 w-7" />
                       <span>{item.title}</span>
-                    </a>
+                    </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
               

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +44,11 @@ export function useCreditCardBills() {
       // Generate bills based on actual transactions
       await generateRealBills(userData.id);
 
+      // Show bills from current month and next 2 months (more relevant)
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 3, 0);
+
       const { data, error } = await supabase
         .from('credit_card_bills')
         .select(`
@@ -56,7 +62,8 @@ export function useCreditCardBills() {
           )
         `)
         .eq('user_id', userData.id)
-        .gte('due_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]) // Last 3 months
+        .gte('due_date', startDate.toISOString().split('T')[0])
+        .lte('due_date', endDate.toISOString().split('T')[0])
         .order('due_date', { ascending: true });
 
       if (error) {
@@ -67,6 +74,8 @@ export function useCreditCardBills() {
       return data as CreditCardBill[];
     },
     enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -79,16 +88,16 @@ async function generateRealBills(userId: number) {
 
   if (!creditCards || creditCards.length === 0) return;
 
-  // Get all credit card transactions from the last 6 months
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  // Get all credit card transactions from the last 3 months (improved timeframe)
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
   const { data: transactions } = await supabase
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
     .eq('is_credit_card_expense', true)
-    .gte('tx_date', sixMonthsAgo.toISOString())
+    .gte('tx_date', threeMonthsAgo.toISOString())
     .order('tx_date', { ascending: true });
 
   if (!transactions || transactions.length === 0) return;
@@ -148,7 +157,7 @@ async function generateRealBills(userId: number) {
           .update({
             bill_amount: bill.bill_amount,
             remaining_amount: bill.bill_amount - existingBill.paid_amount,
-            status: bill.status,
+            status: getBillStatus(bill.close_date, bill.due_date),
             close_date: bill.close_date
           })
           .eq('id', existingBill.id);
@@ -271,6 +280,7 @@ export function usePayBill() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
       toast({
         title: "Sucesso",
         description: "Pagamento registrado com sucesso!",

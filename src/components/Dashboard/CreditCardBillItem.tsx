@@ -1,9 +1,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, AlertTriangle } from "lucide-react";
+import { CreditCard, AlertTriangle, Eye } from "lucide-react";
 import { useState } from "react";
 import { PayBillModal } from "./PayBillModal";
+import { CreditCardBillTransactionsModal } from "@/components/CreditCards/CreditCardBillTransactionsModal";
 import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
 
 interface CreditCardBillItemProps {
@@ -12,6 +13,7 @@ interface CreditCardBillItemProps {
 
 export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -91,31 +93,49 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
             </div>
           </div>
 
-          {bill.status !== 'paid' && (
+          <div className="space-y-2">
             <Button
-              onClick={() => setIsPayModalOpen(true)}
+              onClick={() => setIsTransactionsModalOpen(true)}
+              variant="outline"
               size="sm"
               className="w-full"
-              style={{
-                backgroundColor: isOverdue() ? '#dc2626' : '#61710C',
-                color: isOverdue() ? 'white' : '#CFF500',
-              }}
             >
-              {isOverdue() ? 'Pagar (Vencida)' : 'Pagar Fatura'}
+              <Eye className="h-4 w-4 mr-2" />
+              Ver Transações
             </Button>
-          )}
 
-          {bill.status === 'paid' && (
-            <div className="text-center py-2">
-              <span className="text-sm font-medium text-green-600">✓ Fatura Paga</span>
-            </div>
-          )}
+            {bill.status !== 'paid' && (
+              <Button
+                onClick={() => setIsPayModalOpen(true)}
+                size="sm"
+                className="w-full"
+                style={{
+                  backgroundColor: isOverdue() ? '#dc2626' : '#61710C',
+                  color: isOverdue() ? 'white' : '#CFF500',
+                }}
+              >
+                {isOverdue() ? 'Pagar (Vencida)' : 'Pagar Fatura'}
+              </Button>
+            )}
+
+            {bill.status === 'paid' && (
+              <div className="text-center py-2">
+                <span className="text-sm font-medium text-green-600">✓ Fatura Paga</span>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       <PayBillModal
         open={isPayModalOpen}
         onOpenChange={setIsPayModalOpen}
+        bill={bill}
+      />
+
+      <CreditCardBillTransactionsModal
+        open={isTransactionsModalOpen}
+        onOpenChange={setIsTransactionsModalOpen}
         bill={bill}
       />
     </>

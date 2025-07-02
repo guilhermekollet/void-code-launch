@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2, CreditCard, Eye } from "lucide-react";
 import { useCreditCardTransactions } from "@/hooks/useCreditCards";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { EditCreditCardModal } from "./EditCreditCardModal";
 import { DeleteCreditCardDialog } from "./DeleteCreditCardDialog";
 
@@ -37,7 +36,6 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { data: transactions = [] } = useCreditCardTransactions(card.id);
-  const navigate = useNavigate();
 
   const monthlySpent = transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   const cardName = card.card_name || card.bank_name;
@@ -52,10 +50,11 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
   };
 
   const handleViewTransactions = () => {
+    // Navigate to transactions page filtered by this card
     const currentDate = new Date();
     const year = currentDate.getFullYear();
     const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-    navigate(`/transacoes?cardId=${card.id}&month=${year}-${month}`);
+    window.location.href = `/transacoes?cardId=${card.id}&month=${year}-${month}`;
   };
 
   return (
