@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,10 +26,23 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
   const updateTransaction = useUpdateTransaction();
   const deleteTransaction = useDeleteTransaction();
 
-  // Parse period to get month and year
-  const [month, year] = period.includes('/') 
-    ? period.split('/').map(Number)
-    : [parseInt(period.split('-')[1]), parseInt(period.split('-')[0])];
+  // Parse period to get month and year - fix the type conversion
+  let month: number, year: number;
+  
+  if (period.includes('/')) {
+    const parts = period.split('/');
+    month = parseInt(parts[0], 10);
+    year = parseInt(parts[1], 10);
+  } else if (period.includes('-')) {
+    const parts = period.split('-');
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+  } else {
+    // Fallback for other formats
+    const currentDate = new Date();
+    month = currentDate.getMonth() + 1;
+    year = currentDate.getFullYear();
+  }
 
   const { data: transactions = [], isLoading } = useTransactionsByMonth(month, year);
 
