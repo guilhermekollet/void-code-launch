@@ -12,6 +12,7 @@ interface Transaction {
   description: string;
   category: string;
   tx_date: string;
+  type?: string;
   installments?: number;
   installment_value?: number;
 }
@@ -37,6 +38,12 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
   };
 
   const isInstallment = transaction.installments && transaction.installments > 1;
+
+  const handleDelete = (id: number) => {
+    // Handle delete logic here
+    onUpdate();
+    setIsDeleteDialogOpen(false);
+  };
 
   return (
     <>
@@ -111,13 +118,18 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
       <EditTransactionModal
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
-        transaction={transaction}
+        transaction={{
+          ...transaction,
+          type: transaction.type || 'despesa'
+        }}
       />
 
       <DeleteTransactionDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        transaction={transaction}
+        transactionId={transaction.id}
+        transactionDescription={transaction.description}
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onDelete={handleDelete}
       />
     </>
   );
