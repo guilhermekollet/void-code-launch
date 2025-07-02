@@ -10,6 +10,7 @@ interface UserProfile {
   email: string | null;
   phone_number: string;
   user_id: string | null;
+  completed_onboarding: boolean | null;
 }
 
 export function useUserProfile() {
@@ -39,7 +40,7 @@ export function useUpdateUserProfile() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'phone_number'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'phone_number' | 'completed_onboarding'>>) => {
       if (!user?.id) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
@@ -52,19 +53,26 @@ export function useUpdateUserProfile() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram salvas com sucesso.",
-      });
+      
+      // Só mostrar toast se não foi apenas update do onboarding
+      if (!('completed_onboarding' in variables && Object.keys(variables).length === 1)) {
+        toast({
+          title: "Perfil atualizado",
+          description: "Suas informações foram salvas com sucesso.",
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: "Erro ao atualizar perfil",
-        description: "Não foi possível salvar as alterações.",
-        variant: "destructive",
-      });
+    onError: (error, variables) => {
+      // Só mostrar toast de erro se não foi apenas update do onboarding
+      if (!('completed_onboarding' in variables && Object.keys(variables).length === 1)) {
+        toast({
+          title: "Erro ao atualizar perfil",
+          description: "Não foi possível salvar as alterações.",
+          variant: "destructive",
+        });
+      }
       console.error('Error updating profile:', error);
     },
   });

@@ -9,24 +9,43 @@ import { CreditCardBillsSection } from "@/components/Dashboard/CreditCardBillsSe
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { useFinancialMetrics, useTransactions } from "@/hooks/useFinancialData";
 import { useCreditCards } from "@/hooks/useCreditCards";
+import { useUserProfile, useUpdateUserProfile } from '@/hooks/useUserProfile';
 
 export default function Dashboard() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const { totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses, monthlyBillExpenses, isLoading } = useFinancialMetrics();
   const { data: transactions = [] } = useTransactions();
   const { data: creditCards = [] } = useCreditCards();
+  const { data: userProfile, isLoading: isLoadingProfile } = useUserProfile();
+  const updateUserProfile = useUpdateUserProfile();
 
   // Check if it's the first time the user is accessing the dashboard
   useEffect(() => {
-    const hasSeenWelcome = localStorage.getItem('bolsofy-welcome-seen');
-    if (!hasSeenWelcome) {
+    if (isLoadingProfile || !userProfile) return;
+
+    const hasSeenWelcomeLocal = localStorage.getItem('bolsofy-welcome-seen') === 'true';
+    const hasCompletedOnboarding = userProfile.completed_onboarding;
+
+    // Mostrar modal se:
+    // 1. Não viu localmente E não completou onboarding no banco
+    // OU
+    // 2. Viu localmente mas não está marcado no banco (sincronizar)
+    if (!hasSeenWelcomeLocal && !hasCompletedOnboarding) {
       setShowWelcomeModal(true);
+    } else if (hasSeenWelcomeLocal && !hasCompletedOnboarding) {
+      // Sincronizar: localStorage diz que viu, mas banco não tem registro
+      updateUserProfile.mutate({ completed_onboarding: true });
     }
-  }, []);
+  }, [userProfile, isLoadingProfile, updateUserProfile]);
 
   const handleCloseWelcome = () => {
     setShowWelcomeModal(false);
+    
+    // Atualizar localStorage
     localStorage.setItem('bolsofy-welcome-seen', 'true');
+    
+    // Atualizar banco de dados
+    updateUserProfile.mutate({ completed_onboarding: true });
   };
 
   const formatCurrency = (value: number) => {
@@ -38,7 +57,7 @@ export default function Dashboard() {
 
   const recentTransactions = transactions.slice(0, 5);
 
-  if (isLoading) {
+  if (isLoading || isLoadingProfile) {
     return (
       <div className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
