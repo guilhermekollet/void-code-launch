@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +13,7 @@ export interface CreditCardBill {
   remaining_amount: number;
   due_date: string;
   close_date: string;
-  status: 'open' | 'closed' | 'paid' | 'overdue';
+  status: 'open' | 'closed' | 'paid' | 'overdue' | 'pending';
   created_at: string;
   updated_at: string;
   credit_cards: {
@@ -209,7 +210,8 @@ function calculateBillPeriod(transactionDate: Date, creditCard: any) {
   return { closeDate, dueDate, billKey };
 }
 
-function getBillStatus(closeDate: string, dueDate: string): 'open' | 'closed' | 'overdue' {
+// Corrigir a função getBillStatus para usar apenas status válidos do constraint
+function getBillStatus(closeDate: string, dueDate: string): 'open' | 'closed' | 'overdue' | 'pending' {
   const today = new Date();
   const close = new Date(closeDate);
   const due = new Date(dueDate);

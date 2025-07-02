@@ -6,6 +6,8 @@ import { useCreditCardTransactions } from "@/hooks/useCreditCards";
 import { useState } from "react";
 import { EditCreditCardModal } from "./EditCreditCardModal";
 import { DeleteCreditCardDialog } from "./DeleteCreditCardDialog";
+import { CreditCardBillTransactionsModal } from "./CreditCardBillTransactionsModal";
+import { useCurrentCreditCardBill } from "@/hooks/useCurrentCreditCardBill";
 
 interface CreditCardItemProps {
   card: {
@@ -35,7 +37,9 @@ const getContrastColor = (backgroundColor: string) => {
 export function CreditCardItem({ card }: CreditCardItemProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
   const { data: transactions = [] } = useCreditCardTransactions(card.id);
+  const { data: currentBill } = useCurrentCreditCardBill(card.id);
 
   const monthlySpent = transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   const cardName = card.card_name || card.bank_name;
@@ -50,11 +54,7 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
   };
 
   const handleViewTransactions = () => {
-    // Navigate to transactions page filtered by this card
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-    window.location.href = `/transacoes?cardId=${card.id}&month=${year}-${month}`;
+    setIsTransactionsModalOpen(true);
   };
 
   return (
@@ -149,6 +149,14 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
         onOpenChange={setIsDeleteDialogOpen}
         card={card}
       />
+
+      {currentBill && (
+        <CreditCardBillTransactionsModal
+          open={isTransactionsModalOpen}
+          onOpenChange={setIsTransactionsModalOpen}
+          bill={currentBill}
+        />
+      )}
     </>
   );
 }

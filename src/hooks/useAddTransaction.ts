@@ -136,10 +136,11 @@ export function useAddTransaction() {
       }
     },
     onSuccess: () => {
-      // Invalidate queries to refresh data
+      // Corrigir invalidações de cache para usar a query key correta
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
       queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-card-transactions'] });
       toast({
         title: "Sucesso",
         description: "Transação adicionada com sucesso!",

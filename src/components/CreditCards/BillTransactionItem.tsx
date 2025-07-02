@@ -5,6 +5,8 @@ import { Edit, Trash2, Calendar, Tag } from "lucide-react";
 import { useState } from "react";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
+import { useTransactionMutations } from "@/hooks/useTransactionMutations";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Transaction {
   id: number;
@@ -25,6 +27,8 @@ interface BillTransactionItemProps {
 export function BillTransactionItem({ transaction, onUpdate }: BillTransactionItemProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { deleteTransaction, updateTransaction } = useTransactionMutations();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -39,17 +43,30 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
 
   const isInstallment = transaction.installments && transaction.installments > 1;
 
-  const handleDelete = (id: number) => {
-    // Handle delete logic here
-    onUpdate();
-    setIsDeleteDialogOpen(false);
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteTransaction.mutateAsync(id);
+      // Invalidar caches relevantes
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bill-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
+      onUpdate();
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+    }
   };
 
-  const handleSave = (id: number, updates: Partial<Transaction>) => {
-    // Handle save logic here - this would typically call an API
-    // For now, just trigger the update callback
-    onUpdate();
-    setIsEditModalOpen(false);
+  const handleSave = async (id: number, updates: Partial<Transaction>) => {
+    try {
+      await updateTransaction.mutateAsync({ id, updates });
+      // Invalidar caches relevantes
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bill-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
+      onUpdate();
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+    }
   };
 
   return (
