@@ -45,6 +45,13 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
     setIsDeleteDialogOpen(false);
   };
 
+  const handleSave = (id: number, updates: Partial<Transaction>) => {
+    // Handle save logic here - this would typically call an API
+    // For now, just trigger the update callback
+    onUpdate();
+    setIsEditModalOpen(false);
+  };
+
   return (
     <>
       <Card className="hover:shadow-md transition-shadow border border-[#E2E8F0]">
@@ -116,12 +123,13 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
       </Card>
 
       <EditTransactionModal
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
         transaction={{
           ...transaction,
           type: transaction.type || 'despesa'
         }}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSave}
       />
 
       <DeleteTransactionDialog
