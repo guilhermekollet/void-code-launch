@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,10 +65,31 @@ export function useFinancialMetrics() {
     .filter(t => t.type === 'despesa' && !t.is_credit_card_expense)
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
-  // Calculate recurring expenses - transactions marked as recurring (excluding credit card)
+  // CORRIGIDO: Calculate recurring expenses - apenas transações do mês atual marcadas como recorrentes
   const monthlyRecurringExpenses = currentMonthTransactions
-    .filter(t => t.type === 'despesa' && t.is_recurring && !t.is_credit_card_expense)
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+    .filter(t => {
+      const isRecurring = t.is_recurring === true;
+      const isExpense = t.type === 'despesa';
+      const isNotCreditCard = !t.is_credit_card_expense;
+      
+      console.log('Recurring transaction check:', {
+        id: t.id,
+        description: t.description,
+        amount: t.amount,
+        isRecurring,
+        isExpense,
+        isNotCreditCard,
+        shouldCount: isRecurring && isExpense && isNotCreditCard
+      });
+      
+      return isRecurring && isExpense && isNotCreditCard;
+    })
+    .reduce((sum, t) => {
+      console.log('Adding recurring expense:', t.description, t.amount);
+      return sum + Number(t.amount);
+    }, 0);
+
+  console.log('Monthly recurring expenses total:', monthlyRecurringExpenses);
 
   // Calculate credit card expenses that are in bills
   const monthlyBillExpenses = currentMonthTransactions

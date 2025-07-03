@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,7 +43,7 @@ export function useCreditCardBills() {
       // Generate bills based on actual transactions
       await generateRealBills(userData.id);
 
-      // Show bills from current month and next 2 months (more relevant)
+      // Show bills from current month and next 2 months only (more focused)
       const today = new Date();
       const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
       const endDate = new Date(today.getFullYear(), today.getMonth() + 3, 0);
@@ -88,16 +87,16 @@ async function generateRealBills(userId: number) {
 
   if (!creditCards || creditCards.length === 0) return;
 
-  // Get all credit card transactions from the last 3 months (improved timeframe)
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  // Get all credit card transactions from the last 2 months only (optimized timeframe)
+  const twoMonthsAgo = new Date();
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
 
   const { data: transactions } = await supabase
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
     .eq('is_credit_card_expense', true)
-    .gte('tx_date', threeMonthsAgo.toISOString())
+    .gte('tx_date', twoMonthsAgo.toISOString())
     .order('tx_date', { ascending: true });
 
   if (!transactions || transactions.length === 0) return;
@@ -107,17 +106,22 @@ async function generateRealBills(userId: number) {
     const cardTransactions = transactions.filter(t => t.credit_card_id === creditCard.id);
     if (cardTransactions.length === 0) continue;
 
-    // Calculate bill periods for this card
+    // Calculate bill periods for this card (limited to next 6 months only)
     const billPeriods = new Map();
 
     for (const transaction of cardTransactions) {
       const installments = transaction.installments || 1;
       const installmentValue = transaction.installment_value || transaction.amount;
 
-      // Calculate each installment billing
+      // Calculate each installment billing (limit to 6 months ahead)
       for (let i = 0; i < installments; i++) {
         const installmentDate = new Date(transaction.tx_date);
         installmentDate.setMonth(installmentDate.getMonth() + i);
+        
+        // Skip if installment is more than 6 months in the future
+        const sixMonthsFromNow = new Date();
+        sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+        if (installmentDate > sixMonthsFromNow) continue;
         
         const { closeDate, dueDate, billKey } = calculateBillPeriod(installmentDate, creditCard);
         
@@ -210,9 +214,11 @@ function calculateBillPeriod(transactionDate: Date, creditCard: any) {
   return { closeDate, dueDate, billKey };
 }
 
-// Corrigir a função getBillStatus para usar apenas status válidos do constraint
+// Melhorada a função getBillStatus para ser mais precisa
 function getBillStatus(closeDate: string, dueDate: string): 'open' | 'closed' | 'overdue' | 'pending' {
   const today = new Date();
+  today.setHours(0, 0, 0, 0); // Zerar horas para comparação precisa
+  
   const close = new Date(closeDate);
   const due = new Date(dueDate);
   
@@ -298,12 +304,30 @@ export function usePayBill() {
   });
 }
 
+// CORRIGIDA: Função para calcular despesas de fatura vigente apenas
 export function useBillExpenses() {
   const { data: bills = [] } = useCreditCardBills();
   
-  const totalBillExpenses = bills
-    .filter(bill => bill.status !== 'paid')
-    .reduce((sum, bill) => sum + bill.remaining_amount, 0);
+  // Filtrar apenas faturas vigentes (não pagas e com vencimento próximo)
+  const today = new Date();
+  const in45Days = new Date();
+  in45Days.setDate(today.getDate() + 45);
+  
+  const currentBills = bills.filter(bill => {
+    const dueDate = new Date(bill.due_date);
+    return (
+      bill.status !== 'paid' && // Não foi paga
+      dueDate >= today && // Não venceu ainda OU
+      dueDate <= in45Days // Vence nos próximos 45 dias
+    ) || (
+      bill.status === 'overdue' && // OU está vencida
+      bill.remaining_amount > 0 // E ainda tem saldo
+    );
+  });
+  
+  const totalBillExpenses = currentBills.reduce((sum, bill) => sum + bill.remaining_amount, 0);
+    
+  console.log('Current bills for expenses:', currentBills.length, 'Total:', totalBillExpenses);
     
   return { totalBillExpenses };
 }
