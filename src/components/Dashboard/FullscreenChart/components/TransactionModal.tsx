@@ -9,7 +9,7 @@ import { TimeRange } from '../types';
 import { useState } from "react";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
-import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
+import { useTransactionMutations } from "@/hooks/useTransactionMutations";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface TransactionModalProps {
@@ -23,28 +23,29 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-  const updateTransaction = useUpdateTransaction();
-  const deleteTransaction = useDeleteTransaction();
+  const { updateTransaction, deleteTransaction } = useTransactionMutations();
 
-  // Parse period to get month and year - fix the type conversion
-  let month: number, year: number;
+  // Parse period to get month string and convert to the format expected by useTransactionsByMonth
+  const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+                     'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  
+  let monthString: string;
   
   if (period.includes('/')) {
     const parts = period.split('/');
-    month = parseInt(parts[0], 10);
-    year = parseInt(parts[1], 10);
+    const monthNumber = parseInt(parts[0], 10);
+    monthString = monthNames[monthNumber - 1] || 'jan';
   } else if (period.includes('-')) {
     const parts = period.split('-');
-    year = parseInt(parts[0], 10);
-    month = parseInt(parts[1], 10);
+    const monthNumber = parseInt(parts[1], 10);
+    monthString = monthNames[monthNumber - 1] || 'jan';
   } else {
-    // Fallback for other formats
-    const currentDate = new Date();
-    month = currentDate.getMonth() + 1;
-    year = currentDate.getFullYear();
+    // Fallback - try to find month name in period string
+    const foundMonth = monthNames.find(month => period.toLowerCase().includes(month));
+    monthString = foundMonth || 'jan';
   }
 
-  const { data: transactions = [], isLoading } = useTransactionsByMonth(month, year);
+  const { data: transactions = [], isLoading } = useTransactionsByMonth(monthString, true);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
