@@ -1,8 +1,6 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { X } from "lucide-react";
 import { useCreditCardBillTransactions } from "@/hooks/useCreditCardBillTransactions";
 import { BillTransactionItem } from "./BillTransactionItem";
 import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
@@ -40,23 +38,13 @@ export function CreditCardBillTransactionsModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] bg-white">
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div>
-            <DialogTitle className="text-2xl font-bold text-[#121212]">
-              Transações da Fatura
-            </DialogTitle>
-            <p className="text-[#64748B] mt-1">
-              {cardName} • Vencimento: {formatDate(bill.due_date)}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onOpenChange(false)}
-            className="h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-2xl font-bold text-[#121212]">
+            Transações da Fatura
+          </DialogTitle>
+          <p className="text-[#64748B] mt-1">
+            {cardName} • Vencimento: {formatDate(bill.due_date)}
+          </p>
         </DialogHeader>
 
         <div className="space-y-4">

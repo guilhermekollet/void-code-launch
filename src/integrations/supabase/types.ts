@@ -106,6 +106,48 @@ export type Database = {
           },
         ]
       }
+      bill_payments: {
+        Row: {
+          amount: number
+          bill_id: number
+          created_at: string | null
+          id: number
+          payment_date: string | null
+          user_id: number
+        }
+        Insert: {
+          amount: number
+          bill_id: number
+          created_at?: string | null
+          id?: number
+          payment_date?: string | null
+          user_id: number
+        }
+        Update: {
+          amount?: number
+          bill_id?: number
+          created_at?: string | null
+          id?: number
+          payment_date?: string | null
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_payments_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "credit_card_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string
@@ -143,6 +185,7 @@ export type Database = {
       }
       credit_card_bills: {
         Row: {
+          archived: boolean | null
           bill_amount: number
           close_date: string | null
           created_at: string
@@ -156,6 +199,7 @@ export type Database = {
           user_id: number
         }
         Insert: {
+          archived?: boolean | null
           bill_amount?: number
           close_date?: string | null
           created_at?: string
@@ -169,6 +213,7 @@ export type Database = {
           user_id: number
         }
         Update: {
+          archived?: boolean | null
           bill_amount?: number
           close_date?: string | null
           created_at?: string

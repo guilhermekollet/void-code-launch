@@ -13,6 +13,7 @@ export interface CreditCardBill {
   due_date: string;
   close_date: string;
   status: 'open' | 'closed' | 'paid' | 'overdue' | 'pending';
+  archived: boolean;
   created_at: string;
   updated_at: string;
   credit_cards: {
@@ -24,11 +25,11 @@ export interface CreditCardBill {
   };
 }
 
-export function useCreditCardBills() {
+export function useCreditCardBills(includeArchived = false) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['credit-card-bills-new'],
+    queryKey: ['credit-card-bills-new', includeArchived],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
 
@@ -48,7 +49,7 @@ export function useCreditCardBills() {
       const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
       const endDate = new Date(today.getFullYear(), today.getMonth() + 3, 0);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('credit_card_bills')
         .select(`
           *,
@@ -65,6 +66,13 @@ export function useCreditCardBills() {
         .lte('due_date', endDate.toISOString().split('T')[0])
         .order('due_date', { ascending: true });
 
+      // Filter archived bills unless specifically requested
+      if (!includeArchived) {
+        query = query.eq('archived', false);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
         console.error('Error fetching credit card bills:', error);
         throw error;
@@ -74,7 +82,7 @@ export function useCreditCardBills() {
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime)
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -156,12 +164,15 @@ async function generateRealBills(userId: number) {
 
       if (existingBill) {
         // Update existing bill
+        const newRemainingAmount = bill.bill_amount - existingBill.paid_amount;
+        const newStatus = newRemainingAmount <= 0 ? 'paid' : getBillStatus(bill.close_date, bill.due_date);
+        
         await supabase
           .from('credit_card_bills')
           .update({
             bill_amount: bill.bill_amount,
-            remaining_amount: bill.bill_amount - existingBill.paid_amount,
-            status: getBillStatus(bill.close_date, bill.due_date),
+            remaining_amount: newRemainingAmount,
+            status: newStatus,
             close_date: bill.close_date
           })
           .eq('id', existingBill.id);
@@ -214,10 +225,9 @@ function calculateBillPeriod(transactionDate: Date, creditCard: any) {
   return { closeDate, dueDate, billKey };
 }
 
-// Melhorada a função getBillStatus para ser mais precisa
 function getBillStatus(closeDate: string, dueDate: string): 'open' | 'closed' | 'overdue' | 'pending' {
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Zerar horas para comparação precisa
+  today.setHours(0, 0, 0, 0);
   
   const close = new Date(closeDate);
   const due = new Date(dueDate);
@@ -249,6 +259,26 @@ export function usePayBill() {
       const newRemainingAmount = bill.bill_amount - newPaidAmount;
       const newStatus = newRemainingAmount <= 0 ? 'paid' : bill.status;
 
+      // Get user's internal ID
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData) throw new Error('User not found');
+
+      // Insert payment record
+      const { error: paymentError } = await supabase
+        .from('bill_payments')
+        .insert({
+          bill_id: billId,
+          amount: paymentAmount,
+          user_id: userData.id
+        });
+
+      if (paymentError) throw paymentError;
+
       // Update bill
       const { error } = await supabase
         .from('credit_card_bills')
@@ -262,35 +292,32 @@ export function usePayBill() {
       if (error) throw error;
 
       // Create expense transaction for the payment
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+      await supabase
+        .from('transactions')
+        .insert({
+          user_id: userData.id,
+          amount: paymentAmount,
+          description: `Pagamento de fatura - Cartão`,
+          category: 'Cartão de Crédito',
+          type: 'despesa',
+          tx_date: new Date().toISOString(),
+          is_credit_card_expense: false
+        });
 
-      if (userData) {
-        await supabase
-          .from('transactions')
-          .insert({
-            user_id: userData.id,
-            amount: paymentAmount,
-            description: `Pagamento de fatura - Cartão`,
-            category: 'Cartão de Crédito',
-            type: 'despesa',
-            tx_date: new Date().toISOString(),
-            is_credit_card_expense: false
-          });
-      }
-
-      return { billId, paymentAmount };
+      return { billId, paymentAmount, newStatus };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
+      
+      const message = data.newStatus === 'paid' ? 
+        "Fatura paga integralmente! Agora você pode arquivá-la." : 
+        "Pagamento registrado com sucesso!";
+      
       toast({
         title: "Sucesso",
-        description: "Pagamento registrado com sucesso!",
+        description: message,
       });
     },
     onError: (error) => {
@@ -298,6 +325,38 @@ export function usePayBill() {
       toast({
         title: "Erro",
         description: "Erro ao registrar pagamento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useArchiveBill() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (billId: number) => {
+      const { error } = await supabase
+        .from('credit_card_bills')
+        .update({ archived: true })
+        .eq('id', billId);
+
+      if (error) throw error;
+      return billId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
+      toast({
+        title: "Sucesso",
+        description: "Fatura arquivada com sucesso!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error archiving bill:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao arquivar fatura. Tente novamente.",
         variant: "destructive",
       });
     },

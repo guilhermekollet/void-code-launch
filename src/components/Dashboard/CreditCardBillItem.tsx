@@ -1,9 +1,11 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, AlertTriangle, Eye } from "lucide-react";
+import { CreditCard, AlertTriangle, Eye, Archive, History } from "lucide-react";
 import { useState } from "react";
 import { PayBillModal } from "./PayBillModal";
+import { ArchiveBillModal } from "./ArchiveBillModal";
+import { BillPaymentHistory } from "./BillPaymentHistory";
 import { CreditCardBillTransactionsModal } from "@/components/CreditCards/CreditCardBillTransactionsModal";
 import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
 
@@ -13,6 +15,8 @@ interface CreditCardBillItemProps {
 
 export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
 
   const formatCurrency = (value: number) => {
@@ -94,17 +98,44 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
           </div>
 
           <div className="space-y-2">
-            <Button
-              onClick={() => setIsTransactionsModalOpen(true)}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              Ver Transações
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => setIsTransactionsModalOpen(true)}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                Transações
+              </Button>
 
-            {bill.status !== 'paid' && (
+              <Button
+                onClick={() => setIsHistoryModalOpen(true)}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                <History className="h-3 w-3 mr-1" />
+                Pagamentos
+              </Button>
+            </div>
+
+            {bill.status === 'paid' ? (
+              <div className="space-y-2">
+                <div className="text-center py-2">
+                  <span className="text-sm font-medium text-green-600">✓ Fatura Paga</span>
+                </div>
+                <Button
+                  onClick={() => setIsArchiveModalOpen(true)}
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs"
+                >
+                  <Archive className="h-3 w-3 mr-1" />
+                  Arquivar
+                </Button>
+              </div>
+            ) : (
               <Button
                 onClick={() => setIsPayModalOpen(true)}
                 size="sm"
@@ -117,12 +148,6 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
                 {isOverdue() ? 'Pagar (Vencida)' : 'Pagar Fatura'}
               </Button>
             )}
-
-            {bill.status === 'paid' && (
-              <div className="text-center py-2">
-                <span className="text-sm font-medium text-green-600">✓ Fatura Paga</span>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -130,6 +155,18 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
       <PayBillModal
         open={isPayModalOpen}
         onOpenChange={setIsPayModalOpen}
+        bill={bill}
+      />
+
+      <ArchiveBillModal
+        open={isArchiveModalOpen}
+        onOpenChange={setIsArchiveModalOpen}
+        bill={bill}
+      />
+
+      <BillPaymentHistory
+        open={isHistoryModalOpen}
+        onOpenChange={setIsHistoryModalOpen}
         bill={bill}
       />
 

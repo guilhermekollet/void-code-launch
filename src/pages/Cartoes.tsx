@@ -1,5 +1,6 @@
 
 import { CreditCardsSection } from "@/components/Dashboard/CreditCardsSection";
+import { BillsBarChart } from "@/components/CreditCards/BillsBarChart";
 
 export default function Cartoes() {
   return (
@@ -11,6 +12,7 @@ export default function Cartoes() {
         </div>
       </div>
 
+      <BillsBarChart />
       <CreditCardsSection />
     </div>
   );
