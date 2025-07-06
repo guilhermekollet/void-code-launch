@@ -1,48 +1,114 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCategoryMutations } from "@/hooks/useCategoryMutations";
+import { useAddCategory } from "@/hooks/useAddCategory";
 import { Tag } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 
 interface CategoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: 'receita' | 'despesa';
   onCategoryCreated?: (categoryName: string) => void;
 }
 
 const AVAILABLE_ICONS = [
-  'utensils', 'chef-hat', 'wine', 'ice-cream', 'coffee', 'pizza',
-  'car', 'bus', 'train', 'fuel', 'parking-circle', 'plane',
-  'home', 'building', 'wrench', 'lightbulb', 'sofa', 'hammer',
-  'stethoscope', 'pill', 'activity', 'cross', 'heart', 'dumbbell',
-  'graduation-cap', 'pencil', 'calculator', 'book-open', 'book',
-  'film', 'ticket', 'palette', 'mountain', 'music', 'gamepad-2', 'camera',
-  'briefcase', 'computer', 'building-2', 'users', 'laptop',
-  'shopping-bag', 'shopping-cart', 'store', 'shirt', 'gift',
-  'credit-card', 'receipt', 'trending-up', 'piggy-bank', 'coins', 'dollar-sign',
-  'scissors', 'settings', 'wifi', 'phone', 'zap', 'tag',
+  // Alimentação
+  'utensils',
+  'chef-hat',
+  'wine',
+  'ice-cream',
+  'coffee',
+  'pizza',
+  
+  // Transporte
+  'car',
+  'bus',
+  'train',
+  'fuel',
+  'parking-circle',
+  'plane',
+  
+  // Moradia
+  'home',
+  'building',
+  'wrench',
+  'lightbulb',
+  'sofa',
+  'hammer',
+  
+  // Saúde
+  'stethoscope',
+  'pill',
+  'activity',
+  'cross',
+  'heart',
+  'dumbbell',
+  
+  // Educação
+  'graduation-cap',
+  'pencil',
+  'calculator',
+  'book-open',
+  'book',
+  
+  // Lazer
+  'film',
+  'ticket',
+  'palette',
+  'mountain',
+  'music',
+  'gamepad-2',
+  'camera',
+  
+  // Trabalho
+  'briefcase',
+  'computer',
+  'building-2',
+  'users',
+  'laptop',
+  
+  // Compras
+  'shopping-bag',
+  'shopping-cart',
+  'store',
+  'shirt',
+  'gift',
+  
+  // Financeiro
+  'credit-card',
+  'receipt',
+  'trending-up',
+  'piggy-bank',
+  'coins',
+  'dollar-sign',
+  
+  // Serviços/Outros
+  'scissors',
+  'settings',
+  'wifi',
+  'phone',
+  'zap',
+  'tag',
 ];
 
 const DEFAULT_COLOR = '#61710C';
 
-export function CategoryModal({ open, onOpenChange, type, onCategoryCreated }: CategoryModalProps) {
+export function CategoryModal({ open, onOpenChange, onCategoryCreated }: CategoryModalProps) {
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('tag');
   
-  const { addCategory } = useCategoryMutations();
+  const addCategory = useAddCategory();
 
   const getIconComponent = (iconName: string) => {
+    // Convert kebab-case to PascalCase for Lucide icon names
     const pascalCase = iconName
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join('');
     
-    // @ts-ignore
+    // @ts-ignore - Dynamic icon access
     return LucideIcons[pascalCase] || Tag;
   };
 
@@ -55,7 +121,6 @@ export function CategoryModal({ open, onOpenChange, type, onCategoryCreated }: C
       name: categoryName,
       icon: selectedIcon,
       color: DEFAULT_COLOR,
-      type,
     }, {
       onSuccess: () => {
         if (onCategoryCreated) {
@@ -74,19 +139,18 @@ export function CategoryModal({ open, onOpenChange, type, onCategoryCreated }: C
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl mx-auto max-h-[90vh] overflow-y-auto bg-white border-[#DEDEDE] rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Nova Categoria de {type === 'receita' ? 'Receita' : 'Despesa'}
-          </DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Nova Categoria</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Nome da categoria */}
           <div className="space-y-2">
             <Label htmlFor="category-name" className="text-sm font-medium">
               Nome da Categoria
             </Label>
             <Input
               id="category-name"
-              placeholder={`Ex: ${type === 'receita' ? 'Salário, Freelance' : 'Alimentação, Transporte'}...`}
+              placeholder="Ex: Alimentação, Transporte..."
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-10"
@@ -95,6 +159,7 @@ export function CategoryModal({ open, onOpenChange, type, onCategoryCreated }: C
             />
           </div>
 
+          {/* Seleção de ícone */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Ícone</Label>
             <div className="grid grid-cols-8 gap-3 max-h-60 overflow-y-auto p-4 border border-[#DEDEDE] rounded-lg bg-gray-50">
@@ -122,6 +187,7 @@ export function CategoryModal({ open, onOpenChange, type, onCategoryCreated }: C
             </div>
           </div>
 
+          {/* Preview */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Preview</Label>
             <div className="flex items-center gap-3 p-4 bg-white border-2 border-dashed border-gray-200 rounded-lg">
@@ -135,13 +201,11 @@ export function CategoryModal({ open, onOpenChange, type, onCategoryCreated }: C
               <span className="font-medium text-gray-900">
                 {name || 'Nome da categoria'}
               </span>
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded capitalize">
-                {type}
-              </span>
             </div>
           </div>
         </div>
 
+        {/* Botões */}
         <div className="flex gap-3 pt-4">
           <Button
             variant="outline"

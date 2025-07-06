@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +10,7 @@ export function useCategoryChartData() {
     queryFn: async () => {
       if (!user) return [];
 
+      // First get the user's internal ID
       const { data: userData } = await supabase
         .from('users')
         .select('id')
@@ -19,7 +19,7 @@ export function useCategoryChartData() {
 
       if (!userData) return [];
 
-      // Get only expense transactions
+      // Get transactions with category data
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select('*')
@@ -31,12 +31,11 @@ export function useCategoryChartData() {
         return [];
       }
 
-      // Get only expense categories
+      // Get categories
       const { data: categories, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
-        .eq('user_id', userData.id)
-        .eq('type', 'despesa');
+        .eq('user_id', userData.id);
 
       if (categoriesError) {
         console.error('Error fetching categories:', categoriesError);
@@ -64,7 +63,7 @@ export function useCategoryChartData() {
             icon: categoryInfo?.icon || 'tag'
           };
         })
-        .sort((a, b) => b.value - a.value);
+        .sort((a, b) => b.value - a.value); // Sort by value descending
 
       return chartData;
     },

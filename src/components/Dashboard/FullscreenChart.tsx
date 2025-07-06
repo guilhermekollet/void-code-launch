@@ -3,11 +3,10 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts';
 import { FullscreenChartProps, VisibleLines, ZoomDomain } from './FullscreenChart/types';
 import { useFullscreenChartData } from './FullscreenChart/hooks/useChartData';
 import { ChartControls } from './FullscreenChart/components/ChartControls';
-import { TransactionsModal } from './TransactionsModal';
+import { TransactionsSidebar } from './FullscreenChart/components/TransactionsSidebar';
 
 export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
   const [period, setPeriod] = useState('6');
@@ -20,7 +19,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     gastosRecorrentes: true,
     fluxoLiquido: true
   });
-  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');
 
   const chartData = useFullscreenChartData(period, showFuture);
@@ -62,8 +61,8 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      if (isTransactionsModalOpen) {
-        setIsTransactionsModalOpen(false);
+      if (sidebarOpen) {
+        setSidebarOpen(false);
       } else {
         onClose();
       }
@@ -75,7 +74,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, isTransactionsModalOpen]);
+  }, [isOpen, sidebarOpen]);
 
   const showScrollControls = showFuture && chartData.length > 12;
   const canScrollLeft = scrollPosition > 0;
@@ -128,35 +127,14 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     }));
   };
 
-  const handlePointClick = (data: any) => {
-    if (data && data.activePayload && data.activePayload[0]) {
-      const monthData = data.activePayload[0].payload;
-      const month = monthData.period || monthData.mes;
-      if (month) {
-        setSelectedMonth(month);
-        setIsTransactionsModalOpen(true);
-      }
-    }
+  const handlePointClick = (month: string) => {
+    setSelectedMonth(month);
+    setSidebarOpen(true);
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatTooltip = (value: number, name: string) => {
-    const nameMapping: Record<string, string> = {
-      receitas: 'Receitas',
-      despesas: 'Despesas',
-      gastosRecorrentes: 'Gastos Recorrentes',
-      fluxoLiquido: 'Saldo',
-      faturas: 'Faturas'
-    };
-    return [formatCurrency(value), nameMapping[name] || name];
+  const handleCloseSidebar = () => {
+    setSidebarOpen(false);
+    setSelectedMonth('');
   };
 
   return (
@@ -208,97 +186,21 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
             {/* Chart - takes remaining height */}
             <div className="flex-1 min-h-0 p-4">
               <div className="h-full bg-white rounded-lg border border-gray-200">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={displayData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                    onClick={handlePointClick}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="mes"
-                      tick={{ fontSize: 12 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis 
-                      tickFormatter={formatCurrency}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <Tooltip 
-                      formatter={formatTooltip}
-                      labelStyle={{ color: '#121212' }}
-                      contentStyle={{ 
-                        backgroundColor: 'white', 
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    {futureStartIndex >= 0 && (
-                      <ReferenceLine x={futureStartIndex} stroke="#94a3b8" strokeDasharray="2 2" />
-                    )}
-                    
-                    {visibleLines.receitas && (
-                      <Line
-                        type="monotone"
-                        dataKey="receitas"
-                        stroke="#61710C"
-                        strokeWidth={3}
-                        name="Receitas"
-                        dot={{ fill: '#61710C', strokeWidth: 2, r: 4, cursor: 'pointer' }}
-                        activeDot={{ r: 8, stroke: '#61710C', strokeWidth: 2, cursor: 'pointer' }}
-                      />
-                    )}
-                    
-                    {visibleLines.despesas && (
-                      <Line
-                        type="monotone"
-                        dataKey="despesas"
-                        stroke="#EF4444"
-                        strokeWidth={3}
-                        name="Despesas"
-                        dot={{ fill: '#EF4444', strokeWidth: 2, r: 4, cursor: 'pointer' }}
-                        activeDot={{ r: 8, stroke: '#EF4444', strokeWidth: 2, cursor: 'pointer' }}
-                      />
-                    )}
-                    
-                    {visibleLines.gastosRecorrentes && (
-                      <Line
-                        type="monotone"
-                        dataKey="gastosRecorrentes"
-                        stroke="#3B82F6"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        name="Gastos Recorrentes"
-                        dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3, cursor: 'pointer' }}
-                        activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2, cursor: 'pointer' }}
-                      />
-                    )}
-                    
-                    {visibleLines.fluxoLiquido && (
-                      <Line
-                        type="monotone"
-                        dataKey="fluxoLiquido"
-                        stroke="#F59E0B"
-                        strokeWidth={2}
-                        name="Saldo"
-                        dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3, cursor: 'pointer' }}
-                        activeDot={{ r: 6, stroke: '#F59E0B', strokeWidth: 2, cursor: 'pointer' }}
-                      />
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="p-4 h-full">
+                  <p className="text-center text-gray-500 py-8">
+                    Gráfico de fluxo financeiro - Clique nos pontos para ver detalhes das transações
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Transactions Modal */}
-      <TransactionsModal
-        isOpen={isTransactionsModalOpen}
-        onClose={() => setIsTransactionsModalOpen(false)}
+      {/* Transactions Sidebar */}
+      <TransactionsSidebar
+        isOpen={sidebarOpen}
+        onClose={handleCloseSidebar}
         selectedMonth={selectedMonth}
       />
     </>

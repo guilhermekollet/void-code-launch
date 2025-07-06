@@ -1,16 +1,16 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function useCategories(type?: 'receita' | 'despesa') {
+export function useCategories() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['categories', user?.id, type],
+    queryKey: ['categories', user?.id],
     queryFn: async () => {
       if (!user) return [];
 
+      // First get the user's internal ID
       const { data: userData } = await supabase
         .from('users')
         .select('id')
@@ -19,17 +19,11 @@ export function useCategories(type?: 'receita' | 'despesa') {
 
       if (!userData) return [];
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('categories')
         .select('*')
         .eq('user_id', userData.id)
         .order('name', { ascending: true });
-
-      if (type) {
-        query = query.eq('type', type);
-      }
-
-      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching categories:', error);
