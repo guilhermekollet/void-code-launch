@@ -155,6 +155,7 @@ export type Database = {
           icon: string
           id: number
           name: string
+          type: string
           user_id: number
         }
         Insert: {
@@ -163,6 +164,7 @@ export type Database = {
           icon?: string
           id?: number
           name: string
+          type?: string
           user_id: number
         }
         Update: {
@@ -171,6 +173,7 @@ export type Database = {
           icon?: string
           id?: number
           name?: string
+          type?: string
           user_id?: number
         }
         Relationships: [

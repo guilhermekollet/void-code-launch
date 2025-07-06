@@ -10,33 +10,27 @@ import * as LucideIcons from "lucide-react";
 interface CategoryDropdownProps {
   value: string;
   onChange: (value: string) => void;
+  transactionType: 'receita' | 'despesa';
   onCategoryAdded?: (categoryName: string) => void;
 }
 
-export function CategoryDropdown({ value, onChange, onCategoryAdded }: CategoryDropdownProps) {
+export function CategoryDropdown({ value, onChange, transactionType, onCategoryAdded }: CategoryDropdownProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { data: categories = [], isLoading } = useCategories();
+  const { data: categories = [], isLoading } = useCategories(transactionType);
 
   const getIconComponent = (iconName: string) => {
-    console.log('Trying to get icon for:', iconName);
-    
-    // Converter kebab-case para PascalCase para ícones do Lucide
     const pascalCase = iconName
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join('');
     
-    console.log('Converted to PascalCase:', pascalCase);
-    
-    // @ts-ignore - Acesso dinâmico aos ícones
+    // @ts-ignore
     const IconComponent = LucideIcons[pascalCase];
     
     if (IconComponent) {
-      console.log('Found icon component:', pascalCase);
       return IconComponent;
     }
     
-    console.log('Icon not found, using fallback Tag icon');
     return Tag;
   };
 
@@ -56,15 +50,14 @@ export function CategoryDropdown({ value, onChange, onCategoryAdded }: CategoryD
                 isLoading 
                   ? "Carregando..." 
                   : categories.length === 0 
-                    ? "Nenhuma categoria encontrada" 
-                    : "Selecione uma categoria"
+                    ? `Nenhuma categoria de ${transactionType} encontrada` 
+                    : `Selecione uma categoria de ${transactionType}`
               } 
             />
           </SelectTrigger>
           <SelectContent className="bg-white border border-[#DEDEDE] shadow-lg z-50">
             {!isLoading && categories.length > 0 && categories.map((category) => {
               const IconComponent = getIconComponent(category.icon);
-              console.log('Rendering category:', category.name, 'with color:', category.color);
               return (
                 <SelectItem key={category.id} value={category.name}>
                   <div className="flex items-center gap-2">
@@ -91,6 +84,7 @@ export function CategoryDropdown({ value, onChange, onCategoryAdded }: CategoryD
       <CategoryModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
+        type={transactionType}
         onCategoryCreated={handleCategoryCreated}
       />
     </>

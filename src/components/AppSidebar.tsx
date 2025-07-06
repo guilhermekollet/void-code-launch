@@ -1,5 +1,5 @@
 
-import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle } from "lucide-react";
+import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,10 @@ const items = [{
   title: "Recorrentes",
   url: "/recorrentes",
   icon: Repeat
+}, {
+  title: "Categorias",
+  url: "/categorias",
+  icon: Tag
 }, {
   title: "Relatórios",
   url: "/relatorios",
@@ -82,7 +86,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
               
-              {/* Bolsofy IA Button */}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild size="lg" className="h-14">
                   <button 

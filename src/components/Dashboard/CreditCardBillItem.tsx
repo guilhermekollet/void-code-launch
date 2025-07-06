@@ -11,9 +11,10 @@ import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
 
 interface CreditCardBillItemProps {
   bill: CreditCardBill;
+  compact?: boolean;
 }
 
-export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
+export function CreditCardBillItem({ bill, compact = false }: CreditCardBillItemProps) {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -52,94 +53,102 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
 
   return (
     <>
-      <Card className={`${statusColor} transition-colors`}>
-        <CardContent className="p-4 space-y-3">
+      <Card className={`${statusColor} transition-colors ${compact ? 'h-fit' : ''}`}>
+        <CardContent className={`${compact ? 'p-3' : 'p-4'} space-y-${compact ? '2' : '3'}`}>
           <div className="flex items-center gap-3">
             <div 
-              className="w-8 h-8 rounded flex items-center justify-center"
+              className={`${compact ? 'w-6 h-6' : 'w-8 h-8'} rounded flex items-center justify-center`}
               style={{ backgroundColor: bill.credit_cards.color }}
             >
-              <CreditCard className="h-4 w-4 text-white" />
+              <CreditCard className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-white`} />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-[#121212] text-sm">{cardName}</h3>
-              <p className="text-xs text-[#64748B]">
+            <div className="flex-1 min-w-0">
+              <h3 className={`font-semibold text-[#121212] ${compact ? 'text-xs' : 'text-sm'} truncate`}>
+                {cardName}
+              </h3>
+              <p className={`${compact ? 'text-xs' : 'text-xs'} text-[#64748B] truncate`}>
                 {bill.status === 'open' ? 'Fatura em aberto' : `Vence em ${formatDate(bill.due_date)}`}
               </p>
             </div>
             {isOverdue() && (
-              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <AlertTriangle className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-red-500 flex-shrink-0`} />
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className={`space-y-${compact ? '1' : '2'}`}>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-[#64748B]">Total:</span>
-              <span className="font-semibold text-[#121212]">
+              <span className={`${compact ? 'text-xs' : 'text-sm'} text-[#64748B]`}>Total:</span>
+              <span className={`font-semibold text-[#121212] ${compact ? 'text-xs' : 'text-sm'}`}>
                 {formatCurrency(bill.bill_amount)}
               </span>
             </div>
             
             {bill.paid_amount > 0 && (
               <div className="flex justify-between items-center">
-                <span className="text-sm text-[#64748B]">Pago:</span>
-                <span className="text-sm text-green-600">
+                <span className={`${compact ? 'text-xs' : 'text-sm'} text-[#64748B]`}>Pago:</span>
+                <span className={`${compact ? 'text-xs' : 'text-sm'} text-green-600`}>
                   {formatCurrency(bill.paid_amount)}
                 </span>
               </div>
             )}
             
             <div className="flex justify-between items-center">
-              <span className="text-sm text-[#64748B]">Restante:</span>
-              <span className="font-semibold text-[#121212]">
+              <span className={`${compact ? 'text-xs' : 'text-sm'} text-[#64748B]`}>Restante:</span>
+              <span className={`font-semibold text-[#121212] ${compact ? 'text-xs' : 'text-sm'}`}>
                 {formatCurrency(bill.remaining_amount)}
               </span>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                onClick={() => setIsTransactionsModalOpen(true)}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                <Eye className="h-3 w-3 mr-1" />
-                Transações
-              </Button>
+          <div className={`space-y-${compact ? '1' : '2'}`}>
+            {!compact && (
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => setIsTransactionsModalOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <Eye className="h-3 w-3 mr-1" />
+                  Transações
+                </Button>
 
-              <Button
-                onClick={() => setIsHistoryModalOpen(true)}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                <History className="h-3 w-3 mr-1" />
-                Pagamentos
-              </Button>
-            </div>
+                <Button
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <History className="h-3 w-3 mr-1" />
+                  Pagamentos
+                </Button>
+              </div>
+            )}
 
             {bill.status === 'paid' ? (
-              <div className="space-y-2">
-                <div className="text-center py-2">
-                  <span className="text-sm font-medium text-green-600">✓ Fatura Paga</span>
+              <div className={`space-y-${compact ? '1' : '2'}`}>
+                <div className="text-center py-1">
+                  <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-green-600`}>
+                    ✓ Fatura Paga
+                  </span>
                 </div>
-                <Button
-                  onClick={() => setIsArchiveModalOpen(true)}
-                  size="sm"
-                  variant="outline"
-                  className="w-full text-xs"
-                >
-                  <Archive className="h-3 w-3 mr-1" />
-                  Arquivar
-                </Button>
+                {!compact && (
+                  <Button
+                    onClick={() => setIsArchiveModalOpen(true)}
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs"
+                  >
+                    <Archive className="h-3 w-3 mr-1" />
+                    Arquivar
+                  </Button>
+                )}
               </div>
             ) : (
               <Button
                 onClick={() => setIsPayModalOpen(true)}
                 size="sm"
-                className="w-full"
+                className={`w-full ${compact ? 'text-xs py-1' : ''}`}
                 style={{
                   backgroundColor: isOverdue() ? '#dc2626' : '#61710C',
                   color: isOverdue() ? 'white' : '#CFF500',
