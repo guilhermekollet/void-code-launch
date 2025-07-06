@@ -54,9 +54,8 @@ const handleBolsofyIAClick = () => {
 };
 
 export function AppSidebar() {
-  return <Sidebar className="border-r bg-white" style={{
-    borderColor: '#DEDEDE'
-  }}>
+  return (
+    <Sidebar className="border-r bg-white z-40" style={{ borderColor: '#DEDEDE' }}>
       <SidebarHeader className="p-6 bg-white">
         <div className="flex items-center gap-3">
           <img src="/lovable-uploads/549233e8-56e8-49c8-b3d7-3393077d8256.png" alt="Bolsofy Logo" className="h-10 w-auto" />
@@ -65,10 +64,9 @@ export function AppSidebar() {
       <SidebarContent className="bg-white">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu style={{
-            gap: '10px'
-          }}>
-              {items.map(item => <SidebarMenuItem key={item.title}>
+            <SidebarMenu style={{ gap: '10px' }}>
+              {items.map(item => 
+                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="lg" className="h-14">
                     <NavLink 
                       to={item.url} 
@@ -84,7 +82,8 @@ export function AppSidebar() {
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
-                </SidebarMenuItem>)}
+                </SidebarMenuItem>
+              )}
               
               <SidebarMenuItem>
                 <SidebarMenuButton asChild size="lg" className="h-14">
@@ -115,5 +114,6 @@ export function AppSidebar() {
           </Badge>
         </div>
       </SidebarFooter>
-    </Sidebar>;
+    </Sidebar>
+  );
 }

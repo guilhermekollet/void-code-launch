@@ -7,7 +7,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { FullscreenChartProps, VisibleLines, ZoomDomain } from './FullscreenChart/types';
 import { useFullscreenChartData } from './FullscreenChart/hooks/useChartData';
 import { ChartControls } from './FullscreenChart/components/ChartControls';
-import { TransactionsSidebar } from './FullscreenChart/components/TransactionsSidebar';
+import { TransactionsModal } from './TransactionsModal';
 
 export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
   const [period, setPeriod] = useState('6');
@@ -20,7 +20,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     gastosRecorrentes: true,
     fluxoLiquido: true
   });
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');
 
   const chartData = useFullscreenChartData(period, showFuture);
@@ -62,8 +62,8 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      if (sidebarOpen) {
-        setSidebarOpen(false);
+      if (isTransactionsModalOpen) {
+        setIsTransactionsModalOpen(false);
       } else {
         onClose();
       }
@@ -75,7 +75,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, sidebarOpen]);
+  }, [isOpen, isTransactionsModalOpen]);
 
   const showScrollControls = showFuture && chartData.length > 12;
   const canScrollLeft = scrollPosition > 0;
@@ -128,14 +128,15 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     }));
   };
 
-  const handlePointClick = (month: string) => {
-    setSelectedMonth(month);
-    setSidebarOpen(true);
-  };
-
-  const handleCloseSidebar = () => {
-    setSidebarOpen(false);
-    setSelectedMonth('');
+  const handlePointClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload[0]) {
+      const monthData = data.activePayload[0].payload;
+      const month = monthData.period || monthData.mes;
+      if (month) {
+        setSelectedMonth(month);
+        setIsTransactionsModalOpen(true);
+      }
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -211,14 +212,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
                   <LineChart
                     data={displayData}
                     margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                    onClick={(data) => {
-                      if (data && data.activePayload && data.activePayload[0]) {
-                        const period = data.activePayload[0].payload.period || data.activePayload[0].payload.mes;
-                        if (period) {
-                          handlePointClick(period);
-                        }
-                      }
-                    }}
+                    onClick={handlePointClick}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis 
@@ -301,10 +295,10 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Transactions Sidebar */}
-      <TransactionsSidebar
-        isOpen={sidebarOpen}
-        onClose={handleCloseSidebar}
+      {/* Transactions Modal */}
+      <TransactionsModal
+        isOpen={isTransactionsModalOpen}
+        onClose={() => setIsTransactionsModalOpen(false)}
         selectedMonth={selectedMonth}
       />
     </>

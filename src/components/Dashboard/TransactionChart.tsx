@@ -6,10 +6,24 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Maximize } from "lucide-react";
 import { useChartDataWithInstallments } from "@/hooks/useFinancialData";
 import { FullscreenChart } from "./FullscreenChart";
+import { TransactionsModal } from "./TransactionsModal";
 
 export function TransactionChart() {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('');
   const { data: monthlyData = [] } = useChartDataWithInstallments();
+
+  const handlePointClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload[0]) {
+      const monthData = data.activePayload[0].payload;
+      const month = monthData.period || monthData.mes;
+      if (month) {
+        setSelectedMonth(month);
+        setIsTransactionsModalOpen(true);
+      }
+    }
+  };
 
   if (monthlyData.length === 0 || monthlyData.every(d => d.receitas === 0 && d.despesas === 0)) {
     return (
@@ -42,7 +56,10 @@ export function TransactionChart() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={monthlyData}>
+            <LineChart 
+              data={monthlyData}
+              onClick={handlePointClick}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis 
                 dataKey="mes" 
@@ -77,8 +94,8 @@ export function TransactionChart() {
                 stroke="#61710C" 
                 strokeWidth={3} 
                 name="Receitas" 
-                dot={{ fill: '#61710C', strokeWidth: 2, r: 4 }} 
-                activeDot={{ r: 6, fill: '#61710C' }} 
+                dot={{ fill: '#61710C', strokeWidth: 2, r: 4, cursor: 'pointer' }} 
+                activeDot={{ r: 6, fill: '#61710C', cursor: 'pointer' }} 
               />
               <Line 
                 type="monotone" 
@@ -86,8 +103,8 @@ export function TransactionChart() {
                 stroke="#EF4444" 
                 strokeWidth={3} 
                 name="Despesas" 
-                dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }} 
-                activeDot={{ r: 6, fill: '#EF4444' }} 
+                dot={{ fill: '#EF4444', strokeWidth: 2, r: 4, cursor: 'pointer' }} 
+                activeDot={{ r: 6, fill: '#EF4444', cursor: 'pointer' }} 
               />
                <Line 
                 type="monotone" 
@@ -96,8 +113,8 @@ export function TransactionChart() {
                 strokeWidth={2} 
                 strokeDasharray="5 5" 
                 name="Gastos Recorrentes" 
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }} 
-                activeDot={{ r: 5, fill: '#3B82F6' }} 
+                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3, cursor: 'pointer' }} 
+                activeDot={{ r: 5, fill: '#3B82F6', cursor: 'pointer' }} 
                />
                <Line 
                 type="monotone" 
@@ -105,8 +122,8 @@ export function TransactionChart() {
                 stroke="#F59E0B" 
                 strokeWidth={2} 
                 name="Faturas" 
-                dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }} 
-                activeDot={{ r: 5, fill: '#F59E0B' }} 
+                dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3, cursor: 'pointer' }} 
+                activeDot={{ r: 5, fill: '#F59E0B', cursor: 'pointer' }} 
                />
             </LineChart>
           </ResponsiveContainer>
@@ -116,6 +133,12 @@ export function TransactionChart() {
       <FullscreenChart 
         isOpen={isFullscreenOpen}
         onClose={() => setIsFullscreenOpen(false)}
+      />
+
+      <TransactionsModal
+        isOpen={isTransactionsModalOpen}
+        onClose={() => setIsTransactionsModalOpen(false)}
+        selectedMonth={selectedMonth}
       />
     </>
   );
