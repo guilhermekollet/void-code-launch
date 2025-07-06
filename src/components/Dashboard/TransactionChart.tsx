@@ -18,7 +18,7 @@ export function TransactionChart() {
           <CardTitle className="text-[#121212]">Fluxo Financeiro</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] flex items-center justify-center text-[#64748B]">
+          <div className="h-64 flex items-center justify-center text-[#64748B]">
             Nenhuma transação encontrada
           </div>
         </CardContent>
@@ -41,7 +41,7 @@ export function TransactionChart() {
           </Button>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={250}>
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis 
