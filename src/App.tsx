@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Transacoes from "./pages/Transacoes";
 import Cartoes from "./pages/Cartoes";
 import Recorrentes from "./pages/Recorrentes";
+import Categorias from "./pages/Categorias";
 import Assinatura from "./pages/Assinatura";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
@@ -57,6 +58,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <Recorrentes />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/categorias" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Categorias />
                 </Layout>
               </ProtectedRoute>
             } />

@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +8,7 @@ interface CategoryData {
   name: string;
   icon: string;
   color: string;
+  type: string;
 }
 
 export function useAddCategory() {
@@ -34,6 +36,7 @@ export function useAddCategory() {
           name: categoryData.name,
           icon: categoryData.icon,
           color: categoryData.color,
+          type: categoryData.type,
         })
         .select()
         .single();

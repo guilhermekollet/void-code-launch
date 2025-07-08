@@ -1,5 +1,5 @@
 
-import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle } from "lucide-react";
+import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,10 @@ const items = [{
   url: "/recorrentes",
   icon: Repeat
 }, {
+  title: "Categorias",
+  url: "/categorias",
+  icon: Tag
+}, {
   title: "Relatórios",
   url: "/relatorios",
   icon: BarChart3
@@ -32,17 +36,48 @@ const items = [{
 }];
 
 const handleBetaClick = () => {
-  confetti({
-    particleCount: 100,
-    spread: 70,
-    origin: { y: 0.6 },
-    colors: ['#61710C', '#4a5709', '#92CB0B', '#A8E6CF'],
-    startVelocity: 30,
-    decay: 0.9,
-    gravity: 1,
-    drift: 0,
-    ticks: 200
-  });
+  // Enhanced confetti with green and yellow colors for 5 seconds
+  const colors = ['#61710C', '#92CB0B', '#CFF500', '#FFEB3B'];
+  const duration = 5000; // 5 seconds
+  const end = Date.now() + duration;
+
+  // Multiple confetti bursts
+  const frame = () => {
+    // Random positions across the screen
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    confetti({
+      particleCount: randomInRange(30, 60),
+      spread: randomInRange(50, 90),
+      origin: { 
+        x: randomInRange(0.1, 0.9), 
+        y: randomInRange(0.1, 0.7) 
+      },
+      colors: colors,
+      startVelocity: randomInRange(25, 45),
+      decay: randomInRange(0.85, 0.95),
+      gravity: randomInRange(0.8, 1.2),
+      drift: randomInRange(-0.5, 0.5),
+      ticks: randomInRange(150, 250),
+      scalar: randomInRange(0.8, 1.2)
+    });
+
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  };
+
+  // Start with immediate burst
+  frame();
+
+  // Additional bursts every 500ms
+  const interval = setInterval(() => {
+    if (Date.now() >= end) {
+      clearInterval(interval);
+      return;
+    }
+    frame();
+  }, 500);
 };
 
 const handleBolsofyIAClick = () => {

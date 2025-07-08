@@ -11,11 +11,15 @@ interface CategoryDropdownProps {
   value: string;
   onChange: (value: string) => void;
   onCategoryAdded?: (categoryName: string) => void;
+  transactionType?: "despesa" | "receita";
 }
 
-export function CategoryDropdown({ value, onChange, onCategoryAdded }: CategoryDropdownProps) {
+export function CategoryDropdown({ value, onChange, onCategoryAdded, transactionType = "despesa" }: CategoryDropdownProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: categories = [], isLoading } = useCategories();
+
+  // Filter categories by transaction type
+  const filteredCategories = categories.filter(category => category.type === transactionType);
 
   const getIconComponent = (iconName: string) => {
     console.log('Trying to get icon for:', iconName);
@@ -55,14 +59,14 @@ export function CategoryDropdown({ value, onChange, onCategoryAdded }: CategoryD
               placeholder={
                 isLoading 
                   ? "Carregando..." 
-                  : categories.length === 0 
+                  : filteredCategories.length === 0 
                     ? "Nenhuma categoria encontrada" 
                     : "Selecione uma categoria"
               } 
             />
           </SelectTrigger>
           <SelectContent className="bg-white border border-[#DEDEDE] shadow-lg z-50">
-            {!isLoading && categories.length > 0 && categories.map((category) => {
+            {!isLoading && filteredCategories.length > 0 && filteredCategories.map((category) => {
               const IconComponent = getIconComponent(category.icon);
               console.log('Rendering category:', category.name, 'with color:', category.color);
               return (
@@ -92,6 +96,7 @@ export function CategoryDropdown({ value, onChange, onCategoryAdded }: CategoryD
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onCategoryCreated={handleCategoryCreated}
+        categoryType={transactionType}
       />
     </>
   );

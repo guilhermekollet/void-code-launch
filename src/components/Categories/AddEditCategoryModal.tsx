@@ -6,14 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAddCategory } from "@/hooks/useAddCategory";
+import { useCategoryMutations } from "@/hooks/useCategoryMutations";
 import * as LucideIcons from "lucide-react";
 import { Tag } from "lucide-react";
 
-interface CategoryModalProps {
+interface AddEditCategoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCategoryCreated?: (categoryName: string) => void;
-  categoryType?: "despesa" | "receita";
+  categoryType: "despesa" | "receita";
+  category?: {
+    id: number;
+    name: string;
+    icon: string;
+    color: string;
+    type: string;
+  };
 }
 
 const CATEGORY_ICONS = [
@@ -29,25 +36,32 @@ const CATEGORY_COLORS = [
   '#4F46E5', '#7C3AED', '#9333EA', '#C026D3', '#DB2777', '#BE185D'
 ];
 
-export function CategoryModal({ 
+export function AddEditCategoryModal({ 
   open, 
   onOpenChange, 
-  onCategoryCreated,
-  categoryType = "despesa"
-}: CategoryModalProps) {
+  categoryType, 
+  category 
+}: AddEditCategoryModalProps) {
   const [name, setName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState("tag");
   const [selectedColor, setSelectedColor] = useState("#61710C");
 
-  const { mutate: addCategory, isPending } = useAddCategory();
+  const { mutate: addCategory, isPending: isAdding } = useAddCategory();
+  const { updateCategoryMutation } = useCategoryMutations();
+
+  const isEditing = !!category;
 
   useEffect(() => {
-    if (!open) {
+    if (category && open) {
+      setName(category.name);
+      setSelectedIcon(category.icon);
+      setSelectedColor(category.color);
+    } else if (!category && open) {
       setName("");
       setSelectedIcon("tag");
       setSelectedColor("#61710C");
     }
-  }, [open]);
+  }, [category, open]);
 
   const getIconComponent = (iconName: string) => {
     if (!iconName) return Tag;
@@ -66,19 +80,30 @@ export function CategoryModal({
     
     if (!name.trim()) return;
 
-    addCategory({
-      name: name.trim(),
-      icon: selectedIcon,
-      color: selectedColor,
-      type: categoryType
-    }, {
-      onSuccess: () => {
-        if (onCategoryCreated) {
-          onCategoryCreated(name.trim());
+    if (isEditing && category) {
+      updateCategoryMutation.mutate({
+        categoryId: category.id,
+        name: name.trim(),
+        icon: selectedIcon,
+        color: selectedColor,
+        type: categoryType
+      }, {
+        onSuccess: () => {
+          onOpenChange(false);
         }
-        onOpenChange(false);
-      }
-    });
+      });
+    } else {
+      addCategory({
+        name: name.trim(),
+        icon: selectedIcon,
+        color: selectedColor,
+        type: categoryType
+      }, {
+        onSuccess: () => {
+          onOpenChange(false);
+        }
+      });
+    }
   };
 
   return (
@@ -86,7 +111,7 @@ export function CategoryModal({
       <DialogContent className="bg-white max-w-md">
         <DialogHeader>
           <DialogTitle>
-            Adicionar Categoria de {categoryType === 'despesa' ? 'Despesa' : 'Receita'}
+            {isEditing ? 'Editar Categoria' : `Adicionar Categoria de ${categoryType === 'despesa' ? 'Despesa' : 'Receita'}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -160,9 +185,12 @@ export function CategoryModal({
             <Button 
               type="submit" 
               className="bg-[#61710C] hover:bg-[#4a5709]"
-              disabled={isPending || !name.trim()}
+              disabled={isAdding || updateCategoryMutation.isPending || !name.trim()}
             >
-              {isPending ? 'Adicionando...' : 'Adicionar'}
+              {isAdding || updateCategoryMutation.isPending 
+                ? (isEditing ? 'Salvando...' : 'Adicionando...') 
+                : (isEditing ? 'Salvar' : 'Adicionar')
+              }
             </Button>
           </div>
         </form>
