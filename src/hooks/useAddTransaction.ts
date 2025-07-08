@@ -55,7 +55,7 @@ export function useAddTransaction() {
           .from('transactions')
           .insert({
             user_id: userData.id,
-            amount: transactionData.amount,
+            value: transactionData.amount,
             type: transactionData.type,
             category: transactionData.category,
             description: transactionData.description,
@@ -88,7 +88,7 @@ export function useAddTransaction() {
             .from('transactions')
             .insert({
               user_id: userData.id,
-              amount: installmentAmount,
+              value: installmentAmount,
               type: transactionData.type,
               category: transactionData.category,
               description: `${transactionData.description} (${i}/${transactionData.total_installments})`,
@@ -116,7 +116,7 @@ export function useAddTransaction() {
           .from('transactions')
           .insert({
             user_id: userData.id,
-            amount: transactionData.amount,
+            value: transactionData.amount,
             type: transactionData.type,
             category: transactionData.category,
             description: transactionData.description,

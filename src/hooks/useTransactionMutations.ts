@@ -21,9 +21,16 @@ export function useUpdateTransaction() {
     mutationFn: async ({ id, updates }: { id: number; updates: UpdateTransactionData }) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Map amount to value for database update
+      const dbUpdates = { ...updates };
+      if (updates.amount !== undefined) {
+        dbUpdates.value = updates.amount;
+        delete dbUpdates.amount;
+      }
+
       const { data, error } = await supabase
         .from('transactions')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();

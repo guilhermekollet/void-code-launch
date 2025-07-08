@@ -50,7 +50,7 @@ export function useFutureData(showFuture: boolean) {
         if (transactionDate.getFullYear() === futureDate.getFullYear() && 
             transactionDate.getMonth() === futureDate.getMonth()) {
           
-          const amount = Number(transaction.amount);
+          const amount = Number(transaction.value);
           console.log(`Future unique transaction: ${transaction.description}, amount: ${amount}, type: ${transaction.type}, date: ${transactionDate.toLocaleDateString()}`);
           
           if (transaction.type === 'receita') {
@@ -73,7 +73,7 @@ export function useFutureData(showFuture: boolean) {
         const currentInstallment = (transaction.installment_number || 1) + monthsDiff;
         
         if (monthsDiff >= 0 && currentInstallment <= (transaction.total_installments || 0)) {
-          const amount = Number(transaction.amount);
+          const amount = Number(transaction.value);
           console.log(`Future installment: ${transaction.description}, amount: ${amount}, month: ${futureDate.toLocaleDateString('pt-BR', { month: 'short' })}`);
           
           if (transaction.type === 'receita') {
@@ -89,7 +89,7 @@ export function useFutureData(showFuture: boolean) {
 
       // Add recurring transactions to ALL future months
       recurringTransactions.forEach(transaction => {
-        const amount = Number(transaction.amount);
+        const amount = Number(transaction.value);
         console.log(`Recurring transaction: ${transaction.description}, amount: ${amount}, type: ${transaction.type}`);
         
         if (transaction.type === 'receita') {

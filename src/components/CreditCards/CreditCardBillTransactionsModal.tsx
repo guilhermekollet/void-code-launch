@@ -104,7 +104,10 @@ export function CreditCardBillTransactionsModal({
                 {transactions.map((transaction) => (
                   <BillTransactionItem
                     key={transaction.id}
-                    transaction={transaction}
+                    transaction={{
+                      ...transaction,
+                      amount: transaction.value // Map value to amount for the component
+                    }}
                     onUpdate={() => {
                       // Refresh transactions when updated
                     }}

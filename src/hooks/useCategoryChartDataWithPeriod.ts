@@ -64,7 +64,7 @@ export function useCategoryChartDataWithPeriod(period: string) {
         if (!acc[categoryName]) {
           acc[categoryName] = 0;
         }
-        acc[categoryName] += Number(transaction.amount);
+        acc[categoryName] += Number(transaction.value);
         return acc;
       }, {} as Record<string, number>);
 

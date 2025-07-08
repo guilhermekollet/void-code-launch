@@ -51,30 +51,30 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
         // Regular income
         const regularReceitas = monthTransactions
           .filter(t => t.type === 'receita' && !t.is_installment)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
         // Installment income
         const installmentReceitas = installmentTransactions
           .filter(t => t.type === 'receita')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
         const totalReceitas = regularReceitas + installmentReceitas;
 
         // Regular expenses
         const regularDespesas = monthTransactions
           .filter(t => t.type === 'despesa' && !t.is_installment)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
         // Installment expenses - each installment counts only once per period
         const installmentDespesas = installmentTransactions
           .filter(t => t.type === 'despesa')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
         const totalDespesas = regularDespesas + installmentDespesas;
 
         const gastosRecorrentes = monthTransactions
           .filter(t => t.type === 'despesa' && t.is_recurring)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
         
         // For 2-year period, include year in label to avoid confusion
         const monthLabel = months === 24 

@@ -101,7 +101,12 @@ export default function Transacoes() {
       return true;
     });
 
-    // Sort transactions
+    // Sort transactions and map value to amount for compatibility
+    filtered = filtered.map(transaction => ({
+      ...transaction,
+      amount: transaction.value || 0 // Map value to amount for component compatibility
+    }));
+
     filtered.sort((a, b) => {
       let comparison = 0;
       

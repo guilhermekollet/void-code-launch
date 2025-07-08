@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +49,7 @@ export function useCategoryChartData() {
         if (!acc[categoryName]) {
           acc[categoryName] = 0;
         }
-        acc[categoryName] += Number(transaction.amount);
+        acc[categoryName] += Number(transaction.value);
         return acc;
       }, {} as Record<string, number>);
 

@@ -41,7 +41,7 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
   const { data: transactions = [] } = useCreditCardTransactions(card.id);
   const { data: currentBill } = useCurrentCreditCardBill(card.id);
 
-  const monthlySpent = transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  const monthlySpent = transactions.reduce((sum, transaction) => sum + Number(transaction.value), 0);
   const cardName = card.card_name || card.bank_name;
   const cardColor = card.color || '#e5e7eb';
   const textColor = getContrastColor(cardColor);

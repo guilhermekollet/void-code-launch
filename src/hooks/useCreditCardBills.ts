@@ -119,7 +119,7 @@ async function generateBillsFromTransactions(userId: number) {
     if (!creditCard) continue;
 
     const installments = transaction.installments || 1;
-    const installmentValue = transaction.installment_value || transaction.amount;
+    const installmentValue = transaction.installment_value || transaction.value;
 
     // Calculate each installment bill
     for (let i = 0; i < installments; i++) {
