@@ -41,24 +41,29 @@ export default function Recorrentes() {
 
   // Calculate statistics
   const totalRecurringExpenses = useMemo(() => {
-    return allRecurringTransactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+    return allRecurringTransactions.reduce((sum, transaction) => sum + Number(transaction.value), 0);
   }, [allRecurringTransactions]);
 
-  // Filter and sort transactions
+  // Filter and sort transactions - Map value to amount for compatibility
   const filteredAndSortedTransactions = useMemo(() => {
-    let filtered = allRecurringTransactions.filter((transaction) => {
-      // Filter by category
-      if (filters.category !== 'all' && transaction.category !== filters.category) {
-        return false;
-      }
+    let filtered = allRecurringTransactions
+      .map(transaction => ({
+        ...transaction,
+        amount: transaction.value // Map value to amount for compatibility
+      }))
+      .filter((transaction) => {
+        // Filter by category
+        if (filters.category !== 'all' && transaction.category !== filters.category) {
+          return false;
+        }
 
-      // Filter by search
-      if (filters.search && !transaction.description.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false;
-      }
+        // Filter by search
+        if (filters.search && !transaction.description.toLowerCase().includes(filters.search.toLowerCase())) {
+          return false;
+        }
 
-      return true;
-    });
+        return true;
+      });
 
     // Sort transactions
     filtered.sort((a, b) => {

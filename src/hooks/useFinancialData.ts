@@ -72,21 +72,23 @@ export const useFinancialData = () => {
         monthlyExpenses: totalDespesas,
         monthlyRecurringExpenses: gastosRecorrentes,
         monthlyBillExpenses,
-        totalBillExpenses: monthlyBillExpenses
+        totalBillExpenses: monthlyBillExpenses,
+        isLoading: false
       };
     },
   });
 };
 
 export const useFinancialMetrics = () => {
-  const { data } = useFinancialData();
+  const { data, isLoading } = useFinancialData();
   
   return {
     totalBalance: data?.totalBalance || 0,
     monthlyIncome: data?.monthlyIncome || 0,
     monthlyExpenses: data?.monthlyExpenses || 0,
     monthlyRecurringExpenses: data?.monthlyRecurringExpenses || 0,
-    monthlyBillExpenses: data?.monthlyBillExpenses || 0
+    monthlyBillExpenses: data?.monthlyBillExpenses || 0,
+    isLoading
   };
 };
 
@@ -112,7 +114,12 @@ export const useTransactions = () => {
         .order('tx_date', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Map value to amount for compatibility
+      return (data || []).map(transaction => ({
+        ...transaction,
+        amount: transaction.value
+      }));
     },
   });
 };
@@ -200,7 +207,7 @@ export const useChartData = () => {
         const startDate = startOfMonth(date);
         const endDate = endOfMonth(date);
 
-        const [receitasResult, despesasResult] = await Promise.all([
+        const [receitasResult, despesasResult, recorrentesResult, billsResult] = await Promise.all([
           supabase
             .from('transactions')
             .select('value')
@@ -215,16 +222,36 @@ export const useChartData = () => {
             .eq('user_id', userData.id)
             .eq('type', 'despesa')
             .gte('tx_date', startDate.toISOString())
-            .lte('tx_date', endDate.toISOString())
+            .lte('tx_date', endDate.toISOString()),
+
+          supabase
+            .from('transactions')
+            .select('value')
+            .eq('user_id', userData.id)
+            .eq('type', 'despesa')
+            .eq('is_recurring', true)
+            .gte('tx_date', startDate.toISOString())
+            .lte('tx_date', endDate.toISOString()),
+
+          supabase
+            .from('credit_card_bills')
+            .select('bill_amount')
+            .eq('user_id', userData.id)
+            .gte('due_date', startDate.toISOString().split('T')[0])
+            .lte('due_date', endDate.toISOString().split('T')[0])
         ]);
 
         const receitas = receitasResult.data?.reduce((sum, t) => sum + Number(t.value), 0) || 0;
         const despesas = despesasResult.data?.reduce((sum, t) => sum + Number(t.value), 0) || 0;
+        const gastosRecorrentes = recorrentesResult.data?.reduce((sum, t) => sum + Number(t.value), 0) || 0;
+        const faturas = billsResult.data?.reduce((sum, bill) => sum + Number(bill.bill_amount), 0) || 0;
 
         months.push({
-          month: format(date, 'MMM'),
+          mes: format(date, 'MMM'),
           receitas,
           despesas,
+          gastosRecorrentes,
+          faturas
         });
       }
 
@@ -257,4 +284,7 @@ export const useChartData = () => {
   });
 };
 
-export const useChartDataWithInstallments = () => useChartData();
+export const useChartDataWithInstallments = () => {
+  const { data } = useChartData();
+  return data?.monthlyData || [];
+};

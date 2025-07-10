@@ -5,7 +5,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { useChartData } from "@/hooks/useFinancialData";
 
 export function ExpensesByCategory() {
-  const { categoryData } = useChartData();
+  const { data } = useChartData();
+  const categoryData = data?.categoryData || [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {

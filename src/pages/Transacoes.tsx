@@ -101,12 +101,6 @@ export default function Transacoes() {
       return true;
     });
 
-    // Sort transactions and map value to amount for compatibility
-    filtered = filtered.map(transaction => ({
-      ...transaction,
-      amount: transaction.value || 0 // Map value to amount for component compatibility
-    }));
-
     filtered.sort((a, b) => {
       let comparison = 0;
       
@@ -162,8 +156,8 @@ export default function Transacoes() {
     setEditingTransaction(transaction);
   };
 
-  const handleSaveTransaction = (id: number, updates: Partial<Transaction>) => {
-    updateTransactionMutation.mutate({ id, updates });
+  const handleSaveTransaction = (id: number, data: Partial<Transaction>) => {
+    updateTransactionMutation.mutate({ id, data });
   };
 
   const handleDeleteTransaction = (id: number, description: string) => {

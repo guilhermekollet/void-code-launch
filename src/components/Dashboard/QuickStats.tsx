@@ -17,7 +17,8 @@ export function QuickStats({
   monthlyRecurringExpenses,
   formatCurrency
 }: QuickStatsProps) {
-  const { totalBillExpenses } = useBillExpenses();
+  const { data: billExpensesData } = useBillExpenses();
+  const totalBillExpenses = billExpensesData?.totalBillExpenses || 0;
   
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">

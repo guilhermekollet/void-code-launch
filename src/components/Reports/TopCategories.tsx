@@ -5,7 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { useChartData } from "@/hooks/useFinancialData";
 
 export function TopCategories() {
-  const { categoryData } = useChartData();
+  const { data } = useChartData();
+  const categoryData = data?.categoryData || [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {

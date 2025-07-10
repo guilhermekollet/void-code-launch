@@ -9,9 +9,9 @@ import { FullscreenChart } from "./FullscreenChart";
 
 export function TransactionChart() {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
-  const { data: monthlyData = [] } = useChartDataWithInstallments();
+  const monthlyData = useChartDataWithInstallments();
 
-  if (monthlyData.length === 0 || monthlyData.every(d => d.receitas === 0 && d.despesas === 0)) {
+  if (!monthlyData || monthlyData.length === 0 || monthlyData.every(d => d.receitas === 0 && d.despesas === 0)) {
     return (
       <Card className="bg-white border-[#E2E8F0]">
         <CardHeader>
