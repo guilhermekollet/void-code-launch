@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditCard, AlertTriangle, Eye, Archive, History } from "lucide-react";
@@ -47,7 +46,7 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
   const statusColor = isOverdue() ? 'border-red-500 bg-red-50' : 
                      isDueSoon() ? 'border-yellow-500 bg-yellow-50' : 
                      bill.status === 'paid' ? 'border-green-500 bg-green-50' :
-                     bill.status === 'open' ? 'border-blue-500 bg-blue-50' :
+                     bill.status === 'pending' ? 'border-blue-500 bg-blue-50' :
                      'border-[#E2E8F0] bg-white';
 
   return (
@@ -64,7 +63,7 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
             <div className="flex-1">
               <h3 className="font-semibold text-[#121212] text-sm">{cardName}</h3>
               <p className="text-xs text-[#64748B]">
-                {bill.status === 'open' ? 'Fatura em aberto' : `Vence em ${formatDate(bill.due_date)}`}
+                {bill.status === 'pending' ? 'Fatura em aberto' : `Vence em ${formatDate(bill.due_date)}`}
               </p>
             </div>
             {isOverdue() && (

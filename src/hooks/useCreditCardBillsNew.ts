@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, addMonths, startOfMonth, endOfMonth, isSameMonth, isAfter, addDays } from 'date-fns';
@@ -87,7 +86,11 @@ export const useCreditCardBillsNew = (selectedMonth?: Date) => {
 
       if (error) throw error;
 
-      return bills || [];
+      // Type cast to ensure proper typing
+      return (bills || []).map(bill => ({
+        ...bill,
+        status: bill.status as 'pending' | 'paid' | 'overdue'
+      })) as CreditCardBill[];
     },
   });
 };
@@ -204,7 +207,7 @@ export const useBillExpenses = () => {
 
       const totalExpenses = bills?.reduce((sum, bill) => sum + Number(bill.bill_amount), 0) || 0;
 
-      return { totalExpenses };
+      return { totalExpenses, totalBillExpenses: totalExpenses };
     },
   });
 };

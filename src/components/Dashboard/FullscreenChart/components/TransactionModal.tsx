@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,9 +69,9 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
     setDeletingTransactionId(transactionId);
   };
 
-  const handleSaveEdit = async (id: number, updates: any) => {
+  const handleSaveEdit = async (id: number, data: any) => {
     try {
-      await updateTransaction.mutateAsync({ id, updates });
+      await updateTransaction.mutateAsync({ id, data });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
       setEditingTransaction(null);
@@ -90,8 +91,10 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
     }
   };
 
-  const receitas = Array.isArray(transactions) ? transactions.filter(t => t.type === 'receita') : [];
-  const despesas = Array.isArray(transactions) ? transactions.filter(t => t.type === 'despesa') : [];
+  // Ensure transactions is always an array
+  const transactionsArray = Array.isArray(transactions) ? transactions : [];
+  const receitas = transactionsArray.filter(t => t.type === 'receita');
+  const despesas = transactionsArray.filter(t => t.type === 'despesa');
 
   const totalReceitas = receitas.reduce((sum, t) => sum + (t.amount || t.value || 0), 0);
   const totalDespesas = despesas.reduce((sum, t) => sum + (t.amount || t.value || 0), 0);
@@ -141,7 +144,7 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
                   </div>
                 ))}
               </div>
-            ) : !Array.isArray(transactions) || transactions.length === 0 ? (
+            ) : transactionsArray.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Calendar className="w-8 h-8 text-gray-400" />
@@ -153,7 +156,7 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
               </div>
             ) : (
               <div className="space-y-2">
-                {transactions.map((transaction) => (
+                {transactionsArray.map((transaction) => (
                   <div
                     key={transaction.id}
                     className="flex items-center justify-between p-4 border border-[#E2E8F0] rounded-lg hover:shadow-md transition-shadow"
@@ -197,7 +200,7 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
                         <p className={`font-bold text-lg ${
                           transaction.type === 'receita' ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {transaction.type === 'receita' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                          {transaction.type === 'receita' ? '+' : '-'}{formatCurrency(transaction.amount || transaction.value)}
                         </p>
                         {transaction.installments && transaction.installments > 1 && (
                           <p className="text-sm text-[#64748B]">
@@ -245,7 +248,7 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
       {deletingTransactionId && (
         <DeleteTransactionDialog
           transactionId={deletingTransactionId}
-          transactionDescription={Array.isArray(transactions) ? transactions.find(t => t.id === deletingTransactionId)?.description || '' : ''}
+          transactionDescription={transactionsArray.find(t => t.id === deletingTransactionId)?.description || ''}
           isOpen={!!deletingTransactionId}
           onClose={() => setDeletingTransactionId(null)}
           onDelete={handleConfirmDelete}

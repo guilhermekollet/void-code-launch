@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, subDays } from 'date-fns';
 
 export const useFinancialData = () => {
   return useQuery({
@@ -71,8 +71,109 @@ export const useFinancialData = () => {
         monthlyIncome: totalReceitas,
         monthlyExpenses: totalDespesas,
         monthlyRecurringExpenses: gastosRecorrentes,
-        monthlyBillExpenses
+        monthlyBillExpenses,
+        totalBillExpenses: monthlyBillExpenses
       };
+    },
+  });
+};
+
+export const useFinancialMetrics = () => {
+  const { data } = useFinancialData();
+  
+  return {
+    totalBalance: data?.totalBalance || 0,
+    monthlyIncome: data?.monthlyIncome || 0,
+    monthlyExpenses: data?.monthlyExpenses || 0,
+    monthlyRecurringExpenses: data?.monthlyRecurringExpenses || 0,
+    monthlyBillExpenses: data?.monthlyBillExpenses || 0
+  };
+};
+
+export const useTransactions = () => {
+  return useQuery({
+    queryKey: ['transactions'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!userData) throw new Error('Dados do usuário não encontrados');
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .order('tx_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+};
+
+export const useDailyData = (days: number) => {
+  return useQuery({
+    queryKey: ['daily-data', days],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!userData) throw new Error('Dados do usuário não encontrados');
+
+      const endDate = new Date();
+      const startDate = subDays(endDate, days);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .gte('tx_date', startDate.toISOString())
+        .lte('tx_date', endDate.toISOString())
+        .order('tx_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Group by day and calculate daily totals
+      const dailyData = [];
+      for (let i = 0; i < days; i++) {
+        const date = subDays(endDate, days - 1 - i);
+        const dayTransactions = (data || []).filter(t => {
+          const txDate = new Date(t.tx_date);
+          return txDate.toDateString() === date.toDateString();
+        });
+
+        const receitas = dayTransactions
+          .filter(t => t.type === 'receita')
+          .reduce((sum, t) => sum + Number(t.value), 0);
+        const despesas = dayTransactions
+          .filter(t => t.type === 'despesa')
+          .reduce((sum, t) => sum + Number(t.value), 0);
+
+        dailyData.push({
+          mes: format(date, 'dd/MM'),
+          receitas,
+          despesas,
+          fluxoLiquido: receitas - despesas,
+          gastosRecorrentes: dayTransactions
+            .filter(t => t.type === 'despesa' && t.is_recurring)
+            .reduce((sum, t) => sum + Number(t.value), 0),
+          isFuture: false
+        });
+      }
+
+      return dailyData;
     },
   });
 };
@@ -127,7 +228,33 @@ export const useChartData = () => {
         });
       }
 
-      return months;
+      // Get category data
+      const { data: categoryTransactions } = await supabase
+        .from('transactions')
+        .select('category, value')
+        .eq('user_id', userData.id)
+        .eq('type', 'despesa');
+
+      const categoryTotals = {};
+      categoryTransactions?.forEach(t => {
+        if (!categoryTotals[t.category]) {
+          categoryTotals[t.category] = 0;
+        }
+        categoryTotals[t.category] += Number(t.value);
+      });
+
+      const categoryData = Object.entries(categoryTotals).map(([name, value], index) => ({
+        name,
+        value: value as number,
+        color: `hsl(${(index * 137.5) % 360}, 70%, 50%)`
+      })).sort((a, b) => b.value - a.value);
+
+      return { 
+        monthlyData: months, 
+        categoryData 
+      };
     },
   });
 };
+
+export const useChartDataWithInstallments = () => useChartData();

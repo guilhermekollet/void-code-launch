@@ -1,9 +1,9 @@
 
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CurrencyInput } from "@/components/ui/currency-input";
+import { useState } from "react";
 import { usePayBill } from "@/hooks/useCreditCardBillsNew";
 import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
 
@@ -14,7 +14,7 @@ interface PayBillModalProps {
 }
 
 export function PayBillModal({ open, onOpenChange, bill }: PayBillModalProps) {
-  const [paymentAmount, setPaymentAmount] = useState(bill.remaining_amount.toString());
+  const [amount, setAmount] = useState(bill.remaining_amount.toString());
   const payBill = usePayBill();
 
   const formatCurrency = (value: number) => {
@@ -24,79 +24,64 @@ export function PayBillModal({ open, onOpenChange, bill }: PayBillModalProps) {
     }).format(value);
   };
 
-  const handlePayment = () => {
-    const amount = parseFloat(paymentAmount);
-    if (amount <= 0 || amount > bill.remaining_amount) return;
-
-    payBill.mutate(
-      { billId: bill.id, paymentAmount: amount },
-      {
-        onSuccess: () => {
-          onOpenChange(false);
-          setPaymentAmount(bill.remaining_amount.toString());
-        }
-      }
-    );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      await payBill.mutateAsync({
+        billId: bill.id,
+        amount: parseFloat(amount)
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error paying bill:', error);
+    }
   };
-
-  const cardName = bill.credit_cards.card_name || bill.credit_cards.bank_name;
-  const paymentValue = parseFloat(paymentAmount) || 0;
-  const remainingAfterPayment = bill.remaining_amount - paymentValue;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white max-w-md mx-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-[#121212]">
-            Pagar Fatura - {cardName}
-          </DialogTitle>
+          <DialogTitle>Pagar Fatura</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 pt-4">
-          <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-            <div className="flex justify-between">
-              <span className="text-sm text-[#64748B]">Total da fatura:</span>
-              <span className="font-semibold">{formatCurrency(bill.bill_amount)}</span>
-            </div>
-            
-            {bill.paid_amount > 0 && (
-              <div className="flex justify-between">
-                <span className="text-sm text-[#64748B]">Já pago:</span>
-                <span className="text-green-600">{formatCurrency(bill.paid_amount)}</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between border-t pt-2">
-              <span className="text-sm text-[#64748B]">Valor restante:</span>
-              <span className="font-semibold">{formatCurrency(bill.remaining_amount)}</span>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label>Cartão</Label>
+            <div className="text-sm text-[#64748B]">
+              {bill.credit_cards.card_name || bill.credit_cards.bank_name}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="payment-amount" className="text-sm font-medium">
-              Valor a pagar
-            </Label>
-            <CurrencyInput
-              id="payment-amount"
-              value={paymentAmount}
-              onChange={setPaymentAmount}
-              className="w-full"
+          <div>
+            <Label>Valor Total da Fatura</Label>
+            <div className="text-lg font-semibold">
+              {formatCurrency(bill.bill_amount)}
+            </div>
+          </div>
+
+          <div>
+            <Label>Valor Restante</Label>
+            <div className="text-lg font-semibold text-red-600">
+              {formatCurrency(bill.remaining_amount)}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="amount">Valor do Pagamento</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
             />
-            <p className="text-xs text-[#64748B]">
-              Você pode pagar o valor total ou parcial
-            </p>
           </div>
 
-          {paymentValue > 0 && paymentValue !== bill.remaining_amount && (
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700">
-                Após este pagamento, restará: {formatCurrency(remainingAfterPayment)}
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-3">
+          <div className="flex gap-2 pt-4">
             <Button
+              type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               className="flex-1"
@@ -104,18 +89,14 @@ export function PayBillModal({ open, onOpenChange, bill }: PayBillModalProps) {
               Cancelar
             </Button>
             <Button
-              onClick={handlePayment}
-              disabled={paymentValue <= 0 || paymentValue > bill.remaining_amount || payBill.isPending}
+              type="submit"
+              disabled={payBill.isPending}
               className="flex-1"
-              style={{
-                backgroundColor: '#61710C',
-                color: '#CFF500',
-              }}
             >
               {payBill.isPending ? 'Processando...' : 'Confirmar Pagamento'}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

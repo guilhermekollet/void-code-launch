@@ -34,6 +34,7 @@ export function useCurrentCreditCardBill(creditCardId: number) {
         .select(`
           *,
           credit_cards (
+            id,
             bank_name,
             card_name,
             color,
@@ -54,7 +55,13 @@ export function useCurrentCreditCardBill(creditCardId: number) {
         return null;
       }
 
-      return data as CreditCardBill | null;
+      if (!data) return null;
+
+      // Type cast to ensure proper typing with status
+      return {
+        ...data,
+        status: data.status as 'pending' | 'paid' | 'overdue'
+      } as CreditCardBill;
     },
     enabled: !!user && !!creditCardId,
     staleTime: 2 * 60 * 1000, // 2 minutes
