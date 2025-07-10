@@ -389,6 +389,7 @@ export type Database = {
           name: string
           payment_confirmed: boolean | null
           phone: string
+          registration_stage: string
           selected_plan: string
           stripe_session_id: string | null
           updated_at: string | null
@@ -401,6 +402,7 @@ export type Database = {
           name: string
           payment_confirmed?: boolean | null
           phone: string
+          registration_stage?: string
           selected_plan: string
           stripe_session_id?: string | null
           updated_at?: string | null
@@ -413,6 +415,7 @@ export type Database = {
           name?: string
           payment_confirmed?: boolean | null
           phone?: string
+          registration_stage?: string
           selected_plan?: string
           stripe_session_id?: string | null
           updated_at?: string | null

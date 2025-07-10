@@ -9,7 +9,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, MessageCircle } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { IOSSwitch } from '@/components/ui/ios-switch';
 
@@ -85,6 +85,8 @@ export default function Register() {
   });
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [isContinuation, setIsContinuation] = useState(false);
+  const [onboardingId, setOnboardingId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -114,18 +116,83 @@ export default function Register() {
     return phone.length >= 10;
   };
 
-  const checkEmailExists = async (email: string): Promise<boolean> => {
+  const checkEmailExists = async (email: string): Promise<any> => {
     try {
       const { data, error } = await supabase.functions.invoke('check-email-exists', {
         body: { email }
       });
 
       if (error) throw error;
-      return data?.exists || false;
+      return data;
     } catch (error) {
       console.error('Error checking email:', error);
-      return false;
+      return { exists: false, canContinue: false };
     }
+  };
+
+  const saveOrUpdateOnboarding = async (stage: string, updateData: Partial<FormData> = {}) => {
+    try {
+      const dataToSave = {
+        name: updateData.name || formData.name,
+        email: updateData.email || formData.email,
+        phone: (updateData.phone || formData.phone).replace(/\D/g, ''),
+        selected_plan: updateData.selectedPlan || formData.selectedPlan,
+        billing_cycle: updateData.billingCycle || formData.billingCycle,
+        registration_stage: stage
+      };
+
+      if (onboardingId) {
+        // Update existing record
+        const { error } = await supabase
+          .from('onboarding')
+          .update(dataToSave)
+          .eq('id', onboardingId);
+
+        if (error) throw error;
+      } else {
+        // Create new record
+        const { data, error } = await supabase
+          .from('onboarding')
+          .insert([dataToSave])
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        if (data) setOnboardingId(data.id);
+      }
+    } catch (error) {
+      console.error('Error saving onboarding data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar progresso. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadExistingData = (existingData: any) => {
+    setFormData({
+      name: existingData.name || '',
+      email: existingData.email || '',
+      confirmEmail: existingData.email || '',
+      phone: existingData.phone || '55',
+      selectedPlan: existingData.selectedPlan || '',
+      billingCycle: existingData.billingCycle || 'monthly'
+    });
+
+    // Determine current step based on registration stage
+    const stage = existingData.registrationStage;
+    if (stage === 'email') {
+      setCurrentStep('phone');
+    } else if (stage === 'phone') {
+      setCurrentStep('plan');
+    } else if (stage === 'plan') {
+      setCurrentStep('plan');
+    } else {
+      setCurrentStep('name');
+    }
+
+    setIsContinuation(true);
   };
 
   const canProceedFromStep = (step: RegistrationStep): boolean => {
@@ -170,20 +237,41 @@ export default function Register() {
       return;
     }
 
-    // Check if email already exists before proceeding from email step
+    // Handle email step
     if (currentStep === 'email') {
       setCheckingEmail(true);
-      const emailExists = await checkEmailExists(formData.email);
+      const emailCheckResult = await checkEmailExists(formData.email);
       setCheckingEmail(false);
 
-      if (emailExists) {
+      if (emailCheckResult.exists && emailCheckResult.completed) {
         toast({
           title: "Email já cadastrado",
-          description: "Este email já está cadastrado. Faça login ou use outro email.",
+          description: emailCheckResult.message,
           variant: "destructive"
         });
         return;
       }
+
+      if (emailCheckResult.canContinue && emailCheckResult.existingData) {
+        toast({
+          title: "Cadastro encontrado",
+          description: emailCheckResult.message,
+        });
+        loadExistingData(emailCheckResult.existingData);
+        return;
+      }
+
+      // Save new registration after email step
+      await saveOrUpdateOnboarding('email');
+    }
+
+    // Save progress for other steps
+    if (currentStep === 'name') {
+      // Name step completed, move to email
+    } else if (currentStep === 'phone') {
+      await saveOrUpdateOnboarding('phone');
+    } else if (currentStep === 'plan') {
+      await saveOrUpdateOnboarding('plan');
     }
 
     const nextIndex = currentStepIndex + 1;
@@ -212,24 +300,8 @@ export default function Register() {
     if (!selectedPlan) return;
 
     try {
-      // Save data to onboarding table
-      const { error } = await supabase.from('onboarding').insert({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone.replace(/\D/g, ''), // Only numbers
-        selected_plan: formData.selectedPlan,
-        billing_cycle: formData.billingCycle
-      });
-
-      if (error) {
-        console.error('Error saving onboarding data:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao salvar dados. Tente novamente.",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Update to payment stage
+      await saveOrUpdateOnboarding('payment', formData);
 
       const stripeUrl = formData.billingCycle === 'monthly' 
         ? selectedPlan.stripeUrls.monthly 
@@ -284,6 +356,13 @@ export default function Register() {
                 className="h-12 w-auto" 
               />
             </div>
+            {isContinuation && (
+              <div className="text-center mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  ✨ Continuando seu cadastro
+                </p>
+              </div>
+            )}
           </CardHeader>
           
           <CardContent className="space-y-6">
@@ -512,8 +591,20 @@ export default function Register() {
               )}
             </div>
 
+            {/* Support Button */}
+            <div className="text-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() => window.open('https://wa.me/5551992527815', '_blank')}
+                className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white mb-4"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Prec isa de ajuda? Fale conosco
+              </Button>
+            </div>
+
             {/* Login Link */}
-            <div className="text-center pt-4 border-t border-[#DEDEDE]">
+            <div className="text-center border-t border-[#DEDEDE] pt-4">
               <p className="text-sm text-[#64748B]">
                 Já tem uma conta?{' '}
                 <Link to="/login" className="text-[#61710C] hover:underline font-medium">
