@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,8 +37,8 @@ const plans: Plan[] = [
       'Suporte por email'
     ],
     stripeUrls: {
-      monthly: 'https://buy.stripe.com/bJe28r23b5uk7G3bUafQI00',
-      yearly: 'https://buy.stripe.com/fZubJ16jrcWM2lJ8HYfQI01'
+      monthly: 'https://buy.stripe.com/test_bJe28r23b5uk7G3bUafQI00',
+      yearly: 'https://buy.stripe.com/test_fZubJ16jrcWM2lJ8HYfQI01'
     }
   },
   {
@@ -56,8 +55,8 @@ const plans: Plan[] = [
       'Integração com bancos'
     ],
     stripeUrls: {
-      monthly: 'https://buy.stripe.com/8x28wP37f0a00dB3nEfQI02',
-      yearly: 'https://buy.stripe.com/3cI4gz5fng8Ye4r1fwfQI03'
+      monthly: 'https://buy.stripe.com/test_8x28wP37f0a00dB3nEfQI02',
+      yearly: 'https://buy.stripe.com/test_3cI4gz5fng8Ye4r1fwfQI03'
     }
   }
 ];
@@ -559,12 +558,12 @@ export default function Register() {
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between pt-6">
+            <div className="flex gap-1.5 pt-6">
               <Button
                 variant="outline"
                 onClick={handleBack}
                 disabled={currentStepIndex === 0}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-full"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Voltar
@@ -574,7 +573,7 @@ export default function Register() {
                 <Button
                   onClick={handleNext}
                   disabled={!canProceedFromStep(currentStep) || checkingEmail}
-                  className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2"
+                  className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2 w-full"
                 >
                   {checkingEmail ? 'Verificando...' : 'Próximo'}
                   <ArrowRight className="w-4 h-4 text-white" />
@@ -583,7 +582,7 @@ export default function Register() {
                 <Button
                   onClick={handleFinishRegistration}
                   disabled={!canProceedFromStep(currentStep)}
-                  className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2"
+                  className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2 w-full"
                 >
                   Finalizar Cadastro
                   <ArrowRight className="w-4 h-4 text-white" />
@@ -599,7 +598,7 @@ export default function Register() {
                 className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white mb-4"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
-                Prec isa de ajuda? Fale conosco
+                Precisa de ajuda? Fale conosco
               </Button>
             </div>
 
