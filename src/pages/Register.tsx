@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, ArrowRight, Check, Eye, EyeClosed } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { Switch } from '@/components/ui/switch';
+import { IOSSwitch } from '@/components/ui/ios-switch';
 
 interface Plan {
   id: string;
@@ -27,8 +29,8 @@ const plans: Plan[] = [
   {
     id: 'basic',
     name: 'Básico',
-    monthlyPrice: 14.99,
-    yearlyPrice: 149.99,
+    monthlyPrice: 19.90,
+    yearlyPrice: 199.90,
     features: [
       'Controle de gastos básico',
       'Relatórios mensais',
@@ -43,8 +45,8 @@ const plans: Plan[] = [
   {
     id: 'premium',
     name: 'Premium',
-    monthlyPrice: 29.99,
-    yearlyPrice: 299.99,
+    monthlyPrice: 29.90,
+    yearlyPrice: 289.90,
     features: [
       'Controle completo de gastos',
       'Relatórios detalhados',
@@ -82,6 +84,7 @@ export default function Register() {
     billingCycle: 'monthly'
   });
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -111,6 +114,20 @@ export default function Register() {
     return phone.length >= 10;
   };
 
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-email-exists', {
+        body: { email }
+      });
+
+      if (error) throw error;
+      return data?.exists || false;
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return false;
+    }
+  };
+
   const canProceedFromStep = (step: RegistrationStep): boolean => {
     switch (step) {
       case 'name':
@@ -128,7 +145,7 @@ export default function Register() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!canProceedFromStep(currentStep)) {
       let errorMessage = '';
       switch (currentStep) {
@@ -153,6 +170,22 @@ export default function Register() {
       return;
     }
 
+    // Check if email already exists before proceeding from email step
+    if (currentStep === 'email') {
+      setCheckingEmail(true);
+      const emailExists = await checkEmailExists(formData.email);
+      setCheckingEmail(false);
+
+      if (emailExists) {
+        toast({
+          title: "Email já cadastrado",
+          description: "Este email já está cadastrado. Faça login ou use outro email.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < stepKeys.length) {
       setCurrentStep(stepKeys[nextIndex]);
@@ -174,24 +207,52 @@ export default function Register() {
     setFormData(prev => ({ ...prev, selectedPlan: planId }));
   };
 
-  const handleFinishRegistration = () => {
+  const handleFinishRegistration = async () => {
     const selectedPlan = plans.find(plan => plan.id === formData.selectedPlan);
     if (!selectedPlan) return;
 
-    const stripeUrl = formData.billingCycle === 'monthly' 
-      ? selectedPlan.stripeUrls.monthly 
-      : selectedPlan.stripeUrls.yearly;
+    try {
+      // Save data to onboarding table
+      const { error } = await supabase.from('onboarding').insert({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone.replace(/\D/g, ''), // Only numbers
+        selected_plan: formData.selectedPlan,
+        billing_cycle: formData.billingCycle
+      });
 
-    // Save data to localStorage for retrieval after Stripe
-    localStorage.setItem('registrationData', JSON.stringify({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone.replace(/\D/g, ''), // Only numbers
-      plan: formData.selectedPlan,
-      billingCycle: formData.billingCycle
-    }));
+      if (error) {
+        console.error('Error saving onboarding data:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar dados. Tente novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
 
-    window.location.href = stripeUrl;
+      const stripeUrl = formData.billingCycle === 'monthly' 
+        ? selectedPlan.stripeUrls.monthly 
+        : selectedPlan.stripeUrls.yearly;
+
+      // Also save to localStorage as backup
+      localStorage.setItem('registrationData', JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone.replace(/\D/g, ''),
+        plan: formData.selectedPlan,
+        billingCycle: formData.billingCycle
+      }));
+
+      window.location.href = stripeUrl;
+    } catch (error) {
+      console.error('Error during registration:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   const formatPrice = (price: number): string => {
@@ -201,9 +262,8 @@ export default function Register() {
     }).format(price);
   };
 
-  const getDiscountPercentage = (monthly: number, yearly: number): number => {
-    const monthlyYearly = monthly * 12;
-    return Math.round(((monthlyYearly - yearly) / monthlyYearly) * 100);
+  const getDiscountPercentage = (): number => {
+    return 20; // Fixed 20% discount as requested
   };
 
   return (
@@ -329,7 +389,7 @@ export default function Register() {
                   <span className={`text-sm ${formData.billingCycle === 'monthly' ? 'text-[#121212] font-medium' : 'text-[#64748B]'}`}>
                     Mensal
                   </span>
-                  <Switch
+                  <IOSSwitch
                     checked={formData.billingCycle === 'yearly'}
                     onCheckedChange={(checked) => handleInputChange('billingCycle', checked ? 'yearly' : 'monthly')}
                   />
@@ -338,7 +398,7 @@ export default function Register() {
                   </span>
                   {formData.billingCycle === 'yearly' && (
                     <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      Economize até 17%
+                      20% de desconto
                     </span>
                   )}
                 </div>
@@ -384,7 +444,7 @@ export default function Register() {
                             
                             {formData.billingCycle === 'yearly' && (
                               <div className="text-sm text-green-600">
-                                {getDiscountPercentage(plan.monthlyPrice, plan.yearlyPrice)}% de desconto
+                                {getDiscountPercentage()}% de desconto
                               </div>
                             )}
                           </div>
@@ -434,11 +494,11 @@ export default function Register() {
               {currentStep !== 'plan' ? (
                 <Button
                   onClick={handleNext}
-                  disabled={!canProceedFromStep(currentStep)}
+                  disabled={!canProceedFromStep(currentStep) || checkingEmail}
                   className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2"
                 >
-                  Próximo
-                  <ArrowRight className="w-4 h-4" />
+                  {checkingEmail ? 'Verificando...' : 'Próximo'}
+                  <ArrowRight className="w-4 h-4 text-white" />
                 </Button>
               ) : (
                 <Button
@@ -447,7 +507,7 @@ export default function Register() {
                   className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2"
                 >
                   Finalizar Cadastro
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 text-white" />
                 </Button>
               )}
             </div>

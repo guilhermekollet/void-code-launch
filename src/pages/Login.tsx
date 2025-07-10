@@ -10,7 +10,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { Eye, EyeClosed, ArrowLeft, Clock } from 'lucide-react';
+import { Eye, EyeClosed, ArrowLeft, Clock, MessageCircle } from 'lucide-react';
 
 type AuthStep = 'method' | 'phone' | 'code';
 
@@ -18,6 +18,7 @@ export default function Login() {
   const [authStep, setAuthStep] = useState<AuthStep>('phone');
   const [phoneNumber, setPhoneNumber] = useState('55');
   const [verificationCode, setVerificationCode] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -52,6 +53,15 @@ export default function Login() {
     return `+${phone}`;
   };
 
+  const maskEmail = (email: string) => {
+    const [localPart, domain] = email.split('@');
+    if (localPart.length <= 3) {
+      return `***@${domain}`;
+    }
+    const visiblePart = localPart.slice(-2);
+    return `***${visiblePart}@${domain}`;
+  };
+
   const handleSendCode = async () => {
     if (!phoneNumber || phoneNumber.length < 10) {
       toast({
@@ -72,20 +82,23 @@ export default function Login() {
 
       if (data?.error) {
         toast({
-          title: "Erro no envio",
-          description: data.error,
+          title: "Conta não encontrada",
+          description: "Não foi encontrada uma conta com este número. Cadastre-se primeiro.",
           variant: "destructive"
         });
         return;
       }
 
-      toast({
-        title: "Código enviado",
-        description: `Código de verificação enviado para o email cadastrado.`
-      });
-      
-      setAuthStep('code');
-      setCountdown(300); // 5 minutes
+      if (data?.maskedEmail) {
+        setMaskedEmail(data.maskedEmail);
+        toast({
+          title: "Código enviado",
+          description: `Código de verificação enviado para ${data.maskedEmail}.`
+        });
+        
+        setAuthStep('code');
+        setCountdown(300); // 5 minutes
+      }
     } catch (error: any) {
       console.error('Error sending code:', error);
       toast({
@@ -245,10 +258,13 @@ export default function Login() {
 
               <div className="text-center mb-4">
                 <p className="text-sm text-[#64748B]">
-                  Código enviado para o email cadastrado no número:
+                  Código enviado para:
                 </p>
                 <p className="font-medium text-[#121212]">
-                  {formatPhoneForDisplay(phoneNumber)}
+                  {maskedEmail}
+                </p>
+                <p className="text-xs text-[#64748B] mt-1">
+                  Verifique sua caixa de entrada e spam
                 </p>
               </div>
               
@@ -298,14 +314,26 @@ export default function Login() {
             </div>
           )}
 
+          <div className="mt-6 space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-[#64748B]">
+                Não tem uma conta?{' '}
+                <Link to="/register" className="text-[#61710C] hover:underline font-medium">
+                  Cadastre-se
+                </Link>
+              </p>
+            </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-[#64748B]">
-              Não tem uma conta?{' '}
-              <Link to="/register" className="text-[#61710C] hover:underline font-medium">
-                Cadastre-se
-              </Link>
-            </p>
+            <div className="text-center">
+              <Button
+                variant="outline"
+                onClick={() => window.open('https://wa.me/5551992527815', '_blank')}
+                className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Suporte via WhatsApp
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

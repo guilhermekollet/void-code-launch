@@ -5,18 +5,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { Layout } from "@/components/Layout";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import Dashboard from "./pages/Dashboard";
 import Transacoes from "./pages/Transacoes";
 import Cartoes from "./pages/Cartoes";
-import Recorrentes from "./pages/Recorrentes";
 import Categorias from "./pages/Categorias";
-import Assinatura from "./pages/Assinatura";
+import Recorrentes from "./pages/Recorrentes";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Assinatura from "./pages/Assinatura";
 import EmailConfirmation from "./pages/EmailConfirmation";
 import NotFound from "./pages/NotFound";
 
@@ -25,71 +26,56 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <AuthProvider>
+        <Toaster />
+        <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/confirm-email" element={<EmailConfirmation />} />
-            <Route path="/" element={
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/email-confirmation" element={<EmailConfirmation />} />
+            <Route path="/dashboard" element={
               <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
+                <Dashboard />
               </ProtectedRoute>
             } />
             <Route path="/transacoes" element={
               <ProtectedRoute>
-                <Layout>
-                  <Transacoes />
-                </Layout>
+                <Transacoes />
               </ProtectedRoute>
             } />
             <Route path="/cartoes" element={
               <ProtectedRoute>
-                <Layout>
-                  <Cartoes />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/recorrentes" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Recorrentes />
-                </Layout>
+                <Cartoes />
               </ProtectedRoute>
             } />
             <Route path="/categorias" element={
               <ProtectedRoute>
-                <Layout>
-                  <Categorias />
-                </Layout>
+                <Categorias />
               </ProtectedRoute>
             } />
-            <Route path="/assinatura" element={
+            <Route path="/recorrentes" element={
               <ProtectedRoute>
-                <Layout>
-                  <Assinatura />
-                </Layout>
+                <Recorrentes />
               </ProtectedRoute>
             } />
             <Route path="/relatorios" element={
               <ProtectedRoute>
-                <Layout>
-                  <Relatorios />
-                </Layout>
+                <Relatorios />
               </ProtectedRoute>
             } />
             <Route path="/configuracoes" element={
               <ProtectedRoute>
-                <Layout>
-                  <Configuracoes />
-                </Layout>
+                <Configuracoes />
               </ProtectedRoute>
             } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/assinatura" element={
+              <ProtectedRoute>
+                <Assinatura />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

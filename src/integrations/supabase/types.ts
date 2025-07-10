@@ -380,6 +380,45 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding: {
+        Row: {
+          billing_cycle: string
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          payment_confirmed: boolean | null
+          phone: string
+          selected_plan: string
+          stripe_session_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          billing_cycle: string
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+          payment_confirmed?: boolean | null
+          phone: string
+          selected_plan: string
+          stripe_session_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          payment_confirmed?: boolean | null
+          phone?: string
+          selected_plan?: string
+          stripe_session_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
