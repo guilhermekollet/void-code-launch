@@ -9,7 +9,10 @@ export function useExportReport() {
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
   const { totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses } = useFinancialMetrics();
-  const { monthlyData, categoryData } = useChartData();
+  const { data: chartData } = useChartData();
+  
+  const monthlyData = chartData?.monthlyData || [];
+  const categoryData = chartData?.categoryData || [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {

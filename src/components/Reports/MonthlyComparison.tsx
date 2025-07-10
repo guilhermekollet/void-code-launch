@@ -9,15 +9,17 @@ import { TrendingUp, Calendar } from "lucide-react";
 
 export function MonthlyComparison() {
   const [showFuture, setShowFuture] = useState(false);
-  const { monthlyData } = useChartData();
-  const { data: futureData = [] } = useReportsFutureData(showFuture);
+  const { data } = useChartData();
+  const { data: futureData } = useReportsFutureData();
+  
+  const monthlyData = data?.monthlyData || [];
 
   const comparisonData = monthlyData.map(month => ({
     ...month,
     isFuture: false
   }));
 
-  const combinedData = showFuture ? [...comparisonData, ...futureData] : comparisonData;
+  const combinedData = showFuture && futureData ? [...comparisonData, futureData.nextMonth, futureData.monthAfterNext].filter(Boolean) : comparisonData;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
