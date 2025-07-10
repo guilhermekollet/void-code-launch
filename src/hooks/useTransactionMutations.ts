@@ -74,3 +74,14 @@ export const useDeleteTransaction = () => {
     },
   });
 };
+
+// Export a hook that returns both mutations for compatibility
+export const useTransactionMutations = () => {
+  const updateTransaction = useUpdateTransaction();
+  const deleteTransaction = useDeleteTransaction();
+
+  return {
+    updateTransaction,
+    deleteTransaction,
+  };
+};

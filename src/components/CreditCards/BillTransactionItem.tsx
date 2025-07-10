@@ -1,11 +1,10 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Calendar, Tag } from "lucide-react";
 import { useState } from "react";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
-import { useTransactionMutations } from "@/hooks/useTransactionMutations";
+import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface Transaction {
@@ -28,7 +27,8 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
-  const { deleteTransaction, updateTransaction } = useTransactionMutations();
+  const deleteTransaction = useDeleteTransaction();
+  const updateTransaction = useUpdateTransaction();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -58,7 +58,7 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
 
   const handleSave = async (id: number, updates: Partial<Transaction>) => {
     try {
-      await updateTransaction.mutateAsync({ id, updates });
+      await updateTransaction.mutateAsync({ id, data: updates });
       // Invalidar caches relevantes
       queryClient.invalidateQueries({ queryKey: ['credit-card-bill-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });

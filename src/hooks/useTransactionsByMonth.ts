@@ -1,14 +1,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
 
-export const useTransactionsByMonth = (selectedMonth: Date) => {
+export const useTransactionsByMonth = (monthString: string) => {
   return useQuery({
-    queryKey: ['transactions-by-month', format(selectedMonth, 'yyyy-MM')],
+    queryKey: ['transactions-by-month', monthString],
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('Usuário não autenticado');
+      if (!user.user) throw new Error('User not authenticated');
 
       const { data: userData } = await supabase
         .from('users')
@@ -16,54 +15,45 @@ export const useTransactionsByMonth = (selectedMonth: Date) => {
         .eq('user_id', user.user.id)
         .single();
 
-      if (!userData) throw new Error('Dados do usuário não encontrados');
+      if (!userData) throw new Error('User data not found');
 
-      const startDate = startOfMonth(selectedMonth);
-      const endDate = endOfMonth(selectedMonth);
+      // Get current year and convert month string to number
+      const currentYear = new Date().getFullYear();
+      const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 
+                         'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      const monthIndex = monthNames.indexOf(monthString.toLowerCase());
+      
+      if (monthIndex === -1) {
+        throw new Error('Invalid month string');
+      }
+
+      const monthNumber = monthIndex + 1;
+      const startDate = `${currentYear}-${monthNumber.toString().padStart(2, '0')}-01`;
+      const endDate = `${currentYear}-${monthNumber.toString().padStart(2, '0')}-31`;
 
       const { data: transactions, error } = await supabase
         .from('transactions')
         .select(`
           *,
-          categories!inner(name, icon, color)
+          categories (
+            name,
+            color,
+            icon
+          )
         `)
         .eq('user_id', userData.id)
-        .gte('tx_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('tx_date', format(endDate, 'yyyy-MM-dd'))
+        .gte('tx_date', startDate)
+        .lte('tx_date', endDate)
         .order('tx_date', { ascending: false });
 
       if (error) throw error;
 
-      // Group by category and calculate totals
-      const categoryTotals = transactions?.reduce((acc, transaction) => {
-        const category = transaction.category;
-        const amount = Number(transaction.value || 0); // Using 'value' instead of 'amount'
-        
-        if (!acc[category]) {
-          acc[category] = {
-            name: category,
-            total: 0,
-            count: 0,
-            color: transaction.categories?.color || '#61710C',
-            icon: transaction.categories?.icon || 'tag'
-          };
-        }
-        
-        acc[category].total += amount;
-        acc[category].count += 1;
-        
-        return acc;
-      }, {} as Record<string, any>) || {};
-
-      const sortedCategories = Object.values(categoryTotals)
-        .sort((a: any, b: any) => b.total - a.total);
-
-      return {
-        transactions: transactions || [],
-        categoryTotals: sortedCategories,
-        totalTransactions: transactions?.length || 0,
-        totalAmount: transactions?.reduce((sum, t) => sum + Number(t.value || 0), 0) || 0
-      };
+      // Map value to amount for compatibility
+      return transactions?.map(transaction => ({
+        ...transaction,
+        amount: transaction.value
+      })) || [];
     },
+    enabled: !!monthString,
   });
 };

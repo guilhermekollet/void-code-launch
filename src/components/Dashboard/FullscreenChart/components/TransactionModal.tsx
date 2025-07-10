@@ -9,7 +9,7 @@ import { TimeRange } from '../types';
 import { useState } from "react";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
-import { useTransactionMutations } from "@/hooks/useTransactionMutations";
+import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface TransactionModalProps {
@@ -23,7 +23,8 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-  const { updateTransaction, deleteTransaction } = useTransactionMutations();
+  const updateTransaction = useUpdateTransaction();
+  const deleteTransaction = useDeleteTransaction();
 
   // Parse period to get month string and convert to the format expected by useTransactionsByMonth
   const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -45,7 +46,7 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
     monthString = foundMonth || 'jan';
   }
 
-  const { data: transactions = [], isLoading } = useTransactionsByMonth(monthString, true);
+  const { data: transactions = [], isLoading } = useTransactionsByMonth(monthString);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -89,11 +90,11 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
     }
   };
 
-  const receitas = transactions.filter(t => t.type === 'receita');
-  const despesas = transactions.filter(t => t.type === 'despesa');
+  const receitas = Array.isArray(transactions) ? transactions.filter(t => t.type === 'receita') : [];
+  const despesas = Array.isArray(transactions) ? transactions.filter(t => t.type === 'despesa') : [];
 
-  const totalReceitas = receitas.reduce((sum, t) => sum + t.amount, 0);
-  const totalDespesas = despesas.reduce((sum, t) => sum + t.amount, 0);
+  const totalReceitas = receitas.reduce((sum, t) => sum + (t.amount || t.value || 0), 0);
+  const totalDespesas = despesas.reduce((sum, t) => sum + (t.amount || t.value || 0), 0);
 
   return (
     <>
@@ -140,7 +141,7 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
                   </div>
                 ))}
               </div>
-            ) : transactions.length === 0 ? (
+            ) : !Array.isArray(transactions) || transactions.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Calendar className="w-8 h-8 text-gray-400" />
@@ -244,7 +245,7 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
       {deletingTransactionId && (
         <DeleteTransactionDialog
           transactionId={deletingTransactionId}
-          transactionDescription={transactions.find(t => t.id === deletingTransactionId)?.description || ''}
+          transactionDescription={Array.isArray(transactions) ? transactions.find(t => t.id === deletingTransactionId)?.description || '' : ''}
           isOpen={!!deletingTransactionId}
           onClose={() => setDeletingTransactionId(null)}
           onDelete={handleConfirmDelete}

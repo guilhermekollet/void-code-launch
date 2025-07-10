@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,7 @@ interface TransactionsSidebarProps {
 }
 
 export function TransactionsSidebar({ isOpen, onClose, selectedMonth }: TransactionsSidebarProps) {
-  const { data: transactions = [], isLoading } = useTransactionsByMonth(selectedMonth, isOpen);
+  const { data: transactions = [], isLoading } = useTransactionsByMonth(selectedMonth);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -25,8 +24,8 @@ export function TransactionsSidebar({ isOpen, onClose, selectedMonth }: Transact
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const receitas = transactions.filter(t => t.type === 'receita');
-  const despesas = transactions.filter(t => t.type === 'despesa');
+  const receitas = Array.isArray(transactions) ? transactions.filter(t => t.type === 'receita') : [];
+  const despesas = Array.isArray(transactions) ? transactions.filter(t => t.type === 'despesa') : [];
 
   if (!isOpen) return null;
 
@@ -54,7 +53,7 @@ export function TransactionsSidebar({ isOpen, onClose, selectedMonth }: Transact
             <div className="flex items-center justify-center py-8">
               <div className="text-[#64748B]">Carregando transações...</div>
             </div>
-          ) : transactions.length === 0 ? (
+          ) : !Array.isArray(transactions) || transactions.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-[#64748B]">Nenhuma transação encontrada</div>
             </div>

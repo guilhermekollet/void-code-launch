@@ -1,12 +1,13 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, addMonths, startOfMonth, endOfMonth, isSameMonth, isAfter, addDays } from 'date-fns';
 import { useToast } from '@/components/ui/use-toast';
 
-interface CreditCardBill {
+export interface CreditCardBill {
   id: number;
   created_at: string;
-  user_id: string;
+  user_id: number;
   credit_card_id: number;
   bill_amount: number;
   due_date: string;
@@ -15,12 +16,18 @@ interface CreditCardBill {
   paid_amount: number;
   remaining_amount: number;
   archived: boolean;
+  credit_cards: {
+    id: number;
+    bank_name: string;
+    card_name: string | null;
+    color: string;
+  };
 }
 
 interface Transaction {
   id: number;
   created_at: string;
-  user_id: string;
+  user_id: number;
   tx_date: string;
   description: string;
   value: number;
@@ -36,12 +43,12 @@ interface Transaction {
 interface CreditCard {
   id: number;
   created_at: string;
-  user_id: string;
+  user_id: number;
   bank_name: string;
   card_name: string;
-  limit: number;
   close_date: number;
   due_date: number;
+  color: string;
 }
 
 export const useCreditCardBillsNew = (selectedMonth?: Date) => {
@@ -50,7 +57,7 @@ export const useCreditCardBillsNew = (selectedMonth?: Date) => {
 
   return useQuery({
     queryKey: ['credit-card-bills', format(startDate, 'yyyy-MM')],
-    queryFn: async () => {
+    queryFn: async (): Promise<CreditCardBill[]> => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Usuário não autenticado');
 
@@ -67,9 +74,10 @@ export const useCreditCardBillsNew = (selectedMonth?: Date) => {
         .select(`
           *,
           credit_cards (
+            id,
             bank_name,
             card_name,
-            limit
+            color
           )
         `)
         .eq('user_id', userData.id)
