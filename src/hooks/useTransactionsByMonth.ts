@@ -1,105 +1,69 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { useTransactions } from "./useFinancialData";
-import { useCreditCards } from "./useCreditCards";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
-export function useTransactionsByMonth(month: string, enabled: boolean = false) {
-  const { data: allTransactions = [] } = useTransactions();
-  const { data: creditCards = [] } = useCreditCards();
-
+export const useTransactionsByMonth = (selectedMonth: Date) => {
   return useQuery({
-    queryKey: ['transactions-by-month', month, allTransactions.length, creditCards.length],
-    queryFn: () => {
-      if (!month || !enabled) return [];
+    queryKey: ['transactions-by-month', format(selectedMonth, 'yyyy-MM')],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
 
-      // Parse the month (format: "jan", "fev", etc.)
-      const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-                         'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-      const monthIndex = monthNames.indexOf(month.toLowerCase());
-      
-      if (monthIndex === -1) return [];
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .single();
 
-      const currentYear = new Date().getFullYear();
-      
-      // Filter regular transactions for the specific month (excluding credit card expenses)
-      const monthTransactions = allTransactions.filter(t => {
-        if (t.is_credit_card_expense) return false; // These will be handled separately
+      if (!userData) throw new Error('Dados do usuário não encontrados');
+
+      const startDate = startOfMonth(selectedMonth);
+      const endDate = endOfMonth(selectedMonth);
+
+      const { data: transactions, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          categories!inner(name, icon, color)
+        `)
+        .eq('user_id', userData.id)
+        .gte('tx_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('tx_date', format(endDate, 'yyyy-MM-dd'))
+        .order('tx_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Group by category and calculate totals
+      const categoryTotals = transactions?.reduce((acc, transaction) => {
+        const category = transaction.category;
+        const amount = Number(transaction.value || 0); // Using 'value' instead of 'amount'
         
-        const txDate = new Date(t.tx_date);
-        return txDate.getMonth() === monthIndex && txDate.getFullYear() === currentYear;
-      });
-
-      // Add installment transactions for this month (non-credit card)
-      const installmentTransactions = allTransactions.filter(t => {
-        if (!t.is_installment || !t.installment_start_date || !t.total_installments || t.is_credit_card_expense) return false;
-        
-        const startDate = new Date(t.installment_start_date);
-        const targetDate = new Date(currentYear, monthIndex, 1);
-        
-        const monthsDiff = (targetDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                          (targetDate.getMonth() - startDate.getMonth());
-        
-        return monthsDiff >= 0 && monthsDiff < t.total_installments;
-      });
-
-      // Add credit card transactions that will be billed this month
-      const creditCardTransactions: any[] = [];
-      
-      allTransactions.filter(t => t.is_credit_card_expense && t.credit_card_id).forEach(transaction => {
-        const creditCard = creditCards.find(card => card.id === transaction.credit_card_id);
-        if (!creditCard) return;
-
-        const transactionDate = new Date(transaction.tx_date);
-        const installments = transaction.installments || 1;
-        const installmentValue = transaction.installment_value || transaction.amount;
-
-        // Calculate billing dates for each installment
-        for (let installmentIndex = 0; installmentIndex < installments; installmentIndex++) {
-          const installmentDate = new Date(transactionDate);
-          installmentDate.setMonth(installmentDate.getMonth() + installmentIndex);
-
-          // Calculate when this installment will be billed
-          const closeDate = Math.max(1, creditCard.due_date - 7);
-          let billMonth = installmentDate.getMonth();
-          let billYear = installmentDate.getFullYear();
-          
-          if (installmentDate.getDate() > closeDate) {
-            billMonth += 1;
-            if (billMonth > 11) {
-              billMonth = 0;
-              billYear += 1;
-            }
-          }
-
-          // Check if this installment bill falls in the target month
-          if (billYear === currentYear && billMonth === monthIndex) {
-            creditCardTransactions.push({
-              ...transaction,
-              id: `${transaction.id}-installment-${installmentIndex}`,
-              amount: installmentValue,
-              description: installments > 1 
-                ? `${transaction.description} (${installmentIndex + 1}/${installments} - Cartão)`
-                : `${transaction.description} (Cartão)`,
-              tx_date: new Date(billYear, billMonth, creditCard.due_date).toISOString(),
-              installment_number: installmentIndex + 1,
-              total_installments: installments,
-            });
-          }
+        if (!acc[category]) {
+          acc[category] = {
+            name: category,
+            total: 0,
+            count: 0,
+            color: transaction.categories?.color || '#61710C',
+            icon: transaction.categories?.icon || 'tag'
+          };
         }
-      });
+        
+        acc[category].total += amount;
+        acc[category].count += 1;
+        
+        return acc;
+      }, {} as Record<string, any>) || {};
 
-      // Combine all transactions
-      const allMonthTransactions = [...monthTransactions, ...installmentTransactions, ...creditCardTransactions];
+      const sortedCategories = Object.values(categoryTotals)
+        .sort((a: any, b: any) => b.total - a.total);
 
-      // Sort by type: receitas first, then despesas
-      const sortedTransactions = allMonthTransactions.sort((a, b) => {
-        if (a.type === 'receita' && b.type === 'despesa') return -1;
-        if (a.type === 'despesa' && b.type === 'receita') return 1;
-        return new Date(b.tx_date).getTime() - new Date(a.tx_date).getTime();
-      });
-
-      return sortedTransactions;
+      return {
+        transactions: transactions || [],
+        categoryTotals: sortedCategories,
+        totalTransactions: transactions?.length || 0,
+        totalAmount: transactions?.reduce((sum, t) => sum + Number(t.value || 0), 0) || 0
+      };
     },
-    enabled: enabled && !!month,
   });
-}
+};

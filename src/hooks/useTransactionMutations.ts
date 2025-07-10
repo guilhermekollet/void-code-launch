@@ -1,110 +1,76 @@
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 interface UpdateTransactionData {
   description?: string;
-  amount?: number;
+  value?: number;
   type?: string;
   category?: string;
   tx_date?: string;
 }
 
-export function useUpdateTransaction() {
-  const { user } = useAuth();
+export const useUpdateTransaction = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: UpdateTransactionData }) => {
-      if (!user) throw new Error('User not authenticated');
-
-      // Map amount to value for database update
-      const dbUpdates = { ...updates };
-      if (updates.amount !== undefined) {
-        dbUpdates.value = updates.amount;
-        delete dbUpdates.amount;
-      }
-
-      const { data, error } = await supabase
+    mutationFn: async ({ id, data }: { id: number; data: UpdateTransactionData }) => {
+      const { error } = await supabase
         .from('transactions')
-        .update(dbUpdates)
-        .eq('id', id)
-        .select()
-        .single();
+        .update(data)
+        .eq('id', id);
 
-      if (error) {
-        console.error('Error updating transaction:', error);
-        throw error;
-      }
-
-      return data;
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-data'] });
       toast({
-        title: "Sucesso",
-        description: "Transação atualizada com sucesso!",
+        title: "Transação atualizada",
+        description: "A transação foi atualizada com sucesso.",
       });
     },
     onError: (error) => {
       console.error('Error updating transaction:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao atualizar transação. Tente novamente.",
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar a transação.",
         variant: "destructive",
       });
     },
   });
-}
+};
 
-export function useDeleteTransaction() {
-  const { user } = useAuth();
+export const useDeleteTransaction = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (id: number) => {
-      if (!user) throw new Error('User not authenticated');
-
+    mutationFn: async (transactionId: number) => {
       const { error } = await supabase
         .from('transactions')
         .delete()
-        .eq('id', id);
+        .eq('id', transactionId);
 
-      if (error) {
-        console.error('Error deleting transaction:', error);
-        throw error;
-      }
-
-      return id;
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-data'] });
       toast({
-        title: "Sucesso",
-        description: "Transação excluída com sucesso!",
+        title: "Transação excluída",
+        description: "A transação foi excluída com sucesso.",
       });
     },
     onError: (error) => {
       console.error('Error deleting transaction:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao excluir transação. Tente novamente.",
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a transação.",
         variant: "destructive",
       });
     },
   });
-}
-
-export function useTransactionMutations() {
-  const updateTransaction = useUpdateTransaction();
-  const deleteTransaction = useDeleteTransaction();
-
-  return {
-    updateTransaction,
-    deleteTransaction,
-  };
-}
+};

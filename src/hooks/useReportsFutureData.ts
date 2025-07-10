@@ -1,112 +1,104 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { useTransactions } from "./useFinancialData";
-import { useCreditCards } from "./useCreditCards";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { addMonths, format, startOfMonth, endOfMonth } from 'date-fns';
 
-export function useReportsFutureData(enabled: boolean = false) {
-  const { data: transactions = [] } = useTransactions();
-  const { data: creditCards = [] } = useCreditCards();
-
+export const useReportsFutureData = () => {
   return useQuery({
-    queryKey: ['reports-future-data', transactions.length, creditCards.length, enabled],
-    queryFn: () => {
-      if (!enabled) return [];
+    queryKey: ['reports-future-data'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!userData) throw new Error('Dados do usuário não encontrados');
 
       const currentDate = new Date();
-      const futureMonths = 24; // Show next 24 months
+      const nextMonth = addMonths(currentDate, 1);
+      const monthAfterNext = addMonths(currentDate, 2);
 
-      const futureData = Array.from({ length: futureMonths }, (_, i) => {
-        const date = new Date(currentDate);
-        date.setMonth(date.getMonth() + i + 1);
-        
-        // Calculate installment transactions (non-credit card) that will be due in this specific month
-        const installmentTransactions = transactions.filter(t => {
-          if (!t.is_installment || !t.installment_start_date || !t.total_installments || t.is_credit_card_expense) return false;
-          
-          const startDate = new Date(t.installment_start_date);
-          const futurePeriodDate = new Date(date.getFullYear(), date.getMonth(), 1);
-          
-          // Calculate which installment would fall in this period
-          const monthsDiff = (futurePeriodDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                           (futurePeriodDate.getMonth() - startDate.getMonth());
-          
-          return monthsDiff >= 0 && monthsDiff < t.total_installments;
-        });
+      // Get recurring transactions
+      const { data: recurringTransactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .eq('is_recurring', true);
 
-        // Calculate recurring transactions that will be due in this month
-        const recurringTransactions = transactions.filter(t => t.is_recurring && !t.is_credit_card_expense);
+      // Get installment transactions that will continue
+      const { data: installmentTransactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .eq('is_installment', true)
+        .gte('tx_date', format(currentDate, 'yyyy-MM-dd'));
 
-        // Calculate credit card expenses for this month
-        let creditCardExpenses = 0;
-        
-        transactions.filter(t => t.is_credit_card_expense && t.credit_card_id).forEach(transaction => {
-          const creditCard = creditCards.find(card => card.id === transaction.credit_card_id);
-          if (!creditCard) return;
+      // Calculate future projections
+      const nextMonthProjection = calculateMonthProjection(nextMonth, recurringTransactions || [], installmentTransactions || []);
+      const monthAfterProjection = calculateMonthProjection(monthAfterNext, recurringTransactions || [], installmentTransactions || []);
 
-          const transactionDate = new Date(transaction.tx_date);
-          const installments = transaction.installments || 1;
-          const installmentValue = transaction.installment_value || transaction.amount;
-
-          // Calculate billing dates for each installment
-          for (let installmentIndex = 0; installmentIndex < installments; installmentIndex++) {
-            const installmentDate = new Date(transactionDate);
-            installmentDate.setMonth(installmentDate.getMonth() + installmentIndex);
-
-            // Calculate when this installment will be billed
-            const closeDate = Math.max(1, creditCard.due_date - 7); // Assumindo que fechamento é 7 dias antes do vencimento
-            let billMonth = installmentDate.getMonth();
-            let billYear = installmentDate.getFullYear();
-            
-            if (installmentDate.getDate() > closeDate) {
-              billMonth += 1;
-              if (billMonth > 11) {
-                billMonth = 0;
-                billYear += 1;
-              }
-            }
-
-            // Check if this installment bill falls in the current future month
-            if (billYear === date.getFullYear() && billMonth === date.getMonth()) {
-              creditCardExpenses += installmentValue;
-            }
-          }
-        });
-
-        // For installment transactions, use the direct amount (each transaction already represents one installment)
-        const installmentReceitas = installmentTransactions
-          .filter(t => t.type === 'receita')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const installmentDespesas = installmentTransactions
-          .filter(t => t.type === 'despesa')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        // For recurring transactions, only count what will be due in this specific month
-        const recurringReceitas = recurringTransactions
-          .filter(t => t.type === 'receita')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const recurringDespesas = recurringTransactions
-          .filter(t => t.type === 'despesa')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const totalReceitas = installmentReceitas + recurringReceitas;
-        const totalDespesas = installmentDespesas + recurringDespesas;
-
-        return {
-          mes: date.toLocaleDateString('pt-BR', { month: 'short' }),
-          receitas: totalReceitas,
-          despesas: totalDespesas,
-          gastosRecorrentes: recurringDespesas,
-          faturas: creditCardExpenses,
-          fluxo: totalReceitas - totalDespesas - creditCardExpenses,
-          isFuture: true
-        };
-      });
-
-      console.log('Future data generated with credit cards:', futureData);
-      return futureData;
+      return {
+        nextMonth: nextMonthProjection,
+        monthAfterNext: monthAfterProjection,
+        recurringCount: recurringTransactions?.length || 0,
+        installmentCount: installmentTransactions?.length || 0
+      };
     },
-    enabled: enabled,
   });
+};
+
+function calculateMonthProjection(
+  targetMonth: Date,
+  recurringTransactions: any[],
+  installmentTransactions: any[]
+) {
+  let totalIncome = 0;
+  let totalExpenses = 0;
+
+  // Process recurring transactions
+  recurringTransactions.forEach(transaction => {
+    const amount = Number(transaction.value || 0); // Using 'value' instead of 'amount'
+    
+    if (transaction.type === 'receita') {
+      totalIncome += amount;
+    } else {
+      totalExpenses += amount;
+    }
+  });
+
+  // Process installment transactions
+  installmentTransactions.forEach(transaction => {
+    if (transaction.installment_start_date) {
+      const startDate = new Date(transaction.installment_start_date);
+      const totalInstallments = transaction.total_installments || 1;
+      const installmentValue = Number(transaction.installment_value || transaction.value || 0); // Using 'value' as fallback
+      
+      // Check if this installment falls in the target month
+      for (let i = 0; i < totalInstallments; i++) {
+        const installmentDate = addMonths(startDate, i);
+        if (
+          installmentDate.getMonth() === targetMonth.getMonth() &&
+          installmentDate.getFullYear() === targetMonth.getFullYear()
+        ) {
+          if (transaction.type === 'receita') {
+            totalIncome += installmentValue;
+          } else {
+            totalExpenses += installmentValue;
+          }
+          break;
+        }
+      }
+    }
+  });
+
+  return {
+    totalIncome,
+    totalExpenses,
+    netBalance: totalIncome - totalExpenses,
+    month: format(targetMonth, 'MMM yyyy')
+  };
 }

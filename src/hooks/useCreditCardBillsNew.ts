@@ -1,259 +1,202 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { format, parseISO, addMonths, startOfMonth, endOfMonth, isSameMonth, isAfter, addDays } from 'date-fns';
+import { useToast } from '@/components/ui/use-toast';
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-
-export interface CreditCardBill {
+interface CreditCardBill {
   id: number;
-  user_id: number;
+  created_at: string;
+  user_id: string;
   credit_card_id: number;
   bill_amount: number;
+  due_date: string;
+  close_date: string;
+  status: 'pending' | 'paid' | 'overdue';
   paid_amount: number;
   remaining_amount: number;
-  due_date: string;
-  close_date: string | null;
-  status: string;
-  archived: boolean | null;
-  created_at: string;
-  updated_at: string;
-  credit_cards: {
-    bank_name: string;
-    card_name: string | null;
-    color: string;
-    due_date: number;
-    close_date: number | null;
-  };
+  archived: boolean;
 }
 
-export function useCreditCardBillsNew() {
-  const { user } = useAuth();
+interface Transaction {
+  id: number;
+  created_at: string;
+  user_id: string;
+  tx_date: string;
+  description: string;
+  value: number;
+  type: 'receita' | 'despesa';
+  category: string;
+  is_recurring: boolean;
+  credit_card_id: number | null;
+  is_installment: boolean;
+  installment_number: number | null;
+  total_installments: number | null;
+}
+
+interface CreditCard {
+  id: number;
+  created_at: string;
+  user_id: string;
+  bank_name: string;
+  card_name: string;
+  limit: number;
+  close_date: number;
+  due_date: number;
+}
+
+export const useCreditCardBillsNew = (selectedMonth?: Date) => {
+  const startDate = selectedMonth ? startOfMonth(selectedMonth) : startOfMonth(new Date());
+  const endDate = selectedMonth ? endOfMonth(selectedMonth) : endOfMonth(new Date());
 
   return useQuery({
-    queryKey: ['credit-card-bills-new'],
+    queryKey: ['credit-card-bills', format(startDate, 'yyyy-MM')],
     queryFn: async () => {
-      if (!user) return [];
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
 
       const { data: userData } = await supabase
         .from('users')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', user.user.id)
         .single();
 
-      if (!userData) return [];
+      if (!userData) throw new Error('Dados do usuário não encontrados');
 
-      // Get all user's credit cards
-      const { data: creditCards } = await supabase
-        .from('credit_cards')
-        .select('*')
-        .eq('user_id', userData.id);
+      const { data: bills, error } = await supabase
+        .from('credit_card_bills')
+        .select(`
+          *,
+          credit_cards (
+            bank_name,
+            card_name,
+            limit
+          )
+        `)
+        .eq('user_id', userData.id)
+        .gte('due_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('due_date', format(endDate, 'yyyy-MM-dd'))
+        .order('due_date', { ascending: false });
 
-      if (!creditCards?.length) return [];
+      if (error) throw error;
 
-      const today = new Date();
-      const bills: CreditCardBill[] = [];
-
-      // Generate bills for each credit card for the next 12 months
-      for (const card of creditCards) {
-        for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
-          const billMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
-          
-          // Calculate close date for this bill
-          let closeDate: Date;
-          if (card.close_date) {
-            closeDate = new Date(billMonth.getFullYear(), billMonth.getMonth(), card.close_date);
-            // If close date has passed this month, move to next month
-            if (closeDate < today && monthOffset === 0) {
-              closeDate = new Date(billMonth.getFullYear(), billMonth.getMonth() + 1, card.close_date);
-            }
-          } else {
-            // If no close date, use the end of the month
-            closeDate = new Date(billMonth.getFullYear(), billMonth.getMonth() + 1, 0);
-          }
-
-          // Calculate due date (usually 1 month after close date)
-          const dueDate = new Date(closeDate.getFullYear(), closeDate.getMonth() + 1, card.due_date);
-
-          // Calculate the billing period start (1 month before close date)
-          const billingPeriodStart = new Date(closeDate);
-          billingPeriodStart.setMonth(billingPeriodStart.getMonth() - 1);
-
-          // Get transactions for this billing period
-          const { data: transactions } = await supabase
-            .from('transactions')
-            .select('*')
-            .eq('user_id', userData.id)
-            .eq('credit_card_id', card.id)
-            .eq('is_credit_card_expense', true)
-            .gte('tx_date', billingPeriodStart.toISOString())
-            .lt('tx_date', closeDate.toISOString());
-
-          // Calculate bill amount - now using 'value' instead of 'amount'
-          const billAmount = transactions?.reduce((sum, transaction) => {
-            return sum + Number(transaction.value);
-          }, 0) || 0;
-
-          // Skip bills with no transactions and future bills
-          if (billAmount === 0 && dueDate > today) continue;
-
-          // Check if bill already exists in database
-          const { data: existingBill } = await supabase
-            .from('credit_card_bills')
-            .select('*')
-            .eq('credit_card_id', card.id)
-            .eq('due_date', dueDate.toISOString().split('T')[0])
-            .maybeSingle();
-
-          if (existingBill) {
-            // Use existing bill data
-            bills.push({
-              ...existingBill,
-              credit_cards: {
-                bank_name: card.bank_name,
-                card_name: card.card_name,
-                color: card.color,
-                due_date: card.due_date,
-                close_date: card.close_date,
-              }
-            });
-          } else if (billAmount > 0) {
-            // Create new bill if there are transactions
-            const newBill = {
-              id: Date.now() + Math.random(), // Temporary ID for new bills
-              user_id: userData.id,
-              credit_card_id: card.id,
-              bill_amount: billAmount,
-              paid_amount: 0,
-              remaining_amount: billAmount,
-              due_date: dueDate.toISOString().split('T')[0],
-              close_date: card.close_date ? closeDate.toISOString().split('T')[0] : null,
-              status: dueDate < today ? 'overdue' : 'pending',
-              archived: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              credit_cards: {
-                bank_name: card.bank_name,
-                card_name: card.card_name,
-                color: card.color,
-                due_date: card.due_date,
-                close_date: card.close_date,
-              }
-            };
-
-            bills.push(newBill);
-          }
-        }
-      }
-
-      return bills.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+      return bills || [];
     },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
   });
-}
+};
 
-export function useGenerateAndSaveBills() {
-  const { user } = useAuth();
+export const useCreditCardBills = useCreditCardBillsNew;
 
-  return async () => {
-    if (!user) throw new Error('User not authenticated');
+export const useArchiveBill = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!userData) throw new Error('User not found');
-
-    // Get all user's credit cards
-    const { data: creditCards } = await supabase
-      .from('credit_cards')
-      .select('*')
-      .eq('user_id', userData.id);
-
-    if (!creditCards?.length) return;
-
-    const today = new Date();
-    const billsToSave = [];
-
-    // Generate bills for each credit card for the next 12 months
-    for (const card of creditCards) {
-      for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
-        const billMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
-        
-        // Calculate close date for this bill
-        let closeDate: Date;
-        if (card.close_date) {
-          closeDate = new Date(billMonth.getFullYear(), billMonth.getMonth(), card.close_date);
-          // If close date has passed this month, move to next month
-          if (closeDate < today && monthOffset === 0) {
-            closeDate = new Date(billMonth.getFullYear(), billMonth.getMonth() + 1, card.close_date);
-          }
-        } else {
-          // If no close date, use the end of the month
-          closeDate = new Date(billMonth.getFullYear(), billMonth.getMonth() + 1, 0);
-        }
-
-        // Calculate due date (usually 1 month after close date)
-        const dueDate = new Date(closeDate.getFullYear(), closeDate.getMonth() + 1, card.due_date);
-
-        // Calculate the billing period start (1 month before close date)
-        const billingPeriodStart = new Date(closeDate);
-        billingPeriodStart.setMonth(billingPeriodStart.getMonth() - 1);
-
-        // Get transactions for this billing period
-        const { data: transactions } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', userData.id)
-          .eq('credit_card_id', card.id)
-          .eq('is_credit_card_expense', true)
-          .gte('tx_date', billingPeriodStart.toISOString())
-          .lt('tx_date', closeDate.toISOString());
-
-        // Calculate bill amount
-        const billValue = transactions?.reduce((sum, transaction) => {
-          return sum + Number(transaction.value);
-        }, 0) || 0;
-
-        // Skip bills with no transactions
-        if (billValue === 0) continue;
-
-        // Check if bill already exists
-        const { data: existingBill } = await supabase
-          .from('credit_card_bills')
-          .select('id')
-          .eq('credit_card_id', card.id)
-          .eq('due_date', dueDate.toISOString().split('T')[0])
-          .maybeSingle();
-
-        if (!existingBill) {
-          billsToSave.push({
-            user_id: userData.id,
-            credit_card_id: card.id,
-            bill_amount: billValue,
-            paid_amount: 0,
-            remaining_amount: billValue,
-            due_date: dueDate.toISOString().split('T')[0],
-            close_date: card.close_date ? closeDate.toISOString().split('T')[0] : null,
-            status: dueDate < today ? 'overdue' : 'pending',
-          });
-        }
-      }
-    }
-
-    // Save all bills to database
-    if (billsToSave.length > 0) {
+  return useMutation({
+    mutationFn: async (billId: number) => {
       const { error } = await supabase
         .from('credit_card_bills')
-        .insert(billsToSave);
+        .update({ archived: true })
+        .eq('id', billId);
 
-      if (error) {
-        console.error('Error saving bills:', error);
-        throw error;
-      }
-    }
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
+      toast({
+        title: "Fatura arquivada",
+        description: "A fatura foi arquivada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error archiving bill:', error);
+      toast({
+        title: "Erro ao arquivar",
+        description: "Não foi possível arquivar a fatura.",
+        variant: "destructive",
+      });
+    },
+  });
+};
 
-    return billsToSave.length;
-  };
-}
+export const usePayBill = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ billId, amount }: { billId: number; amount: number }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!userData) throw new Error('Dados do usuário não encontrados');
+
+      const { error } = await supabase
+        .from('bill_payments')
+        .insert({
+          bill_id: billId,
+          amount,
+          user_id: userData.id,
+        });
+
+      if (error) throw error;
+
+      const { error: updateError } = await supabase
+        .from('credit_card_bills')
+        .update({ 
+          paid_amount: amount,
+          remaining_amount: 0,
+          status: 'paid'
+        })
+        .eq('id', billId);
+
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
+      toast({
+        title: "Pagamento registrado",
+        description: "O pagamento da fatura foi registrado com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error paying bill:', error);
+      toast({
+        title: "Erro no pagamento",
+        description: "Não foi possível registrar o pagamento.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useBillExpenses = () => {
+  return useQuery({
+    queryKey: ['bill-expenses'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!userData) throw new Error('Dados do usuário não encontrados');
+
+      const { data: bills } = await supabase
+        .from('credit_card_bills')
+        .select('*')
+        .eq('user_id', userData.id)
+        .eq('status', 'pending');
+
+      const totalExpenses = bills?.reduce((sum, bill) => sum + Number(bill.bill_amount), 0) || 0;
+
+      return { totalExpenses };
+    },
+  });
+};
