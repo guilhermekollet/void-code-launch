@@ -12,10 +12,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeClosed, ArrowLeft, Clock } from 'lucide-react';
 
-type AuthStep = 'method' | 'phone' | 'code' | 'email';
+type AuthStep = 'method' | 'phone' | 'code';
 
 export default function Login() {
-  const [authStep, setAuthStep] = useState<AuthStep>('method');
+  const [authStep, setAuthStep] = useState<AuthStep>('phone');
   const [phoneNumber, setPhoneNumber] = useState('55');
   const [verificationCode, setVerificationCode] = useState('');
   const [email, setEmail] = useState('');
@@ -200,45 +200,14 @@ export default function Login() {
           </div>
           
           <CardDescription className="text-[#64748B]">
-            {authStep === 'method' && 'Escolha como deseja entrar na sua conta'}
             {authStep === 'phone' && 'Digite seu número de celular'}
             {authStep === 'code' && 'Digite o código de verificação'}
-            {authStep === 'email' && 'Entre com email e senha'}
           </CardDescription>
         </CardHeader>
         
         <CardContent>
-          {authStep === 'method' && (
-            <div className="space-y-4">
-              <Button 
-                onClick={() => setAuthStep('phone')}
-                className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white"
-              >
-                Entrar com Celular
-              </Button>
-              <Button 
-                onClick={() => setAuthStep('email')}
-                variant="outline"
-                className="w-full border-[#DEDEDE] hover:bg-gray-50"
-              >
-                Entrar com Email
-              </Button>
-            </div>
-          )}
-
           {authStep === 'phone' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAuthStep('method')}
-                  className="p-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-[#64748B]">Voltar</span>
-              </div>
               
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-[#121212]">Número do celular</Label>
@@ -329,64 +298,6 @@ export default function Login() {
             </div>
           )}
 
-          {authStep === 'email' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAuthStep('method')}
-                  className="p-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-[#64748B]">Voltar</span>
-              </div>
-
-              <form onSubmit={handleEmailLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[#121212]">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="seu@email.com" 
-                    value={email} 
-                    onChange={e => setEmail(e.target.value)} 
-                    required 
-                    className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-[#121212]">Senha</Label>
-                  <div className="relative">
-                    <Input 
-                      id="password" 
-                      type={showPassword ? "text" : "password"} 
-                      placeholder="••••••••" 
-                      value={password} 
-                      onChange={e => setPassword(e.target.value)} 
-                      required 
-                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50 pr-10" 
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#121212] transition-colors"
-                    >
-                      {showPassword ? <EyeClosed size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white" 
-                  disabled={loading}
-                >
-                  {loading ? 'Entrando...' : 'Entrar'}
-                </Button>
-              </form>
-            </div>
-          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-[#64748B]">
