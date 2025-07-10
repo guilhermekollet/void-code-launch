@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +11,6 @@ export function useTransactions() {
     queryFn: async () => {
       if (!user) return [];
 
-      // First get the user's internal ID
       const { data: userData } = await supabase
         .from('users')
         .select('id')
@@ -36,137 +36,84 @@ export function useTransactions() {
   });
 }
 
-export function useFinancialMetrics() {
-  const { data: transactions = [], isLoading } = useTransactions();
-
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const today = new Date();
-
-  const currentMonthTransactions = transactions.filter(t => {
-    const transactionDate = new Date(t.tx_date);
-    return transactionDate.getMonth() === currentMonth && 
-           transactionDate.getFullYear() === currentYear;
-  });
-
-  // Calculate total balance excluding credit card expenses (they don't impact balance until bill is paid)
-  const totalBalance = transactions
-    .filter(t => new Date(t.tx_date) <= today && !t.is_credit_card_expense)
-    .reduce((sum, t) => {
-      return t.type === 'receita' ? sum + Number(t.amount) : sum - Number(t.amount);
-    }, 0);
-
-  const monthlyIncome = currentMonthTransactions
-    .filter(t => t.type === 'receita')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  // Monthly expenses exclude credit card expenses (they are tracked in bills)
-  const monthlyExpenses = currentMonthTransactions
-    .filter(t => t.type === 'despesa' && !t.is_credit_card_expense)
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  // CORRIGIDO: Calculate recurring expenses - apenas transações do mês atual marcadas como recorrentes
-  const monthlyRecurringExpenses = currentMonthTransactions
-    .filter(t => {
-      const isRecurring = t.is_recurring === true;
-      const isExpense = t.type === 'despesa';
-      const isNotCreditCard = !t.is_credit_card_expense;
-      
-      console.log('Recurring transaction check:', {
-        id: t.id,
-        description: t.description,
-        amount: t.amount,
-        isRecurring,
-        isExpense,
-        isNotCreditCard,
-        shouldCount: isRecurring && isExpense && isNotCreditCard
-      });
-      
-      return isRecurring && isExpense && isNotCreditCard;
-    })
-    .reduce((sum, t) => {
-      console.log('Adding recurring expense:', t.description, t.amount);
-      return sum + Number(t.amount);
-    }, 0);
-
-  console.log('Monthly recurring expenses total:', monthlyRecurringExpenses);
-
-  // Calculate credit card expenses that are in bills
-  const monthlyBillExpenses = currentMonthTransactions
-    .filter(t => t.is_credit_card_expense)
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  return {
-    totalBalance,
-    monthlyIncome,
-    monthlyExpenses,
-    monthlyRecurringExpenses,
-    monthlyBillExpenses,
-    isLoading,
-  };
-}
-
-export function useChartData() {
-  const { data: chartData = [] } = useChartDataWithInstallments();
-
-  // For backward compatibility, return the data in the expected format
-  const monthlyData = chartData;
-
-  // Category data with improved colors following the identity
+export function useChartDataWithInstallments() {
   const { data: transactions = [] } = useTransactions();
-  const categoryData = transactions
-    .filter(t => t.type === 'despesa')
-    .reduce((acc, t) => {
-      const category = t.category;
-      if (!acc[category]) {
-        acc[category] = 0;
-      }
-      acc[category] += Number(t.amount);
-      return acc;
-    }, {} as Record<string, number>);
 
-  // Enhanced color palette following the identity
-  const colorPalette = [
-    '#61710C', // Primary brand color
-    '#84CC16', // Lime green
-    '#22C55E', // Green
-    '#10B981', // Emerald
-    '#059669', // Emerald 600
-    '#047857', // Emerald 700
-    '#065F46', // Emerald 800
-    '#064E3B', // Emerald 900
-    '#F59E0B', // Amber (complementary)
-    '#EF4444', // Red (complementary)
-  ];
+  return useQuery({
+    queryKey: ['chart-data-installments', transactions.length],
+    queryFn: () => {
+      // Process data for the last 6 months
+      const monthlyData = Array.from({ length: 6 }, (_, i) => {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        
+        const receitas = transactions
+          .filter(t => {
+            const tDate = new Date(t.tx_date);
+            return t.type === 'receita' && 
+                   tDate.getMonth() === date.getMonth() && 
+                   tDate.getFullYear() === date.getFullYear();
+          })
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
-  const categoryChartData = Object.entries(categoryData)
-    .sort(([,a], [,b]) => b - a) // Sort by value descending
-    .map(([name, value], index) => ({
-      name,
-      value,
-      color: colorPalette[index % colorPalette.length]
-    }));
+        const despesas = transactions
+          .filter(t => {
+            const tDate = new Date(t.tx_date);
+            return t.type === 'despesa' && 
+                   tDate.getMonth() === date.getMonth() && 
+                   tDate.getFullYear() === date.getFullYear();
+          })
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
-  return {
-    monthlyData,
-    categoryData: categoryChartData
-  };
+        const gastosRecorrentes = transactions
+          .filter(t => {
+            const tDate = new Date(t.tx_date);
+            return t.type === 'despesa' && 
+                   t.is_recurring && 
+                   tDate.getMonth() === date.getMonth() && 
+                   tDate.getFullYear() === date.getFullYear();
+          })
+          .reduce((sum, t) => sum + Number(t.value), 0);
+
+        // Calculate credit card bills for this month
+        const creditCardTransactions = transactions
+          .filter(t => {
+            const tDate = new Date(t.tx_date);
+            return t.is_credit_card_expense && 
+                   tDate.getMonth() === date.getMonth() && 
+                   tDate.getFullYear() === date.getFullYear();
+          })
+          .reduce((sum, t) => sum + Number(t.value), 0);
+
+        return {
+          mes: date.toLocaleDateString('pt-BR', { month: 'short' }),
+          receitas,
+          despesas,
+          gastosRecorrentes,
+          faturas: creditCardTransactions,
+          fluxoLiquido: receitas - despesas
+        };
+      }).reverse();
+
+      return monthlyData;
+    },
+    enabled: transactions.length > 0,
+  });
 }
 
-// Enhanced function to get daily data for specific periods
-export function useDailyData(days: number) {
+export function useDailyData(days: number = 30) {
   const { data: transactions = [] } = useTransactions();
 
   return useQuery({
     queryKey: ['daily-data', days, transactions.length],
     queryFn: () => {
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - (days - 1));
+      const today = new Date();
+      const dailyData = [];
 
-      const dailyData = Array.from({ length: days }, (_, i) => {
-        const date = new Date(startDate);
-        date.setDate(date.getDate() + i);
+      // Generate data for the specified number of days
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
         
         const dayTransactions = transactions.filter(t => {
           const transactionDate = new Date(t.tx_date);
@@ -175,118 +122,72 @@ export function useDailyData(days: number) {
 
         const receitas = dayTransactions
           .filter(t => t.type === 'receita')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
         const despesas = dayTransactions
           .filter(t => t.type === 'despesa')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
         const gastosRecorrentes = dayTransactions
           .filter(t => t.type === 'despesa' && t.is_recurring)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
-        return {
+        const faturas = dayTransactions
+          .filter(t => t.is_credit_card_expense)
+          .reduce((sum, t) => sum + Number(t.value), 0);
+
+        dailyData.push({
           mes: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
           receitas,
           despesas,
           gastosRecorrentes,
+          faturas,
           fluxoLiquido: receitas - despesas,
           isFuture: false
-        };
-      });
+        });
+      }
 
       return dailyData;
     },
-    enabled: true,
+    enabled: transactions.length > 0,
   });
 }
 
-// Corrected function to process installment transactions for chart data
-export function useChartDataWithInstallments() {
+export function useFinancialMetrics() {
   const { data: transactions = [] } = useTransactions();
 
   return useQuery({
-    queryKey: ['chart-data-installments', transactions.length],
+    queryKey: ['financial-metrics', transactions.length],
     queryFn: () => {
-      // Get last 6 months data
-      const last6Months = Array.from({ length: 6 }, (_, i) => {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        return {
-          month: date.getMonth(),
-          year: date.getFullYear(),
-          name: date.toLocaleDateString('pt-BR', { month: 'short' })
-        };
-      }).reverse();
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
 
-      const monthlyData = last6Months.map(period => {
-        // Get regular transactions for this specific month and year
-        const monthTransactions = transactions.filter(t => {
-          const transactionDate = new Date(t.tx_date);
-          return transactionDate.getMonth() === period.month && 
-                 transactionDate.getFullYear() === period.year;
-        });
-
-        // Calculate installment transactions for this period - FIXED LOGIC
-        const installmentTransactions = transactions.filter(t => {
-          if (!t.is_installment || !t.installment_start_date || !t.total_installments) return false;
-          
-          const startDate = new Date(t.installment_start_date);
-          const currentPeriodDate = new Date(period.year, period.month, 1);
-          
-          // Calculate which installment would fall in this period
-          const monthsDiff = (currentPeriodDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                           (currentPeriodDate.getMonth() - startDate.getMonth());
-          
-          // Only include if this month falls within the installment period
-          return monthsDiff >= 0 && monthsDiff < t.total_installments;
-        });
-
-        // Regular income from transactions in this month
-        const regularReceitas = monthTransactions
-          .filter(t => t.type === 'receita' && !t.is_installment)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        // Installment income for this period
-        const installmentReceitas = installmentTransactions
-          .filter(t => t.type === 'receita')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const totalReceitas = regularReceitas + installmentReceitas;
-
-        // Regular expenses from transactions in this month (excluding credit card)
-        const regularDespesas = monthTransactions
-          .filter(t => t.type === 'despesa' && !t.is_installment && !t.is_credit_card_expense)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        // Installment expenses for this period - each installment counts only once (excluding credit card)
-        const installmentDespesas = installmentTransactions
-          .filter(t => t.type === 'despesa' && !t.is_credit_card_expense)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const totalDespesas = regularDespesas + installmentDespesas;
-
-        // Calculate recurring expenses for this month (excluding credit card)
-        const gastosRecorrentes = monthTransactions
-          .filter(t => t.type === 'despesa' && t.is_recurring && !t.is_credit_card_expense)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        // Calculate bill expenses (credit card expenses accumulated in this period)
-        const billExpenses = monthTransactions
-          .filter(t => t.is_credit_card_expense)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        return {
-          mes: period.name,
-          receitas: totalReceitas,
-          despesas: totalDespesas,
-          gastosRecorrentes,
-          faturas: billExpenses
-        };
+      const currentMonthTransactions = transactions.filter(t => {
+        const tDate = new Date(t.tx_date);
+        return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
       });
 
-      return monthlyData;
+      const totalReceitas = currentMonthTransactions
+        .filter(t => t.type === 'receita')
+        .reduce((sum, t) => sum + Number(t.value), 0);
+
+      const totalDespesas = currentMonthTransactions
+        .filter(t => t.type === 'despesa')
+        .reduce((sum, t) => sum + Number(t.value), 0);
+
+      const saldoAtual = totalReceitas - totalDespesas;
+
+      const gastosRecorrentes = currentMonthTransactions
+        .filter(t => t.type === 'despesa' && t.is_recurring)
+        .reduce((sum, t) => sum + Number(t.value), 0);
+
+      return {
+        totalReceitas,
+        totalDespesas,
+        saldoAtual,
+        gastosRecorrentes
+      };
     },
-    enabled: true,
+    enabled: transactions.length > 0,
   });
 }

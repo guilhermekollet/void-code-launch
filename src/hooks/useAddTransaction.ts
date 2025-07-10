@@ -60,6 +60,7 @@ export function useAddTransaction() {
             category: transactionData.category,
             description: transactionData.description,
             tx_date: transactionData.tx_date,
+            registered_at: new Date().toISOString(),
             is_credit_card_expense: true,
             credit_card_id: transactionData.credit_card_id,
             installments: transactionData.installments || 1,
@@ -93,6 +94,7 @@ export function useAddTransaction() {
               category: transactionData.category,
               description: `${transactionData.description} (${i}/${transactionData.total_installments})`,
               tx_date: installmentDate.toISOString(),
+              registered_at: new Date().toISOString(),
               is_installment: true,
               installment_number: i,
               total_installments: transactionData.total_installments,
@@ -121,6 +123,7 @@ export function useAddTransaction() {
             category: transactionData.category,
             description: transactionData.description,
             tx_date: transactionData.tx_date,
+            registered_at: new Date().toISOString(),
             is_recurring: transactionData.is_recurring || false,
             recurring_date: transactionData.recurring_date,
           })
