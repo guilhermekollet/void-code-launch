@@ -49,9 +49,6 @@ export default function PaymentSuccess() {
           if (data.user) {
             setUserCreated(true);
             
-            // Create a temporary session for the new user
-            // In a real-world scenario, you'd want to implement proper passwordless login
-            // For now, we'll guide the user to login
             toast({
               title: "Conta criada com sucesso!",
               description: `Seu trial de ${data.trial?.daysRemaining || 3} dias começou!`,
@@ -91,10 +88,6 @@ export default function PaymentSuccess() {
   const handleGoToLogin = () => {
     const email = localStorage.getItem('newUserEmail');
     navigate('/login', { state: { email } });
-  };
-
-  const handleGoToDashboard = () => {
-    navigate('/dashboard');
   };
 
   const formatDate = (dateString: string) => {
@@ -182,25 +175,14 @@ export default function PaymentSuccess() {
             </div>
 
             <div className="space-y-4 pt-6">
-              {userCreated ? (
-                <Button
-                  onClick={handleGoToLogin}
-                  className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white text-lg py-3"
-                  size="lg"
-                >
-                  <ArrowRight className="w-5 h-5 mr-2" />
-                  Fazer Login
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleGoToDashboard}
-                  className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white text-lg py-3"
-                  size="lg"
-                >
-                  <ArrowRight className="w-5 h-5 mr-2" />
-                  Acessar Dashboard
-                </Button>
-              )}
+              <Button
+                onClick={handleGoToLogin}
+                className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white text-lg py-3"
+                size="lg"
+              >
+                <ArrowRight className="w-5 h-5 mr-2" />
+                Fazer Login
+              </Button>
 
               <Button
                 variant="outline"

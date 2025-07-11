@@ -1,5 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@14.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,30 +21,96 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const { planType, billingCycle } = await req.json();
-    logStep("Request received", { planType, billingCycle });
+    const { planType, billingCycle, onboardingId } = await req.json();
+    logStep("Request received", { planType, billingCycle, onboardingId });
 
-    // Map plan types and billing cycles to Stripe checkout URLs
-    const checkoutUrls = {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      throw new Error("STRIPE_SECRET_KEY não configurado");
+    }
+
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: "2023-10-16",
+    });
+
+    // Definir preços baseados no plano e ciclo
+    const priceMap = {
       basic: {
-        monthly: "https://buy.stripe.com/test_bJe28r23b5uk7G3bUafQI00",
-        yearly: "https://buy.stripe.com/test_fZubJ16jrcWM2lJ8HYfQI01"
+        monthly: 1990, // R$ 19.90 em centavos
+        yearly: 19990  // R$ 199.90 em centavos
       },
       premium: {
-        monthly: "https://buy.stripe.com/test_8x28wP37f0a00dB3nEfQI02",
-        yearly: "https://buy.stripe.com/test_3cI4gz5fng8Ye4r1fwfQI03"
+        monthly: 2990, // R$ 29.90 em centavos
+        yearly: 28990  // R$ 289.90 em centavos
       }
     };
 
-    const url = checkoutUrls[planType as keyof typeof checkoutUrls]?.[billingCycle as keyof typeof checkoutUrls.basic];
-    
-    if (!url) {
-      throw new Error(`Invalid plan configuration: ${planType} - ${billingCycle}`);
+    const price = priceMap[planType as keyof typeof priceMap]?.[billingCycle as keyof typeof priceMap.basic];
+    if (!price) {
+      throw new Error(`Configuração de preço inválida: ${planType} - ${billingCycle}`);
     }
 
-    logStep("Checkout URL found", { url });
+    const origin = req.headers.get("origin") || "http://localhost:3000";
+    
+    // Criar sessão do Stripe
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'brl',
+            product_data: {
+              name: `Plano ${planType === 'basic' ? 'Básico' : 'Premium'}`,
+              description: `Assinatura ${billingCycle === 'monthly' ? 'mensal' : 'anual'}`
+            },
+            unit_amount: price,
+            recurring: {
+              interval: billingCycle === 'monthly' ? 'month' : 'year'
+            }
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/register`,
+      metadata: {
+        planType,
+        billingCycle,
+        onboardingId: onboardingId || ''
+      }
+    });
 
-    return new Response(JSON.stringify({ url }), {
+    logStep("Stripe session created", { sessionId: session.id, url: session.url });
+
+    // Atualizar onboarding com session_id real
+    if (onboardingId) {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        { auth: { persistSession: false } }
+      );
+
+      const { error: updateError } = await supabase
+        .from('onboarding')
+        .update({ 
+          stripe_session_id: session.id,
+          registration_stage: 'payment',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', onboardingId);
+
+      if (updateError) {
+        logStep("Error updating onboarding", updateError);
+      } else {
+        logStep("Onboarding updated with session ID", { onboardingId, sessionId: session.id });
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      url: session.url,
+      sessionId: session.id 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

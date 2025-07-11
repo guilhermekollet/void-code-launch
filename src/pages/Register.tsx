@@ -18,10 +18,6 @@ interface Plan {
   monthlyPrice: number;
   yearlyPrice: number;
   features: string[];
-  stripeUrls: {
-    monthly: string;
-    yearly: string;
-  };
 }
 
 const plans: Plan[] = [
@@ -35,11 +31,7 @@ const plans: Plan[] = [
       'Relatórios mensais',
       'Até 3 cartões de crédito',
       'Suporte por email'
-    ],
-    stripeUrls: {
-      monthly: 'https://buy.stripe.com/test_bJe28r23b5uk7G3bUafQI00',
-      yearly: 'https://buy.stripe.com/test_fZubJ16jrcWM2lJ8HYfQI01'
-    }
+    ]
   },
   {
     id: 'premium',
@@ -53,11 +45,7 @@ const plans: Plan[] = [
       'Suporte prioritário',
       'Análises avançadas',
       'Integração com bancos'
-    ],
-    stripeUrls: {
-      monthly: 'https://buy.stripe.com/test_8x28wP37f0a00dB3nEfQI02',
-      yearly: 'https://buy.stripe.com/test_3cI4gz5fng8Ye4r1fwfQI03'
-    }
+    ]
   }
 ];
 
@@ -86,6 +74,7 @@ export default function Register() {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [isContinuation, setIsContinuation] = useState(false);
   const [onboardingId, setOnboardingId] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -330,51 +319,66 @@ export default function Register() {
   };
 
   const handleFinishRegistration = async () => {
-    const selectedPlan = plans.find(plan => plan.id === formData.selectedPlan);
-    if (!selectedPlan) return;
+    if (!formData.selectedPlan || !onboardingId) {
+      toast({
+        title: "Erro",
+        description: "Dados incompletos para finalizar o cadastro.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setProcessingPayment(true);
 
     try {
-      // Update to payment stage and save stripe session
-      await saveOrUpdateOnboarding('payment', formData);
+      console.log('Creating checkout session with:', {
+        planType: formData.selectedPlan,
+        billingCycle: formData.billingCycle,
+        onboardingId
+      });
 
-      const stripeUrl = formData.billingCycle === 'monthly' 
-        ? selectedPlan.stripeUrls.monthly 
-        : selectedPlan.stripeUrls.yearly;
+      // Chamar a edge function para criar checkout session
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          planType: formData.selectedPlan,
+          billingCycle: formData.billingCycle,
+          onboardingId: onboardingId
+        }
+      });
 
-      // Get the session ID from Stripe URL for tracking
-      const urlParts = stripeUrl.split('/');
-      const sessionId = urlParts[urlParts.length - 1];
-
-      // Update onboarding with stripe session info
-      if (onboardingId) {
-        await supabase
-          .from('onboarding')
-          .update({ 
-            stripe_session_id: sessionId,
-            registration_stage: 'payment'
-          })
-          .eq('id', onboardingId);
+      if (error) {
+        console.error('Error creating checkout:', error);
+        throw new Error(error.message || 'Erro ao criar sessão de pagamento');
       }
 
-      // Also save to localStorage as backup
+      if (!data?.url) {
+        throw new Error('URL de checkout não recebida');
+      }
+
+      console.log('Checkout session created:', data);
+
+      // Salvar dados no localStorage como backup
       localStorage.setItem('registrationData', JSON.stringify({
         name: formData.name,
         email: formData.email,
         phone: formData.phone.replace(/\D/g, ''),
         plan: formData.selectedPlan,
         billingCycle: formData.billingCycle,
-        onboardingId: onboardingId
+        onboardingId: onboardingId,
+        sessionId: data.sessionId
       }));
 
-      console.log('Redirecting to Stripe with session:', sessionId);
-      window.location.href = stripeUrl;
+      // Redirecionar para o Stripe Checkout
+      window.location.href = data.url;
     } catch (error) {
       console.error('Error during registration:', error);
       toast({
         title: "Erro",
-        description: "Erro inesperado. Tente novamente.",
+        description: error instanceof Error ? error.message : "Erro inesperado. Tente novamente.",
         variant: "destructive"
       });
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -633,10 +637,10 @@ export default function Register() {
               ) : (
                 <Button
                   onClick={handleFinishRegistration}
-                  disabled={!canProceedFromStep(currentStep)}
+                  disabled={!canProceedFromStep(currentStep) || processingPayment}
                   className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2 w-full"
                 >
-                  Finalizar Cadastro
+                  {processingPayment ? 'Processando...' : 'Finalizar Cadastro'}
                   <ArrowRight className="w-4 h-4 text-white" />
                 </Button>
               )}
