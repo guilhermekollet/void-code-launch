@@ -386,12 +386,16 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          last_updated_date: string | null
           name: string
+          onboarding_start_date: string | null
           payment_confirmed: boolean | null
           phone: string
           registration_stage: string
           selected_plan: string
           stripe_session_id: string | null
+          trial_end_date: string | null
+          trial_start_date: string | null
           updated_at: string | null
         }
         Insert: {
@@ -399,12 +403,16 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          last_updated_date?: string | null
           name: string
+          onboarding_start_date?: string | null
           payment_confirmed?: boolean | null
           phone: string
           registration_stage?: string
           selected_plan: string
           stripe_session_id?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -412,12 +420,16 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          last_updated_date?: string | null
           name?: string
+          onboarding_start_date?: string | null
           payment_confirmed?: boolean | null
           phone?: string
           registration_stage?: string
           selected_plan?: string
           stripe_session_id?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -569,6 +581,9 @@ export type Database = {
           name: string | null
           phone_number: string
           plan_type: string | null
+          stripe_session_id: string | null
+          trial_end: string | null
+          trial_start: string | null
           user_id: string | null
         }
         Insert: {
@@ -580,6 +595,9 @@ export type Database = {
           name?: string | null
           phone_number: string
           plan_type?: string | null
+          stripe_session_id?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
           user_id?: string | null
         }
         Update: {
@@ -591,6 +609,9 @@ export type Database = {
           name?: string | null
           phone_number?: string
           plan_type?: string | null
+          stripe_session_id?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
           user_id?: string | null
         }
         Relationships: [

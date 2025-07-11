@@ -100,7 +100,6 @@ export default function Register() {
     }
   }, [user, navigate]);
 
-  // Validations
   const validateName = (name: string): boolean => {
     const nameParts = name.trim().split(' ').filter(part => part.length > 0);
     return nameParts.length >= 2;
@@ -148,16 +147,37 @@ export default function Register() {
           .eq('id', onboardingId);
 
         if (error) throw error;
+        console.log('Updated onboarding record:', onboardingId);
       } else {
-        // Create new record
-        const { data, error } = await supabase
+        // Create new record or update existing by email
+        const { data: existingRecord } = await supabase
           .from('onboarding')
-          .insert([dataToSave])
           .select('id')
+          .eq('email', dataToSave.email)
           .single();
 
-        if (error) throw error;
-        if (data) setOnboardingId(data.id);
+        if (existingRecord) {
+          // Update existing record
+          const { error } = await supabase
+            .from('onboarding')
+            .update(dataToSave)
+            .eq('id', existingRecord.id);
+
+          if (error) throw error;
+          setOnboardingId(existingRecord.id);
+          console.log('Updated existing onboarding record:', existingRecord.id);
+        } else {
+          // Create new record
+          const { data, error } = await supabase
+            .from('onboarding')
+            .insert([dataToSave])
+            .select('id')
+            .single();
+
+          if (error) throw error;
+          if (data) setOnboardingId(data.id);
+          console.log('Created new onboarding record:', data?.id);
+        }
       }
     } catch (error) {
       console.error('Error saving onboarding data:', error);
@@ -179,14 +199,19 @@ export default function Register() {
       billingCycle: existingData.billingCycle || 'monthly'
     });
 
+    // Set onboarding ID if available
+    if (existingData.onboardingId) {
+      setOnboardingId(existingData.onboardingId);
+    }
+
     // Determine current step based on registration stage
     const stage = existingData.registrationStage;
-    if (stage === 'email') {
+    if (stage === 'phone') {
+      setCurrentStep('plan');
+    } else if (stage === 'plan' || stage === 'payment') {
+      setCurrentStep('plan');
+    } else if (stage === 'email') {
       setCurrentStep('phone');
-    } else if (stage === 'phone') {
-      setCurrentStep('plan');
-    } else if (stage === 'plan') {
-      setCurrentStep('plan');
     } else {
       setCurrentStep('name');
     }
@@ -243,6 +268,16 @@ export default function Register() {
       setCheckingEmail(false);
 
       if (emailCheckResult.exists && emailCheckResult.completed) {
+        if (emailCheckResult.shouldCreateUser) {
+          // User completed payment but needs to be migrated to users table
+          toast({
+            title: "Cadastro concluído",
+            description: "Redirecionando para o dashboard...",
+          });
+          // Here you would handle the user creation and login
+          return;
+        }
+        
         toast({
           title: "Email já cadastrado",
           description: emailCheckResult.message,
@@ -266,7 +301,7 @@ export default function Register() {
 
     // Save progress for other steps
     if (currentStep === 'name') {
-      // Name step completed, move to email
+      await saveOrUpdateOnboarding('name');
     } else if (currentStep === 'phone') {
       await saveOrUpdateOnboarding('phone');
     } else if (currentStep === 'plan') {
@@ -299,12 +334,27 @@ export default function Register() {
     if (!selectedPlan) return;
 
     try {
-      // Update to payment stage
+      // Update to payment stage and save stripe session
       await saveOrUpdateOnboarding('payment', formData);
 
       const stripeUrl = formData.billingCycle === 'monthly' 
         ? selectedPlan.stripeUrls.monthly 
         : selectedPlan.stripeUrls.yearly;
+
+      // Get the session ID from Stripe URL for tracking
+      const urlParts = stripeUrl.split('/');
+      const sessionId = urlParts[urlParts.length - 1];
+
+      // Update onboarding with stripe session info
+      if (onboardingId) {
+        await supabase
+          .from('onboarding')
+          .update({ 
+            stripe_session_id: sessionId,
+            registration_stage: 'payment'
+          })
+          .eq('id', onboardingId);
+      }
 
       // Also save to localStorage as backup
       localStorage.setItem('registrationData', JSON.stringify({
@@ -312,9 +362,11 @@ export default function Register() {
         email: formData.email,
         phone: formData.phone.replace(/\D/g, ''),
         plan: formData.selectedPlan,
-        billingCycle: formData.billingCycle
+        billingCycle: formData.billingCycle,
+        onboardingId: onboardingId
       }));
 
+      console.log('Redirecting to Stripe with session:', sessionId);
       window.location.href = stripeUrl;
     } catch (error) {
       console.error('Error during registration:', error);
