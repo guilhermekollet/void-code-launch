@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Layout } from "@/components/Layout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -38,42 +39,58 @@ const App = () => (
             <Route path="/email-confirmation" element={<EmailConfirmation />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <Dashboard />
+                <Layout>
+                  <Dashboard />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/transacoes" element={
               <ProtectedRoute>
-                <Transacoes />
+                <Layout>
+                  <Transacoes />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/cartoes" element={
               <ProtectedRoute>
-                <Cartoes />
+                <Layout>
+                  <Cartoes />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/categorias" element={
               <ProtectedRoute>
-                <Categorias />
+                <Layout>
+                  <Categorias />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/recorrentes" element={
               <ProtectedRoute>
-                <Recorrentes />
+                <Layout>
+                  <Recorrentes />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/relatorios" element={
               <ProtectedRoute>
-                <Relatorios />
+                <Layout>
+                  <Relatorios />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/configuracoes" element={
               <ProtectedRoute>
-                <Configuracoes />
+                <Layout>
+                  <Configuracoes />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/assinatura" element={
               <ProtectedRoute>
-                <Assinatura />
+                <Layout>
+                  <Assinatura />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

@@ -78,11 +78,12 @@ serve(async (req) => {
       // Create user account
       const { data: newUser, error: createUserError } = await supabase.auth.admin.createUser({
         email: onboarding.email,
+        phone: onboarding.phone,
         password: Math.random().toString(36).slice(-8), // Temporary password
         email_confirm: true,
         user_metadata: {
           name: onboarding.name,
-          phone: onboarding.phone,
+          phone_number: onboarding.phone,
           plan_type: onboarding.selected_plan,
           billing_cycle: onboarding.billing_cycle
         }
