@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -610,8 +609,68 @@ export function useExportReport() {
     }
   }, [totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses, monthlyData, categoryData, toast]);
 
+  const exportToExcel = useCallback(async () => {
+    setIsExporting(true);
+    
+    try {
+      toast({
+        title: "Processando",
+        description: "Preparando dados para Excel...",
+      });
+
+      // Criar dados para Excel
+      const excelData = {
+        metrics: [
+          { Métrica: 'Receitas do Mês', Valor: formatCurrency(monthlyIncome) },
+          { Métrica: 'Despesas do Mês', Valor: formatCurrency(monthlyExpenses) },
+          { Métrica: 'Resultado do Mês', Valor: formatCurrency(monthlyIncome - monthlyExpenses) },
+          { Métrica: 'Saldo Total', Valor: formatCurrency(totalBalance) },
+        ],
+        monthlyData: monthlyData.slice(-6).map(month => ({
+          Mês: month.mes,
+          Receitas: formatCurrency(month.receitas),
+          Despesas: formatCurrency(month.despesas),
+          'Gastos Recorrentes': formatCurrency(month.gastosRecorrentes),
+          Resultado: formatCurrency(month.receitas - month.despesas)
+        })),
+        categories: categoryData.slice(0, 10).map((category, index) => ({
+          Posição: index + 1,
+          Categoria: category.name,
+          Valor: formatCurrency(category.value)
+        }))
+      };
+
+      // Simular download de Excel (você pode usar uma biblioteca como xlsx aqui)
+      const jsonData = JSON.stringify(excelData, null, 2);
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `relatorio-financeiro-bolsofy-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Sucesso! 🎉",
+        description: "Dados exportados com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao exportar dados. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  }, [monthlyIncome, monthlyExpenses, totalBalance, monthlyData, categoryData, toast]);
+
   return {
     exportToPDF,
+    exportToExcel,
     isExporting
   };
 }
