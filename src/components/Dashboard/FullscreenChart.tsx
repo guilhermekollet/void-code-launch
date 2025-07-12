@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts';
 import { FullscreenChartProps, VisibleLines, ZoomDomain } from './FullscreenChart/types';
 import { useFullscreenChartData } from './FullscreenChart/hooks/useChartData';
 import { ChartControls } from './FullscreenChart/components/ChartControls';
@@ -127,14 +128,36 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     }));
   };
 
-  const handlePointClick = (month: string) => {
-    setSelectedMonth(month);
-    setSidebarOpen(true);
+  const handlePointClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload[0]) {
+      const month = data.activePayload[0].payload.mes;
+      setSelectedMonth(month);
+      setSidebarOpen(true);
+    }
   };
 
   const handleCloseSidebar = () => {
     setSidebarOpen(false);
     setSelectedMonth('');
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatTooltip = (value: number, name: string) => {
+    const nameMap: { [key: string]: string } = {
+      receitas: 'Receitas',
+      despesas: 'Despesas',
+      gastosRecorrentes: 'Gastos Recorrentes',
+      fluxoLiquido: 'Fluxo Líquido'
+    };
+    return [formatCurrency(value), nameMap[name] || name];
   };
 
   return (
@@ -186,11 +209,89 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
             {/* Chart - takes remaining height */}
             <div className="flex-1 min-h-0 p-4">
               <div className="h-full bg-white rounded-lg border border-gray-200">
-                <div className="p-4 h-full">
-                  <p className="text-center text-gray-500 py-8">
-                    Gráfico de fluxo financeiro - Clique nos pontos para ver detalhes das transações
-                  </p>
-                </div>
+                {displayData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={displayData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      onClick={handlePointClick}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="mes" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis 
+                        tickFormatter={formatCurrency}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        formatter={formatTooltip}
+                        labelStyle={{ color: '#121212' }}
+                        contentStyle={{ 
+                          backgroundColor: 'white', 
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      {futureStartIndex > 0 && (
+                        <ReferenceLine x={futureStartIndex - 0.5} stroke="#94a3b8" strokeDasharray="2 2" />
+                      )}
+                      {visibleLines.receitas && (
+                        <Line
+                          type="monotone"
+                          dataKey="receitas"
+                          stroke="#61710C"
+                          strokeWidth={3}
+                          name="receitas"
+                          dot={{ fill: '#61710C', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#61710C', strokeWidth: 2, cursor: 'pointer' }}
+                        />
+                      )}
+                      {visibleLines.despesas && (
+                        <Line
+                          type="monotone"
+                          dataKey="despesas"
+                          stroke="#EF4444"
+                          strokeWidth={3}
+                          name="despesas"
+                          dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#EF4444', strokeWidth: 2, cursor: 'pointer' }}
+                        />
+                      )}
+                      {visibleLines.gastosRecorrentes && (
+                        <Line
+                          type="monotone"
+                          dataKey="gastosRecorrentes"
+                          stroke="#3B82F6"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          name="gastosRecorrentes"
+                          dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
+                          activeDot={{ r: 5, stroke: '#3B82F6', strokeWidth: 2, cursor: 'pointer' }}
+                        />
+                      )}
+                      {visibleLines.fluxoLiquido && (
+                        <Line
+                          type="monotone"
+                          dataKey="fluxoLiquido"
+                          stroke="#9333EA"
+                          strokeWidth={2}
+                          name="fluxoLiquido"
+                          dot={{ fill: '#9333EA', strokeWidth: 2, r: 3 }}
+                          activeDot={{ r: 5, stroke: '#9333EA', strokeWidth: 2, cursor: 'pointer' }}
+                        />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    <p>Nenhuma transação encontrada para o período selecionado</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

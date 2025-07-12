@@ -10,7 +10,7 @@ interface FinanceCardProps {
 
 export function FinanceCard({ title, value, icon: Icon }: FinanceCardProps) {
   return (
-    <Card className="bg-white border-[#E2E8F0]">
+    <Card className="bg-[#FDFDFD] border-[#DFDFDF]">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-[#121212]">{title}</CardTitle>
         <Icon className="h-4 w-4 text-[#61710C]" />

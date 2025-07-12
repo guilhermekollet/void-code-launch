@@ -23,7 +23,7 @@ export function QuickStats({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
       {/* Saldo Total - cor condicional baseada no valor */}
-      <Card className={`bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow ${totalBalance >= 0 ? '' : 'border-red-300'}`}>
+      <Card className={`bg-[#FDFDFD] border-[#DFDFDF] shadow-sm hover:shadow-md transition-shadow ${totalBalance >= 0 ? '' : 'border-red-300'}`}>
         <CardHeader className="space-y-0 pb-3">
           <CardTitle className="text-sm font-medium text-[#64748B]">Saldo Total</CardTitle>
         </CardHeader>
@@ -35,7 +35,7 @@ export function QuickStats({
       </Card>
 
       {/* Receitas do Mês */}
-      <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow">
+      <Card className="bg-[#FDFDFD] border-[#DFDFDF] shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="space-y-0 pb-3">
           <CardTitle className="text-sm font-medium text-[#64748B]">Receitas do Mês</CardTitle>
         </CardHeader>
@@ -45,7 +45,7 @@ export function QuickStats({
       </Card>
 
       {/* Despesas do Mês */}
-      <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow">
+      <Card className="bg-[#FDFDFD] border-[#DFDFDF] shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="space-y-0 pb-3">
           <CardTitle className="text-sm font-medium text-[#64748B]">Despesas do Mês</CardTitle>
         </CardHeader>
@@ -55,7 +55,7 @@ export function QuickStats({
       </Card>
 
       {/* Gastos Recorrentes */}
-      <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow">
+      <Card className="bg-[#FDFDFD] border-[#DFDFDF] shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="space-y-0 pb-3">
           <CardTitle className="text-sm font-medium text-[#64748B]">Gastos Recorrentes</CardTitle>
         </CardHeader>
@@ -65,7 +65,7 @@ export function QuickStats({
       </Card>
 
       {/* Despesas em Fatura */}
-      <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow">
+      <Card className="bg-[#FDFDFD] border-[#DFDFDF] shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="space-y-0 pb-3">
           <CardTitle className="text-sm font-medium text-[#64748B]">Despesas em Fatura</CardTitle>
         </CardHeader>
