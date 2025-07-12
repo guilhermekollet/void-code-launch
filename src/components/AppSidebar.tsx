@@ -103,6 +103,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild size="lg" className="h-14">
                     <NavLink 
                       to={item.url} 
+                      end
                       className={({ isActive }) => 
                         `flex items-center gap-4 py-4 text-base font-medium px-[16px] ${
                           isActive 

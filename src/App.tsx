@@ -7,11 +7,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
-import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PaymentSuccess from "./pages/PaymentSuccess";
-import Dashboard from "./pages/Dashboard";
 import Transacoes from "./pages/Transacoes";
 import Cartoes from "./pages/Cartoes";
 import Categorias from "./pages/Categorias";
@@ -32,7 +31,13 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            } />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
