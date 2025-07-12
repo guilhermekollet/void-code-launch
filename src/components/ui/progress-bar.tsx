@@ -52,11 +52,11 @@ export function ProgressBar({ steps, currentStep, className }: ProgressBarProps)
         </div>
       </div>
 
-      {/* Mobile Progress Bar - Only the line */}
+      {/* Mobile Progress Bar - Only the green bar with 10px height */}
       <div className="block sm:hidden px-4 py-3">
-        <div className="w-full bg-gray-200 h-1 rounded-full">
+        <div className="w-full bg-gray-200 h-[10px] rounded-full">
           <div 
-            className="bg-white h-1 rounded-full transition-all duration-300 ease-in-out"
+            className="bg-[#61710C] h-[10px] rounded-full transition-all duration-300 ease-in-out"
             style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
           />
         </div>

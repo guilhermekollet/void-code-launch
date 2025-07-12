@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Mail, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -92,9 +91,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
-      <Card className="w-full max-w-md border-[#DEDEDE] bg-white">
-        <CardHeader className="text-center py-[60px]">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-white">
+      <div className="w-full max-w-md">
+        <div className="text-center py-[60px]">
           <div className="flex justify-center mb-4">
             <img 
               src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
@@ -103,13 +102,13 @@ export default function Login() {
             />
           </div>
           
-          <CardDescription className="text-[#64748B]">
+          <p className="text-[#64748B]">
             {authStep === 'phone' && 'Digite seu número de celular para acessar'}
             {authStep === 'email-sent' && 'Verifique seu email'}
-          </CardDescription>
-        </CardHeader>
+          </p>
+        </div>
         
-        <CardContent>
+        <div>
           {authStep === 'phone' && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -202,8 +201,8 @@ export default function Login() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

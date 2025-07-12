@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, ArrowRight, Check, MessageCircle } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -72,6 +72,7 @@ export default function Register() {
   });
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
   const [isContinuation, setIsContinuation] = useState(false);
   const [onboardingId, setOnboardingId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -114,6 +115,20 @@ export default function Register() {
     } catch (error) {
       console.error('Error checking email:', error);
       return { exists: false, canContinue: false };
+    }
+  };
+
+  const checkPhoneExists = async (phone: string): Promise<any> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-phone-exists', {
+        body: { phoneNumber: phone }
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error checking phone:', error);
+      return { exists: false };
     }
   };
 
@@ -168,6 +183,13 @@ export default function Register() {
           console.log('Created new onboarding record:', data?.id);
         }
       }
+
+      // Show success feedback
+      toast({
+        title: "Progresso salvo",
+        description: "Seus dados foram salvos com segurança.",
+        duration: 2000
+      });
     } catch (error) {
       console.error('Error saving onboarding data:', error);
       toast({
@@ -250,6 +272,16 @@ export default function Register() {
       return;
     }
 
+    // Handle name step - save immediately
+    if (currentStep === 'name') {
+      await saveOrUpdateOnboarding('name');
+      const nextIndex = currentStepIndex + 1;
+      if (nextIndex < stepKeys.length) {
+        setCurrentStep(stepKeys[nextIndex]);
+      }
+      return;
+    }
+
     // Handle email step
     if (currentStep === 'email') {
       setCheckingEmail(true);
@@ -286,14 +318,38 @@ export default function Register() {
 
       // Save new registration after email step
       await saveOrUpdateOnboarding('email');
+      const nextIndex = currentStepIndex + 1;
+      if (nextIndex < stepKeys.length) {
+        setCurrentStep(stepKeys[nextIndex]);
+      }
+      return;
     }
 
-    // Save progress for other steps
-    if (currentStep === 'name') {
-      await saveOrUpdateOnboarding('name');
-    } else if (currentStep === 'phone') {
+    // Handle phone step - check for duplicates
+    if (currentStep === 'phone') {
+      setCheckingPhone(true);
+      const phoneCheckResult = await checkPhoneExists(formData.phone);
+      setCheckingPhone(false);
+
+      if (phoneCheckResult.exists) {
+        toast({
+          title: "Telefone já cadastrado",
+          description: phoneCheckResult.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
       await saveOrUpdateOnboarding('phone');
-    } else if (currentStep === 'plan') {
+      const nextIndex = currentStepIndex + 1;
+      if (nextIndex < stepKeys.length) {
+        setCurrentStep(stepKeys[nextIndex]);
+      }
+      return;
+    }
+
+    // Handle plan step
+    if (currentStep === 'plan') {
       await saveOrUpdateOnboarding('plan');
     }
 
@@ -394,7 +450,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#61710C]">
+    <div className="min-h-screen bg-white">
       {/* Progress Bar */}
       <div className="sticky top-0 z-50">
         <ProgressBar steps={steps} currentStep={currentStepIndex} />
@@ -402,8 +458,8 @@ export default function Register() {
 
       {/* Main Content */}
       <div className="flex items-center justify-center min-h-[calc(100vh-73px)] px-4 py-8">
-        <Card className="w-full max-w-lg border-[#DEDEDE] bg-white">
-          <CardHeader className="text-center pb-6">
+        <div className="w-full max-w-lg">
+          <div className="text-center pb-6">
             <div className="flex justify-center mb-4">
               <img 
                 src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
@@ -418,9 +474,9 @@ export default function Register() {
                 </p>
               </div>
             )}
-          </CardHeader>
+          </div>
           
-          <CardContent className="space-y-6">
+          <div className="space-y-6">
             {/* Step 1: Name */}
             {currentStep === 'name' && (
               <div className="space-y-4">
@@ -628,10 +684,10 @@ export default function Register() {
               {currentStep !== 'plan' ? (
                 <Button
                   onClick={handleNext}
-                  disabled={!canProceedFromStep(currentStep) || checkingEmail}
+                  disabled={!canProceedFromStep(currentStep) || checkingEmail || checkingPhone}
                   className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2 w-full"
                 >
-                  {checkingEmail ? 'Verificando...' : 'Próximo'}
+                  {checkingEmail ? 'Verificando email...' : checkingPhone ? 'Verificando telefone...' : 'Próximo'}
                   <ArrowRight className="w-4 h-4 text-white" />
                 </Button>
               ) : (
@@ -667,8 +723,8 @@ export default function Register() {
                 </Link>
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
