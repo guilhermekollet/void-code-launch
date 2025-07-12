@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
+      // Check if we're in the account deletion flow or normal logout
+      const currentPath = window.location.pathname;
+      if (currentPath === '/configuracoes') {
+        // If we're on settings page, likely account deletion - let the hook handle redirect
+        return;
+      }
+      // Normal logout - redirect to login
       window.location.href = '/login';
     } catch (error) {
       console.error('Error signing out:', error);

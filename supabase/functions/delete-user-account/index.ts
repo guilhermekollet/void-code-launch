@@ -84,7 +84,7 @@ serve(async (req) => {
 
     console.log('Dados do usuário arquivados com sucesso')
 
-    // Get all user transactions
+    // Get all user transactions with credit card info
     const { data: transactions, error: transactionsError } = await supabaseClient
       .from('transactions')
       .select(`
@@ -142,48 +142,175 @@ serve(async (req) => {
       console.log('Transações arquivadas com sucesso')
     }
 
-    // Delete user data in specific order (due to foreign keys)
+    // Delete user data in correct order to respect foreign key constraints
     console.log('Iniciando exclusão dos dados ativos')
 
-    // Delete bill payments
-    await supabaseClient.from('bill_payments').delete().eq('user_id', userData.id)
-    
-    // Delete credit card bills
-    await supabaseClient.from('credit_card_bills').delete().eq('user_id', userData.id)
-    
-    // Delete transactions
-    await supabaseClient.from('transactions').delete().eq('user_id', userData.id)
-    
-    // Delete credit cards
-    await supabaseClient.from('credit_cards').delete().eq('user_id', userData.id)
-    
-    // Delete categories
-    await supabaseClient.from('categories').delete().eq('user_id', userData.id)
-    
-    // Delete goals
-    await supabaseClient.from('goals').delete().eq('user_id', userData.id)
-    
-    // Delete alerts
-    await supabaseClient.from('alerts').delete().eq('user_id', userData.id)
-    
-    // Delete subscriptions
-    await supabaseClient.from('subscriptions').delete().eq('user_id', userData.id)
-    
-    // Delete AI agent settings
-    await supabaseClient.from('ai_agent_settings').delete().eq('user_id', user.id)
-    
-    // Delete from users table
-    await supabaseClient.from('users').delete().eq('id', userData.id)
+    try {
+      // 1. Delete bill payments first
+      console.log('Excluindo bill_payments...')
+      const { error: billPaymentsError } = await supabaseClient
+        .from('bill_payments')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (billPaymentsError) {
+        console.error('Error deleting bill_payments:', billPaymentsError)
+        throw billPaymentsError
+      }
+      
+      // 2. Delete credit card bills
+      console.log('Excluindo credit_card_bills...')
+      const { error: billsError } = await supabaseClient
+        .from('credit_card_bills')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (billsError) {
+        console.error('Error deleting credit_card_bills:', billsError)
+        throw billsError
+      }
+      
+      // 3. Delete transactions
+      console.log('Excluindo transactions...')
+      const { error: transactionsDeleteError } = await supabaseClient
+        .from('transactions')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (transactionsDeleteError) {
+        console.error('Error deleting transactions:', transactionsDeleteError)
+        throw transactionsDeleteError
+      }
+
+      // 4. Clear last_used_credit_card_id reference in users table first
+      console.log('Limpando referência de cartão em users...')
+      const { error: clearCardRefError } = await supabaseClient
+        .from('users')
+        .update({ last_used_credit_card_id: null })
+        .eq('id', userData.id)
+      
+      if (clearCardRefError) {
+        console.error('Error clearing credit card reference:', clearCardRefError)
+        throw clearCardRefError
+      }
+      
+      // 5. Delete credit cards
+      console.log('Excluindo credit_cards...')
+      const { error: cardsError } = await supabaseClient
+        .from('credit_cards')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (cardsError) {
+        console.error('Error deleting credit_cards:', cardsError)
+        throw cardsError
+      }
+      
+      // 6. Delete categories
+      console.log('Excluindo categories...')
+      const { error: categoriesError } = await supabaseClient
+        .from('categories')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (categoriesError) {
+        console.error('Error deleting categories:', categoriesError)
+        throw categoriesError
+      }
+      
+      // 7. Delete goals
+      console.log('Excluindo goals...')
+      const { error: goalsError } = await supabaseClient
+        .from('goals')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (goalsError) {
+        console.error('Error deleting goals:', goalsError)
+        throw goalsError
+      }
+      
+      // 8. Delete alerts
+      console.log('Excluindo alerts...')
+      const { error: alertsError } = await supabaseClient
+        .from('alerts')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (alertsError) {
+        console.error('Error deleting alerts:', alertsError)
+        throw alertsError
+      }
+      
+      // 9. Delete subscriptions
+      console.log('Excluindo subscriptions...')
+      const { error: subscriptionsError } = await supabaseClient
+        .from('subscriptions')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (subscriptionsError) {
+        console.error('Error deleting subscriptions:', subscriptionsError)
+        throw subscriptionsError
+      }
+      
+      // 10. Delete AI agent settings
+      console.log('Excluindo ai_agent_settings...')
+      const { error: aiSettingsError } = await supabaseClient
+        .from('ai_agent_settings')
+        .delete()
+        .eq('user_id', user.id)
+      
+      if (aiSettingsError) {
+        console.error('Error deleting ai_agent_settings:', aiSettingsError)
+        throw aiSettingsError
+      }
+
+      // 11. Delete balances if they exist
+      console.log('Excluindo balances...')
+      const { error: balancesError } = await supabaseClient
+        .from('balances')
+        .delete()
+        .eq('user_id', userData.id)
+      
+      if (balancesError) {
+        console.error('Error deleting balances:', balancesError)
+        throw balancesError
+      }
+      
+      // 12. Delete from users table
+      console.log('Excluindo do public.users...')
+      const { error: userDeleteError } = await supabaseClient
+        .from('users')
+        .delete()
+        .eq('id', userData.id)
+
+      if (userDeleteError) {
+        console.error('Error deleting from users table:', userDeleteError)
+        throw userDeleteError
+      }
+
+    } catch (deleteError) {
+      console.error('Error during data deletion:', deleteError)
+      return new Response(
+        JSON.stringify({ error: 'Erro ao excluir dados do usuário: ' + deleteError.message }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
 
     console.log('Dados ativos excluídos com sucesso')
 
-    // Delete user from auth.users (this will cascade delete related auth data)
+    // 13. Finally, delete user from auth.users (this will cascade delete related auth data)
+    console.log('Excluindo do auth.users...')
     const { error: deleteAuthError } = await supabaseClient.auth.admin.deleteUser(user.id)
 
     if (deleteAuthError) {
       console.error('Error deleting auth user:', deleteAuthError)
       return new Response(
-        JSON.stringify({ error: 'Erro ao excluir usuário da autenticação' }),
+        JSON.stringify({ error: 'Erro ao excluir usuário da autenticação: ' + deleteAuthError.message }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -196,7 +323,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Conta excluída com sucesso. Todos os dados foram arquivados.' 
+        message: 'Conta excluída com sucesso. Todos os dados foram arquivados.',
+        redirect_url: 'https://www.bolsofy.com'
       }),
       { 
         status: 200, 
@@ -207,7 +335,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ error: 'Erro interno do servidor: ' + error.message }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
