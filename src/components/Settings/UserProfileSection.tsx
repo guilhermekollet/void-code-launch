@@ -1,93 +1,101 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useUserProfile, useUpdateUserProfile } from '@/hooks/useUserProfile';
-import { Loader2 } from 'lucide-react';
+import { User, Save } from "lucide-react";
+import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
+import { useState, useEffect } from "react";
 
 export function UserProfileSection() {
-  const { data: profile, isLoading } = useUserProfile();
+  const { data: userProfile, isLoading } = useUserProfile();
   const updateProfile = useUpdateUserProfile();
   
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone_number: ''
-  });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
-  React.useEffect(() => {
-    if (profile) {
-      setFormData({
-        name: profile.name || '',
-        email: profile.email || '',
-        phone_number: profile.phone_number || ''
-      });
+  useEffect(() => {
+    if (userProfile) {
+      setName(userProfile.name || "");
+      setEmail(userProfile.email || "");
     }
-  }, [profile]);
+  }, [userProfile]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile.mutate(formData);
+  const handleSave = async () => {
+    updateProfile.mutate({
+      name: name.trim(),
+      email: email.trim(),
+    });
   };
 
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex justify-center items-center h-48">
-          <Loader2 className="h-6 w-6 animate-spin" />
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <User className="h-5 w-5 text-[#61710C]" />
+            <CardTitle>Dados do Usuário</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-10 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-10 bg-gray-200 rounded"></div>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
+  const hasChanges = 
+    name !== (userProfile?.name || "") || 
+    email !== (userProfile?.email || "");
+
   return (
-    <Card className="bg-white">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Dados do Usuário</CardTitle>
+        <div className="flex items-center gap-2">
+          <User className="h-5 w-5 text-[#61710C]" />
+          <CardTitle>Dados do Usuário</CardTitle>
+        </div>
+        <CardDescription>
+          Gerencie suas informações pessoais
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input 
-                id="name" 
-                value={formData.name} 
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} 
-                placeholder="Seu nome completo" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                value={formData.email} 
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} 
-                placeholder="seu@email.com" 
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
-            <Input 
-              id="phone" 
-              value={formData.phone_number} 
-              onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))} 
-              placeholder="(11) 99999-9999" 
-            />
-          </div>
-          <Button 
-            type="submit" 
-            disabled={updateProfile.isPending} 
-            className="w-full md:w-auto bg-gray-200 hover:bg-gray-100"
-          >
-            {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Salvar Alterações
-          </Button>
-        </form>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nome</Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Seu nome completo"
+            className="border-[#DEDEDE] focus:border-[#61710C]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+            className="border-[#DEDEDE] focus:border-[#61710C]"
+          />
+        </div>
+
+        <Button 
+          onClick={handleSave}
+          disabled={updateProfile.isPending || !hasChanges}
+          className="w-full bg-[#61710C] hover:bg-[#4a5a0a] text-white"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {updateProfile.isPending ? 'Salvando...' : 'Salvar Alterações'}
+        </Button>
       </CardContent>
     </Card>
   );

@@ -1,241 +1,143 @@
 
-import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Star, Sparkles } from "lucide-react";
-import { useSubscription } from "@/hooks/useSubscription";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import confetti from 'canvas-confetti';
+import { Check, Crown, Star } from "lucide-react";
+import { useState } from "react";
+import { BillingToggle } from "./BillingToggle";
+import { SubscriptionStatus } from "./SubscriptionStatus";
+import { useCreateCheckout, useCustomerPortal } from "@/hooks/useSubscriptionMutations";
 
 const plans = [
   {
     id: 'basic',
     name: 'Básico',
-    price: 'R$ 19,90',
-    period: '/mês',
+    description: 'Ideal para uso pessoal',
+    monthlyPrice: 19.90,
+    yearlyPrice: 199.90,
     icon: Star,
     features: [
-      'Controle de gastos básico',
-      'Relatórios mensais',
-      'Até 3 cartões de crédito',
+      'Controle de gastos pessoais',
+      'Categorização automática',
+      'Relatórios básicos',
       'Suporte por email'
     ],
-    color: 'border-blue-200 bg-blue-50'
+    color: 'bg-[#CFF500] text-black',
+    borderColor: 'border-[#CFF500]'
   },
   {
     id: 'premium',
     name: 'Premium',
-    price: 'R$ 29,90',
-    period: '/mês',
+    description: 'Para quem quer controle total',
+    monthlyPrice: 39.90,
+    yearlyPrice: 399.90,
     icon: Crown,
     features: [
-      'Controle completo de gastos',
-      'Relatórios detalhados',
-      'Cartões ilimitados',
+      'Todos os recursos do Básico',
+      'Relatórios avançados',
+      'Integração com bancos',
+      'Análise preditiva',
       'Suporte prioritário',
-      'Análises avançadas',
-      'Integração com bancos'
+      'Exportação de dados'
     ],
-    color: 'border-green-200 bg-green-50',
+    color: 'bg-[#61710C] text-white',
+    borderColor: 'border-[#61710C]',
     popular: true
   }
 ];
 
 export function PlansSection() {
-  const { data: subscription, refetch } = useSubscription();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState<string | null>(null);
+  const [isYearly, setIsYearly] = useState(false);
+  const createCheckout = useCreateCheckout();
+  const customerPortal = useCustomerPortal();
 
-  const handleUpgrade = async (planId: string) => {
-    try {
-      setLoading(planId);
-      
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { planType: planId }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.url) {
-        // Trigger celebration confetti
-        const colors = ['#61710C', '#92CB0B', '#CFF500', '#FFEB3B'];
-        const duration = 1200; // 1.2 seconds
-        const end = Date.now() + duration;
-
-        const frame = () => {
-          confetti({
-            particleCount: 50,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: colors
-          });
-
-          if (Date.now() < end) {
-            requestAnimationFrame(frame);
-          }
-        };
-
-        frame();
-
-        // Open Stripe checkout in a new tab
-        window.open(data.url, '_blank');
-      }
-    } catch (error) {
-      console.error('Error creating checkout:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao processar pagamento. Tente novamente.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(null);
-    }
+  const handleSubscribe = (planId: string) => {
+    createCheckout.mutate({
+      planType: planId,
+      billingCycle: isYearly ? 'yearly' : 'monthly'
+    });
   };
 
-  const handleManageSubscription = async () => {
-    try {
-      setLoading('manage');
-      
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (error) {
-      console.error('Error opening customer portal:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao abrir portal do cliente. Tente novamente.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const refreshSubscription = async () => {
-    try {
-      await refetch();
-      toast({
-        title: "Status atualizado",
-        description: "Status da assinatura atualizado com sucesso.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar status da assinatura.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const isCurrentPlan = (planId: string) => {
-    return subscription?.plan_type === planId && subscription?.status === 'active';
+  const handleManageSubscription = () => {
+    customerPortal.mutate();
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-[#121212]">Planos e Assinatura</h3>
-          <p className="text-sm text-[#64748B]">Gerencie sua assinatura e recursos</p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={refreshSubscription}
-          size="sm"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Atualizar Status
-        </Button>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Planos e Assinatura</h2>
+        <p className="text-gray-600 mt-2">Escolha o plano ideal para suas necessidades</p>
       </div>
 
-      {subscription && (
-        <Card className="border-[#DEDEDE]">
-          <CardHeader>
-            <CardTitle className="text-[#121212]">Status Atual</CardTitle>
-            <CardDescription>
-              Plano: <span className="font-medium capitalize">{subscription.plan_type}</span>
-              {subscription.current_period_end && (
-                <span className="block text-sm text-[#64748B] mt-1">
-                  Válido até: {new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}
-                </span>
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={handleManageSubscription}
-              disabled={loading === 'manage'}
-              variant="outline"
-            >
-              {loading === 'manage' ? 'Carregando...' : 'Gerenciar Assinatura'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <SubscriptionStatus onManage={handleManageSubscription} />
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {plans.map((plan) => {
-          const Icon = plan.icon;
-          const isCurrent = isCurrentPlan(plan.id);
-          
-          return (
-            <Card 
-              key={plan.id} 
-              className={`relative ${plan.color} ${isCurrent ? 'ring-2 ring-[#61710C]' : 'border-[#DEDEDE]'}`}
-            >
-              {plan.popular && (
-                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-[#61710C] hover:bg-[#4a5709]">
-                  Mais Popular
-                </Badge>
-              )}
-              {isCurrent && (
-                <Badge className="absolute -top-2 right-4 bg-green-600 hover:bg-green-700">
-                  Seu Plano
-                </Badge>
-              )}
-              
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Icon className="w-6 h-6 text-[#61710C]" />
-                  <CardTitle className="text-[#121212]">{plan.name}</CardTitle>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-[#121212]">{plan.price}</span>
-                  <span className="text-[#64748B]">{plan.period}</span>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <ul className="space-y-2">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-[#64748B]">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+      <div className="space-y-4">
+        <BillingToggle isYearly={isYearly} onToggle={setIsYearly} />
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {plans.map((plan) => {
+            const Icon = plan.icon;
+            const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
+            const savings = isYearly ? Math.round(((plan.monthlyPrice * 12) - plan.yearlyPrice) / (plan.monthlyPrice * 12) * 100) : 0;
+
+            return (
+              <Card 
+                key={plan.id} 
+                className={`relative ${plan.popular ? `${plan.borderColor} border-2` : 'border-gray-200'}`}
+              >
+                {plan.popular && (
+                  <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 ${plan.color} px-3 py-1 rounded-full text-xs font-medium`}>
+                    Mais Popular
+                  </div>
+                )}
                 
-                <Button
-                  onClick={() => handleUpgrade(plan.id)}
-                  disabled={loading === plan.id || isCurrent}
-                  className={`w-full ${isCurrent ? 'bg-green-600 hover:bg-green-700' : 'bg-[#61710C] hover:bg-[#4a5709]'}`}
-                >
-                  {loading === plan.id ? 'Processando...' : isCurrent ? 'Plano Atual' : 'Assinar'}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+                <CardHeader className="text-center pb-4">
+                  <div className="flex justify-center mb-2">
+                    <div className={`p-3 rounded-full ${plan.color}`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                  </div>
+                  <CardTitle className="text-xl">{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  
+                  <div className="mt-4">
+                    <div className="flex items-baseline justify-center">
+                      <span className="text-3xl font-bold text-gray-900">
+                        R$ {price.toFixed(2).replace('.', ',')}
+                      </span>
+                      <span className="text-gray-500 ml-1">
+                        /{isYearly ? 'ano' : 'mês'}
+                      </span>
+                    </div>
+                    {isYearly && savings > 0 && (
+                      <div className="text-sm text-green-600 font-medium mt-1">
+                        Economize {savings}%
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center text-sm">
+                        <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button 
+                    className={`w-full ${plan.color} hover:opacity-90`}
+                    onClick={() => handleSubscribe(plan.id)}
+                    disabled={createCheckout.isPending}
+                  >
+                    {createCheckout.isPending ? 'Processando...' : 'Assinar Agora'}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

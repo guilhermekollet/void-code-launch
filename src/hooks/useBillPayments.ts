@@ -67,15 +67,51 @@ export function useUndoPayment() {
       if (paymentError) throw paymentError;
       if (!payment) throw new Error('Payment not found');
 
-      // Get current bill details
+      // Get current bill details to identify the card
       const { data: bill, error: billError } = await supabase
         .from('credit_card_bills')
-        .select('*')
+        .select(`
+          *,
+          credit_cards (
+            id,
+            bank_name,
+            card_name
+          )
+        `)
         .eq('id', payment.bill_id)
         .single();
 
       if (billError) throw billError;
       if (!bill) throw new Error('Bill not found');
+
+      // Find and delete the corresponding transaction
+      const cardName = bill.credit_cards.card_name || bill.credit_cards.bank_name;
+      const paymentDate = new Date(payment.payment_date);
+      const startOfDay = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), paymentDate.getDate());
+      const endOfDay = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), paymentDate.getDate() + 1);
+
+      const { data: transactions, error: transactionSearchError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userProfile.id)
+        .eq('type', 'despesa')
+        .eq('category', 'Cartão de Crédito')
+        .eq('value', payment.amount)
+        .gte('tx_date', startOfDay.toISOString())
+        .lt('tx_date', endOfDay.toISOString())
+        .ilike('description', `%${cardName}%`);
+
+      if (transactionSearchError) throw transactionSearchError;
+
+      // Delete the matching transaction if found
+      if (transactions && transactions.length > 0) {
+        const { error: deleteTransactionError } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', transactions[0].id);
+
+        if (deleteTransactionError) throw deleteTransactionError;
+      }
 
       // Delete the payment
       const { error: deleteError } = await supabase
@@ -110,10 +146,11 @@ export function useUndoPayment() {
       queryClient.invalidateQueries({ queryKey: ['financial-data'] });
       queryClient.invalidateQueries({ queryKey: ['chart-data'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['bill-expenses'] });
       
       toast({
         title: "Pagamento desfeito",
-        description: "O pagamento foi removido com sucesso.",
+        description: "O pagamento e a transação foram removidos com sucesso.",
       });
     },
     onError: (error) => {

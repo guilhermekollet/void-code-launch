@@ -1,6 +1,6 @@
 
 import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag, Crown, Star, Circle } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -88,15 +88,16 @@ const handleBolsofyIAClick = () => {
 
 export function AppSidebar() {
   const { data: subscription } = useSubscription();
+  const navigate = useNavigate();
 
   const getPlanInfo = () => {
     if (!subscription) return { icon: Circle, name: 'Free', color: 'text-gray-500 bg-gray-50' };
     
     switch (subscription.plan_type) {
       case 'premium':
-        return { icon: Crown, name: 'Premium', color: 'text-green-700 bg-green-50' };
+        return { icon: Crown, name: 'Premium', color: 'text-white bg-[#61710C]' };
       case 'basic':
-        return { icon: Star, name: 'Básico', color: 'text-blue-700 bg-blue-50' };
+        return { icon: Star, name: 'Básico', color: 'text-black bg-[#CFF500]' };
       default:
         return { icon: Circle, name: 'Free', color: 'text-gray-500 bg-gray-50' };
     }
@@ -104,6 +105,10 @@ export function AppSidebar() {
 
   const planInfo = getPlanInfo();
   const PlanIcon = planInfo.icon;
+
+  const handlePlanCardClick = () => {
+    navigate('/configuracoes');
+  };
 
   return <Sidebar className="border-r bg-white" style={{
     borderColor: '#DEDEDE'
@@ -156,7 +161,10 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-6 bg-white space-y-4">
         {/* Plan Status Card */}
-        <Card className={`${planInfo.color} border-0 shadow-sm`}>
+        <Card 
+          className={`${planInfo.color} border-0 shadow-sm cursor-pointer hover:opacity-80 transition-opacity`}
+          onClick={handlePlanCardClick}
+        >
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
               <PlanIcon className="h-4 w-4" />
