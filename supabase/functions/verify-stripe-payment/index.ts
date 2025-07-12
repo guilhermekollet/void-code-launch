@@ -102,8 +102,8 @@ serve(async (req) => {
 
       console.log('User created:', newUser.user?.id);
 
-      // Insert into users table
-      const { error: insertUserError } = await supabase
+      // Insert into users table with complete information
+      const { data: insertedUser, error: insertUserError } = await supabase
         .from('users')
         .insert({
           user_id: newUser.user!.id,
@@ -115,11 +115,39 @@ serve(async (req) => {
           trial_end: trialEnd,
           stripe_session_id: sessionId,
           completed_onboarding: true
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertUserError) {
         console.error('Error inserting user:', insertUserError);
-        // Continue even if this fails, as the auth user was created
+        return new Response(
+          JSON.stringify({ success: false, error: "Erro ao inserir dados do usuário" }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
+
+      // Create subscription record to maintain data consistency
+      const { error: insertSubscriptionError } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: insertedUser.id,
+          plan_type: onboarding.selected_plan,
+          status: 'trialing',
+          trial_start: trialStart,
+          trial_end: trialEnd,
+          current_period_start: trialStart,
+          current_period_end: trialEnd,
+          stripe_customer_id: null, // Will be updated when subscription is activated
+          stripe_subscription_id: null,
+        });
+
+      if (insertSubscriptionError) {
+        console.error('Error inserting subscription:', insertSubscriptionError);
+        // Continue even if this fails, as the main user record was created
       }
 
       return new Response(

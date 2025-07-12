@@ -65,6 +65,12 @@ serve(async (req) => {
     if (customers.data.length === 0) {
       logStep("No Stripe customer found, updating to free plan");
       
+      // Update both users and subscriptions tables
+      await supabaseClient.from("users").update({
+        plan_type: "free",
+        completed_onboarding: true,
+      }).eq("id", internalUser.id);
+
       await supabaseClient.from("subscriptions").upsert({
         user_id: internalUser.id,
         plan_type: "free",
@@ -98,6 +104,7 @@ serve(async (req) => {
     let planType = "free";
     let status = "active";
     let currentPeriodEnd = null;
+    let currentPeriodStart = null;
     let stripeSubscriptionId = null;
 
     if (subscriptions.data.length > 0) {
@@ -105,7 +112,6 @@ serve(async (req) => {
       const priceId = subscription.items.data[0].price.id;
       
       // Map price IDs to plan types based on the Stripe checkout URLs
-      // We'll determine the plan type based on the amount since we don't have the exact price IDs
       const price = await stripe.prices.retrieve(priceId);
       const amount = price.unit_amount || 0;
       
@@ -122,9 +128,11 @@ serve(async (req) => {
       
       status = subscription.status;
       currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
       stripeSubscriptionId = subscription.id;
       logStep("Active subscription found", { 
         subscriptionId: subscription.id, 
+        startDate: currentPeriodStart,
         endDate: currentPeriodEnd,
         planType,
         amount 
@@ -133,21 +141,26 @@ serve(async (req) => {
       logStep("No active subscription found, defaulting to free");
     }
 
-    // Update subscription in database
+    // Update both users and subscriptions tables with complete data synchronization
+    const updateData = {
+      plan_type: planType,
+      completed_onboarding: true,
+    };
+
+    await supabaseClient.from("users").update(updateData).eq("id", internalUser.id);
+
     await supabaseClient.from("subscriptions").upsert({
       user_id: internalUser.id,
       plan_type: planType,
       status: status,
-      current_period_start: subscriptions.data[0]?.current_period_start 
-        ? new Date(subscriptions.data[0].current_period_start * 1000).toISOString()
-        : new Date().toISOString(),
+      current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
       stripe_customer_id: customerId,
       stripe_subscription_id: stripeSubscriptionId,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
 
-    logStep("Updated database with subscription info", { planType, status });
+    logStep("Updated both users and subscriptions tables", { planType, status });
     
     return new Response(JSON.stringify({
       plan_type: planType,

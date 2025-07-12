@@ -11,6 +11,8 @@ export function useSubscription() {
     queryFn: async () => {
       if (!user) return null;
 
+      console.log('[useSubscription] Checking subscription for user:', user.id);
+
       const { data, error } = await supabase.functions.invoke('check-subscription');
 
       if (error) {
@@ -22,9 +24,12 @@ export function useSubscription() {
         };
       }
 
+      console.log('[useSubscription] Subscription data:', data);
       return data;
     },
     enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
   });
 }
