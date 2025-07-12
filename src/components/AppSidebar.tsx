@@ -1,7 +1,10 @@
-import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag } from "lucide-react";
+
+import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag, Crown, Star, Circle } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { useSubscription } from "@/hooks/useSubscription";
 import confetti from 'canvas-confetti';
 
 const items = [{
@@ -35,9 +38,9 @@ const items = [{
 }];
 
 const handleBetaClick = () => {
-  // Enhanced confetti with green and yellow colors for 2 seconds
+  // Enhanced confetti with green and yellow colors for 1.2 seconds
   const colors = ['#61710C', '#92CB0B', '#CFF500', '#FFEB3B'];
-  const duration = 2000; // 2 seconds (reduced from 5 seconds)
+  const duration = 1200; // 1.2 seconds
   const end = Date.now() + duration;
 
   // Multiple confetti bursts
@@ -46,7 +49,7 @@ const handleBetaClick = () => {
     const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
     confetti({
-      particleCount: randomInRange(20, 40), // Reduced particle count
+      particleCount: randomInRange(20, 40),
       spread: randomInRange(50, 90),
       origin: { 
         x: randomInRange(0.1, 0.9), 
@@ -69,14 +72,14 @@ const handleBetaClick = () => {
   // Start with immediate burst
   frame();
 
-  // Additional bursts every 800ms (reduced frequency)
+  // Additional bursts every 480ms
   const interval = setInterval(() => {
     if (Date.now() >= end) {
       clearInterval(interval);
       return;
     }
     frame();
-  }, 800);
+  }, 480);
 };
 
 const handleBolsofyIAClick = () => {
@@ -84,6 +87,24 @@ const handleBolsofyIAClick = () => {
 };
 
 export function AppSidebar() {
+  const { data: subscription } = useSubscription();
+
+  const getPlanInfo = () => {
+    if (!subscription) return { icon: Circle, name: 'Free', color: 'text-gray-500 bg-gray-50' };
+    
+    switch (subscription.plan_type) {
+      case 'premium':
+        return { icon: Crown, name: 'Premium', color: 'text-green-700 bg-green-50' };
+      case 'basic':
+        return { icon: Star, name: 'Básico', color: 'text-blue-700 bg-blue-50' };
+      default:
+        return { icon: Circle, name: 'Free', color: 'text-gray-500 bg-gray-50' };
+    }
+  };
+
+  const planInfo = getPlanInfo();
+  const PlanIcon = planInfo.icon;
+
   return <Sidebar className="border-r bg-white" style={{
     borderColor: '#DEDEDE'
   }}>
@@ -133,7 +154,22 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-6 bg-white">
+      <SidebarFooter className="p-6 bg-white space-y-4">
+        {/* Plan Status Card */}
+        <Card className={`${planInfo.color} border-0 shadow-sm`}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <PlanIcon className="h-4 w-4" />
+              <div className="flex flex-col">
+                <span className="text-xs font-medium">Plano {planInfo.name}</span>
+                <span className="text-xs opacity-70">
+                  {subscription?.status === 'active' ? 'Ativo' : 'Trial'}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex items-center justify-between">
           <div className="text-sm text-[#64748B]">
             ©2025 Bolsofy

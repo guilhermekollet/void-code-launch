@@ -1,173 +1,242 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useSubscription } from '@/hooks/useSubscription';
-import { useCreateCheckout, useCustomerPortal } from '@/hooks/useSubscriptionMutations';
-import { Crown, Zap, Star } from 'lucide-react';
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, Crown, Star, Sparkles } from "lucide-react";
+import { useSubscription } from "@/hooks/useSubscription";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import confetti from 'canvas-confetti';
-import { BillingToggle } from './BillingToggle';
-import { PlanCard } from './PlanCard';
-import { SubscriptionStatus } from './SubscriptionStatus';
 
-interface Plan {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  features: string[];
-  popular?: boolean;
-  current?: boolean;
-  premium?: boolean;
-}
-
-const plans: Plan[] = [{
-  id: 'free',
-  name: 'Gratuito',
-  icon: <Star className="h-6 w-6 text-gray-600" />,
-  monthlyPrice: 0,
-  yearlyPrice: 0,
-  features: ['🤖 Agente de IA Financeiro limitado', '📝 Até 50 lançamentos via Texto', '📊 Relatório Básicos', '🗂️ Até 3 Categorias', '💻 Dashboard Profissional']
-}, {
-  id: 'basic',
-  name: 'Básico',
-  icon: <Zap className="h-6 w-6 text-white" />,
-  monthlyPrice: 19.90,
-  yearlyPrice: 199.90,
-  popular: true,
-  features: ['🤖 Agente de IA Financeiro', '📝 Lançamentos Ilimitado via Texto, Áudio, Foto e PDF*', '📊 Relatório Avançados', '🔁 Agrupamento de Gastos Recorrentes', '🗂️ Categorias Ilimitadas']
-}, {
-  id: 'premium',
-  name: 'Premium',
-  icon: <Crown className="h-6 w-6 text-white" />,
-  monthlyPrice: 29.90,
-  yearlyPrice: 289.90,
-  premium: true,
-  features: ['Além do básico:', '🎯 Criação de Metas', '🔔 Alertas Personalizados', '📂 Exportação de Relatórios CSV e PDF', '🧠 Educação Financeira', '🎛️ Comando "Modo Economia"']
-}];
+const plans = [
+  {
+    id: 'basic',
+    name: 'Básico',
+    price: 'R$ 19,90',
+    period: '/mês',
+    icon: Star,
+    features: [
+      'Controle de gastos básico',
+      'Relatórios mensais',
+      'Até 3 cartões de crédito',
+      'Suporte por email'
+    ],
+    color: 'border-blue-200 bg-blue-50'
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    price: 'R$ 29,90',
+    period: '/mês',
+    icon: Crown,
+    features: [
+      'Controle completo de gastos',
+      'Relatórios detalhados',
+      'Cartões ilimitados',
+      'Suporte prioritário',
+      'Análises avançadas',
+      'Integração com bancos'
+    ],
+    color: 'border-green-200 bg-green-50',
+    popular: true
+  }
+];
 
 export function PlansSection() {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const { data: subscription } = useSubscription();
-  const createCheckout = useCreateCheckout();
-  const customerPortal = useCustomerPortal();
+  const { data: subscription, refetch } = useSubscription();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState<string | null>(null);
 
-  const getDiscountPercentage = (monthly: number, yearly: number) => {
-    if (monthly === 0) return 0;
-    return Math.round((monthly * 12 - yearly) / (monthly * 12) * 100);
-  };
-
-  const triggerConfetti = () => {
-    const colors = ['#22c55e', '#16a34a', '#eab308', '#facc15'];
-    
-    const confettiSettings = {
-      particleCount: 150,
-      spread: 70,
-      origin: { x: 0.5, y: 0.5 },
-      colors: colors,
-      gravity: 0.8,
-      scalar: 1.2
-    };
-
-    // Disparo inicial no centro
-    confetti(confettiSettings);
-    
-    // Disparos nas laterais
-    setTimeout(() => {
-      confetti({
-        ...confettiSettings,
-        origin: { x: 0.2, y: 0.6 },
-        angle: 60
+  const handleUpgrade = async (planId: string) => {
+    try {
+      setLoading(planId);
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { planType: planId }
       });
-    }, 100);
 
-    setTimeout(() => {
-      confetti({
-        ...confettiSettings,
-        origin: { x: 0.8, y: 0.6 },
-        angle: 120
+      if (error) {
+        throw error;
+      }
+
+      if (data?.url) {
+        // Trigger celebration confetti
+        const colors = ['#61710C', '#92CB0B', '#CFF500', '#FFEB3B'];
+        const duration = 1200; // 1.2 seconds
+        const end = Date.now() + duration;
+
+        const frame = () => {
+          confetti({
+            particleCount: 50,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: colors
+          });
+
+          if (Date.now() < end) {
+            requestAnimationFrame(frame);
+          }
+        };
+
+        frame();
+
+        // Open Stripe checkout in a new tab
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar pagamento. Tente novamente.",
+        variant: "destructive"
       });
-    }, 200);
-
-    // Disparos adicionais por 2 segundos
-    const interval = setInterval(() => {
-      confetti({
-        ...confettiSettings,
-        particleCount: 75,
-        spread: 50
-      });
-    }, 250);
-
-    setTimeout(() => {
-      clearInterval(interval);
-    }, 2000);
-  };
-
-  const handleBillingCycleChange = (checked: boolean) => {
-    const newCycle = checked ? 'yearly' : 'monthly';
-    setBillingCycle(newCycle);
-    if (newCycle === 'yearly') {
-      triggerConfetti();
+    } finally {
+      setLoading(null);
     }
   };
 
-  const handleSubscribe = (planId: string) => {
-    if (planId === 'free') return;
-    createCheckout.mutate({
-      planType: planId,
-      billingCycle
-    });
+  const handleManageSubscription = async () => {
+    try {
+      setLoading('manage');
+      
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao abrir portal do cliente. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(null);
+    }
   };
 
-  const handleManageSubscription = () => {
-    customerPortal.mutate();
+  const refreshSubscription = async () => {
+    try {
+      await refetch();
+      toast({
+        title: "Status atualizado",
+        description: "Status da assinatura atualizado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar status da assinatura.",
+        variant: "destructive"
+      });
+    }
   };
 
   const isCurrentPlan = (planId: string) => {
-    if (!subscription) return planId === 'free';
-    return subscription.plan_type === planId;
+    return subscription?.plan_type === planId && subscription?.status === 'active';
   };
 
   return (
-    <Card className="bg-white border-gray-200 shadow-sm">
-      <CardHeader className="pb-6 px-4 sm:px-6">
-        <div className="flex flex-col space-y-4">
-          <div className="text-center sm:text-left">
-            <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              Planos e Assinatura
-            </CardTitle>
-            <p className="text-gray-600 text-base sm:text-lg">
-              Escolha o plano ideal para suas necessidades
-            </p>
-          </div>
-          
-          <div className="flex justify-center sm:justify-end">
-            <BillingToggle 
-              billingCycle={billingCycle}
-              onBillingCycleChange={handleBillingCycleChange}
-            />
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-[#121212]">Planos e Assinatura</h3>
+          <p className="text-sm text-[#64748B]">Gerencie sua assinatura e recursos</p>
         </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0 px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {plans.map(plan => (
-            <PlanCard 
-              key={plan.id} 
-              plan={plan} 
-              billingCycle={billingCycle}
-              onSubscribe={() => handleSubscribe(plan.id)} 
-              onManage={handleManageSubscription} 
-              isCurrentPlan={isCurrentPlan(plan.id)} 
-              isLoading={createCheckout.isPending || customerPortal.isPending}
-              discount={getDiscountPercentage(plan.monthlyPrice, plan.yearlyPrice)}
-            />
-          ))}
-        </div>
+        <Button
+          variant="outline"
+          onClick={refreshSubscription}
+          size="sm"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          Atualizar Status
+        </Button>
+      </div>
 
-        <SubscriptionStatus subscription={subscription} />
-      </CardContent>
-    </Card>
+      {subscription && (
+        <Card className="border-[#DEDEDE]">
+          <CardHeader>
+            <CardTitle className="text-[#121212]">Status Atual</CardTitle>
+            <CardDescription>
+              Plano: <span className="font-medium capitalize">{subscription.plan_type}</span>
+              {subscription.current_period_end && (
+                <span className="block text-sm text-[#64748B] mt-1">
+                  Válido até: {new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={handleManageSubscription}
+              disabled={loading === 'manage'}
+              variant="outline"
+            >
+              {loading === 'manage' ? 'Carregando...' : 'Gerenciar Assinatura'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {plans.map((plan) => {
+          const Icon = plan.icon;
+          const isCurrent = isCurrentPlan(plan.id);
+          
+          return (
+            <Card 
+              key={plan.id} 
+              className={`relative ${plan.color} ${isCurrent ? 'ring-2 ring-[#61710C]' : 'border-[#DEDEDE]'}`}
+            >
+              {plan.popular && (
+                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-[#61710C] hover:bg-[#4a5709]">
+                  Mais Popular
+                </Badge>
+              )}
+              {isCurrent && (
+                <Badge className="absolute -top-2 right-4 bg-green-600 hover:bg-green-700">
+                  Seu Plano
+                </Badge>
+              )}
+              
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Icon className="w-6 h-6 text-[#61710C]" />
+                  <CardTitle className="text-[#121212]">{plan.name}</CardTitle>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-[#121212]">{plan.price}</span>
+                  <span className="text-[#64748B]">{plan.period}</span>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <ul className="space-y-2">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="text-sm text-[#64748B]">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                
+                <Button
+                  onClick={() => handleUpgrade(plan.id)}
+                  disabled={loading === plan.id || isCurrent}
+                  className={`w-full ${isCurrent ? 'bg-green-600 hover:bg-green-700' : 'bg-[#61710C] hover:bg-[#4a5709]'}`}
+                >
+                  {loading === plan.id ? 'Processando...' : isCurrent ? 'Plano Atual' : 'Assinar'}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }

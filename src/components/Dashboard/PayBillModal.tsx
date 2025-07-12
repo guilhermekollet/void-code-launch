@@ -40,7 +40,7 @@ export function PayBillModal({ open, onOpenChange, bill }: PayBillModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md bg-white">
         <DialogHeader>
           <DialogTitle>Pagar Fatura</DialogTitle>
         </DialogHeader>

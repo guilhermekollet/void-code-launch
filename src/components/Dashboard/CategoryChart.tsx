@@ -99,7 +99,7 @@ export function CategoryChart() {
           <CardTitle className="text-xl font-bold text-[#121212]">Gastos por Categoria</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-96 flex items-center justify-center text-gray-500">
+          <div className="h-[280px] flex items-center justify-center text-gray-500">
             <div className="flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#61710C]"></div>
               <span className="text-sm">Carregando...</span>
@@ -115,7 +115,7 @@ export function CategoryChart() {
           <CardTitle className="text-xl font-bold text-[#121212]">Gastos por Categoria</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-96 flex items-center justify-center text-gray-500">
+          <div className="h-[280px] flex items-center justify-center text-gray-500">
             <div className="flex flex-col items-center gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,14 +151,14 @@ export function CategoryChart() {
           </Button>
         </CardHeader>
         <CardContent className="pt-2">
-          <ResponsiveContainer width="100%" height={380} minWidth={300}>
+          <ResponsiveContainer width="100%" height={280} minWidth={300}>
             <BarChart
               data={categoryData}
               margin={{
                 top: 20,
                 right: 20,
                 left: 20,
-                bottom: 80,
+                bottom: 60,
               }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -167,7 +167,7 @@ export function CategoryChart() {
                 axisLine={false}
                 tickLine={false}
                 tick={<CustomXAxisTick />}
-                height={80}
+                height={60}
                 interval={0}
               />
               <YAxis 
