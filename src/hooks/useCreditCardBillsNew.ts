@@ -57,6 +57,79 @@ export function useCreditCardBills() {
   });
 }
 
+export function useBillExpenses() {
+  return useQuery({
+    queryKey: ['bill-expenses'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('User not authenticated');
+
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!userProfile) throw new Error('User profile not found');
+
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+
+      const { data, error } = await supabase
+        .from('credit_card_bills')
+        .select('bill_amount')
+        .eq('user_id', userProfile.id)
+        .eq('archived', false)
+        .gte('due_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+        .lt('due_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+      if (error) throw error;
+
+      const totalBillExpenses = data?.reduce((sum, bill) => sum + bill.bill_amount, 0) || 0;
+      
+      return { totalBillExpenses };
+    },
+  });
+}
+
+export function useArchiveBill() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (billId: number) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('credit_card_bills')
+        .update({ archived: true })
+        .eq('id', billId);
+
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
+      queryClient.invalidateQueries({ queryKey: ['bill-expenses'] });
+      
+      toast({
+        title: "Fatura arquivada",
+        description: "A fatura foi arquivada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível arquivar a fatura.",
+        variant: "destructive",
+      });
+      console.error('Error archiving bill:', error);
+    },
+  });
+}
+
 export function usePayBill() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -144,6 +217,7 @@ export function usePayBill() {
       queryClient.invalidateQueries({ queryKey: ['financial-data'] });
       queryClient.invalidateQueries({ queryKey: ['chart-data'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['bill-expenses'] });
       
       toast({
         title: "Pagamento registrado",
