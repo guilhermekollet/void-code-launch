@@ -22,24 +22,43 @@ serve(async (req) => {
       auth: { persistSession: false }
     });
 
-    // Check if user exists with this phone number
+    // Buscar usuário pelo número de telefone
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('email')
+      .select('email, name')
       .eq('phone_number', phoneNumber)
       .single();
 
-    if (userError || !user) {
+    if (userError || !user || !user.email) {
       return new Response(
         JSON.stringify({ error: "Conta não encontrada com este número" }),
         { 
-          status: 200, 
+          status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         }
       );
     }
 
-    // Mask the email
+    // Enviar magic link usando Supabase Auth
+    const { error: authError } = await supabase.auth.signInWithOtp({
+      email: user.email,
+      options: {
+        emailRedirectTo: `${req.headers.get('origin') || 'http://localhost:3000'}/`
+      }
+    });
+
+    if (authError) {
+      console.error('Error sending magic link:', authError);
+      return new Response(
+        JSON.stringify({ error: "Erro ao enviar link de acesso" }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      );
+    }
+
+    // Mascarar o email para exibição
     const maskEmail = (email: string) => {
       const [localPart, domain] = email.split('@');
       if (localPart.length <= 3) {
@@ -49,37 +68,11 @@ serve(async (req) => {
       return `***${visiblePart}@${domain}`;
     };
 
-    // Generate 4-digit code
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    
-    // Store the code in auth_codes table
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-    
-    await supabase
-      .from('auth_codes')
-      .delete()
-      .eq('phone_number', phoneNumber);
-
-    const { error: insertError } = await supabase
-      .from('auth_codes')
-      .insert({
-        phone_number: phoneNumber,
-        token: code,
-        expires_at: expiresAt.toISOString()
-      });
-
-    if (insertError) {
-      throw insertError;
-    }
-
-    // Here you would normally send an email with the code
-    // For now, we'll just log it
-    console.log(`Verification code for ${phoneNumber}: ${code}`);
-
     return new Response(
       JSON.stringify({ 
         success: true, 
-        maskedEmail: maskEmail(user.email || 'email@domain.com')
+        maskedEmail: maskEmail(user.email),
+        message: "Link de acesso enviado para o seu email!"
       }),
       { 
         status: 200, 
@@ -90,7 +83,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Erro interno do servidor" }),
       { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 

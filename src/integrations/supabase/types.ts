@@ -76,41 +76,6 @@ export type Database = {
           },
         ]
       }
-      auth_codes: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: number
-          phone_number: string | null
-          token: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          expires_at: string
-          id?: number
-          phone_number?: string | null
-          token: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: number
-          phone_number?: string | null
-          token?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "auth_codes_phone_number_fkey"
-            columns: ["phone_number"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["phone_number"]
-          },
-        ]
-      }
       balances: {
         Row: {
           created_at: string
