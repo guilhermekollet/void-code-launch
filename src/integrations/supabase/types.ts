@@ -536,6 +536,63 @@ export type Database = {
           },
         ]
       }
+      transactions_archive: {
+        Row: {
+          archived_at: string
+          category: string
+          credit_card_info: Json | null
+          description: string | null
+          id: string
+          installment_number: number | null
+          installments: number | null
+          is_installment: boolean | null
+          is_recurring: boolean | null
+          original_transaction_id: number
+          original_user_id: number
+          registered_at: string
+          total_installments: number | null
+          tx_date: string
+          type: string | null
+          value: number
+        }
+        Insert: {
+          archived_at?: string
+          category: string
+          credit_card_info?: Json | null
+          description?: string | null
+          id?: string
+          installment_number?: number | null
+          installments?: number | null
+          is_installment?: boolean | null
+          is_recurring?: boolean | null
+          original_transaction_id: number
+          original_user_id: number
+          registered_at: string
+          total_installments?: number | null
+          tx_date: string
+          type?: string | null
+          value: number
+        }
+        Update: {
+          archived_at?: string
+          category?: string
+          credit_card_info?: Json | null
+          description?: string | null
+          id?: string
+          installment_number?: number | null
+          installments?: number | null
+          is_installment?: boolean | null
+          is_recurring?: boolean | null
+          original_transaction_id?: number
+          original_user_id?: number
+          registered_at?: string
+          total_installments?: number | null
+          tx_date?: string
+          type?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           completed_onboarding: boolean | null
@@ -588,6 +645,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      users_archive: {
+        Row: {
+          account_created_at: string | null
+          archived_at: string
+          auth_user_id: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          original_user_id: number
+          phone_number: string
+          plan_type: string | null
+        }
+        Insert: {
+          account_created_at?: string | null
+          archived_at?: string
+          auth_user_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          original_user_id: number
+          phone_number: string
+          plan_type?: string | null
+        }
+        Update: {
+          account_created_at?: string | null
+          archived_at?: string
+          auth_user_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          original_user_id?: number
+          phone_number?: string
+          plan_type?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
