@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, parseISO, addMonths, startOfMonth, endOfMonth, isSameMonth, isAfter, addDays } from 'date-fns';
+import { format, parseISO, addMonths, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { useToast } from '@/components/ui/use-toast';
 
 export interface CreditCardBill {
@@ -51,11 +51,13 @@ interface CreditCard {
 }
 
 export const useCreditCardBillsNew = (selectedMonth?: Date) => {
-  const startDate = selectedMonth ? startOfMonth(selectedMonth) : startOfMonth(new Date());
-  const endDate = selectedMonth ? endOfMonth(selectedMonth) : endOfMonth(new Date());
+  // Use 4-month range: 2 past + current + 1 future for timeline view
+  const baseMonth = selectedMonth || new Date();
+  const startDate = startOfMonth(subMonths(baseMonth, 2));
+  const endDate = endOfMonth(addMonths(baseMonth, 1));
 
   return useQuery({
-    queryKey: ['credit-card-bills', format(startDate, 'yyyy-MM')],
+    queryKey: ['credit-card-bills', format(startDate, 'yyyy-MM'), format(endDate, 'yyyy-MM')],
     queryFn: async (): Promise<CreditCardBill[]> => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Usuário não autenticado');
@@ -82,7 +84,7 @@ export const useCreditCardBillsNew = (selectedMonth?: Date) => {
         .eq('user_id', userData.id)
         .gte('due_date', format(startDate, 'yyyy-MM-dd'))
         .lte('due_date', format(endDate, 'yyyy-MM-dd'))
-        .order('due_date', { ascending: false });
+        .order('due_date', { ascending: true });
 
       if (error) throw error;
 
@@ -92,6 +94,7 @@ export const useCreditCardBillsNew = (selectedMonth?: Date) => {
         status: bill.status as 'pending' | 'paid' | 'overdue'
       })) as CreditCardBill[];
     },
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 

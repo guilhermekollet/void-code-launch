@@ -1,4 +1,3 @@
-
 import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
@@ -36,9 +35,9 @@ const items = [{
 }];
 
 const handleBetaClick = () => {
-  // Enhanced confetti with green and yellow colors for 5 seconds
+  // Enhanced confetti with green and yellow colors for 2 seconds
   const colors = ['#61710C', '#92CB0B', '#CFF500', '#FFEB3B'];
-  const duration = 5000; // 5 seconds
+  const duration = 2000; // 2 seconds (reduced from 5 seconds)
   const end = Date.now() + duration;
 
   // Multiple confetti bursts
@@ -47,7 +46,7 @@ const handleBetaClick = () => {
     const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
     confetti({
-      particleCount: randomInRange(30, 60),
+      particleCount: randomInRange(20, 40), // Reduced particle count
       spread: randomInRange(50, 90),
       origin: { 
         x: randomInRange(0.1, 0.9), 
@@ -70,14 +69,14 @@ const handleBetaClick = () => {
   // Start with immediate burst
   frame();
 
-  // Additional bursts every 500ms
+  // Additional bursts every 800ms (reduced frequency)
   const interval = setInterval(() => {
     if (Date.now() >= end) {
       clearInterval(interval);
       return;
     }
     frame();
-  }, 500);
+  }, 800);
 };
 
 const handleBolsofyIAClick = () => {
