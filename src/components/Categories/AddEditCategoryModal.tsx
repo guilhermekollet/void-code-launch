@@ -106,6 +106,8 @@ export function AddEditCategoryModal({
     }
   };
 
+  const IconPreview = getIconComponent(selectedIcon);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white max-w-md">
@@ -133,10 +135,7 @@ export function AddEditCategoryModal({
               <SelectTrigger>
                 <SelectValue>
                   <div className="flex items-center gap-2">
-                    {(() => {
-                      const IconComponent = getIconComponent(selectedIcon);
-                      return <IconComponent className="w-4 h-4" style={{ color: selectedColor }} />;
-                    })()}
+                    <IconPreview className="w-4 h-4" style={{ color: selectedColor }} />
                     <span className="capitalize">{selectedIcon.replace('-', ' ')}</span>
                   </div>
                 </SelectValue>
@@ -164,13 +163,34 @@ export function AddEditCategoryModal({
                 <button
                   key={color}
                   type="button"
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                  className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
                     selectedColor === color ? 'border-gray-400 scale-110' : 'border-gray-200'
                   }`}
                   style={{ backgroundColor: color }}
                   onClick={() => setSelectedColor(color)}
                 />
               ))}
+            </div>
+          </div>
+
+          {/* Preview da categoria com cor selecionada */}
+          <div className="space-y-2">
+            <Label>Prévia</Label>
+            <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: selectedColor }}
+              >
+                <IconPreview className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">
+                  {name || 'Nome da categoria'}
+                </p>
+                <p className="text-sm text-gray-500 capitalize">
+                  {categoryType === 'despesa' ? 'Despesa' : 'Receita'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -184,7 +204,7 @@ export function AddEditCategoryModal({
             </Button>
             <Button 
               type="submit" 
-              className="bg-[#61710C] hover:bg-[#4a5709]"
+              className="bg-[#61710C] hover:bg-[#4a5709] text-white"
               disabled={isAdding || updateCategoryMutation.isPending || !name.trim()}
             >
               {isAdding || updateCategoryMutation.isPending 

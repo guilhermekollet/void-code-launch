@@ -62,11 +62,19 @@ export function CategoriesPage() {
       </div>
 
       <Tabs defaultValue="despesa" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="despesa" onClick={() => setSelectedType("despesa")}>
+        <TabsList className="grid w-full grid-cols-2 max-w-md bg-gray-100 border border-gray-200">
+          <TabsTrigger 
+            value="despesa" 
+            onClick={() => setSelectedType("despesa")}
+            className="data-[state=active]:bg-white data-[state=active]:text-[#121212] data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-[#61710C] font-medium"
+          >
             Despesas
           </TabsTrigger>
-          <TabsTrigger value="receita" onClick={() => setSelectedType("receita")}>
+          <TabsTrigger 
+            value="receita" 
+            onClick={() => setSelectedType("receita")}
+            className="data-[state=active]:bg-white data-[state=active]:text-[#121212] data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-[#61710C] font-medium"
+          >
             Receitas
           </TabsTrigger>
         </TabsList>
@@ -76,8 +84,11 @@ export function CategoriesPage() {
             <h2 className="text-xl font-semibold text-[#121212]">
               Categorias de Despesas ({categories.filter(c => c.type === "despesa").length})
             </h2>
-            <Button onClick={() => handleAddCategory("despesa")} className="bg-[#61710C] hover:bg-[#4a5709]">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={() => handleAddCategory("despesa")} 
+              className="bg-[#61710C] hover:bg-[#4a5709] text-white"
+            >
+              <Plus className="h-4 w-4 mr-2 text-white" />
               Adicionar Categoria
             </Button>
           </div>
@@ -110,8 +121,11 @@ export function CategoriesPage() {
             <h2 className="text-xl font-semibold text-[#121212]">
               Categorias de Receitas ({categories.filter(c => c.type === "receita").length})
             </h2>
-            <Button onClick={() => handleAddCategory("receita")} className="bg-[#61710C] hover:bg-[#4a5709]">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={() => handleAddCategory("receita")} 
+              className="bg-[#61710C] hover:bg-[#4a5709] text-white"
+            >
+              <Plus className="h-4 w-4 mr-2 text-white" />
               Adicionar Categoria
             </Button>
           </div>

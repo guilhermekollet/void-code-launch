@@ -61,7 +61,7 @@ export function useFutureData(showFuture: boolean) {
         }
       });
 
-      // Calculate future installments for this month
+      // Calculate future installments for this month - FIXED: Use individual installment value
       installmentTransactions.forEach(transaction => {
         const startDate = new Date(transaction.installment_start_date || transaction.tx_date);
         
@@ -73,15 +73,19 @@ export function useFutureData(showFuture: boolean) {
         const currentInstallment = (transaction.installment_number || 1) + monthsDiff;
         
         if (monthsDiff >= 0 && currentInstallment <= (transaction.total_installments || 0)) {
-          const amount = Number(transaction.value);
-          console.log(`Future installment: ${transaction.description}, amount: ${amount}, month: ${futureDate.toLocaleDateString('pt-BR', { month: 'short' })}`);
+          // FIXED: Calculate individual installment value, not total transaction value
+          const installmentValue = transaction.installment_value 
+            ? Number(transaction.installment_value) 
+            : Number(transaction.value) / Number(transaction.total_installments);
+          
+          console.log(`Future installment: ${transaction.description}, installment value: ${installmentValue}, month: ${futureDate.toLocaleDateString('pt-BR', { month: 'short' })}`);
           
           if (transaction.type === 'receita') {
-            futureReceitas += amount;
+            futureReceitas += installmentValue;
           } else if (transaction.type === 'despesa') {
-            futureDespesas += amount;
+            futureDespesas += installmentValue;
             if (transaction.is_recurring) {
-              futureGastosRecorrentes += amount;
+              futureGastosRecorrentes += installmentValue;
             }
           }
         }
