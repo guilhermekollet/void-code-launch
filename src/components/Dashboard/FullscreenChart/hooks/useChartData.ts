@@ -53,10 +53,14 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
           .filter(t => t.type === 'receita' && !t.is_installment)
           .reduce((sum, t) => sum + Number(t.value), 0);
 
-        // Installment income
+        // Installment income - FIXED: Use individual installment value, not total
         const installmentReceitas = installmentTransactions
           .filter(t => t.type === 'receita')
-          .reduce((sum, t) => sum + Number(t.value), 0);
+          .reduce((sum, t) => {
+            // Use installment_value if available, otherwise divide total by installments
+            const installmentValue = t.installment_value ? Number(t.installment_value) : Number(t.value) / Number(t.total_installments);
+            return sum + installmentValue;
+          }, 0);
 
         const totalReceitas = regularReceitas + installmentReceitas;
 
@@ -65,10 +69,14 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
           .filter(t => t.type === 'despesa' && !t.is_installment)
           .reduce((sum, t) => sum + Number(t.value), 0);
 
-        // Installment expenses - each installment counts only once per period
+        // Installment expenses - FIXED: Use individual installment value, not total
         const installmentDespesas = installmentTransactions
           .filter(t => t.type === 'despesa')
-          .reduce((sum, t) => sum + Number(t.value), 0);
+          .reduce((sum, t) => {
+            // Use installment_value if available, otherwise divide total by installments
+            const installmentValue = t.installment_value ? Number(t.installment_value) : Number(t.value) / Number(t.total_installments);
+            return sum + installmentValue;
+          }, 0);
 
         const totalDespesas = regularDespesas + installmentDespesas;
 

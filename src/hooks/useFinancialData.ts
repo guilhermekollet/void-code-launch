@@ -200,6 +200,13 @@ export const useChartData = () => {
 
       if (!userData) throw new Error('Dados do usuário não encontrados');
 
+      // Get all transactions to process installments correctly
+      const { data: allTransactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .order('tx_date', { ascending: true });
+
       // Generate data for last 6 months
       const months = [];
       for (let i = 5; i >= 0; i--) {
@@ -207,43 +214,62 @@ export const useChartData = () => {
         const startDate = startOfMonth(date);
         const endDate = endOfMonth(date);
 
-        const [receitasResult, despesasResult, recorrentesResult, billsResult] = await Promise.all([
-          supabase
-            .from('transactions')
-            .select('value')
-            .eq('user_id', userData.id)
-            .eq('type', 'receita')
-            .gte('tx_date', startDate.toISOString())
-            .lte('tx_date', endDate.toISOString()),
+        // Get regular transactions for this month
+        const monthRegularTransactions = (allTransactions || []).filter(t => {
+          const txDate = new Date(t.tx_date);
+          return txDate >= startDate && txDate <= endDate && !t.is_installment;
+        });
+
+        // Get installment transactions that should be counted in this month
+        const monthInstallmentTransactions = (allTransactions || []).filter(t => {
+          if (!t.is_installment || !t.installment_start_date || !t.total_installments) return false;
           
-          supabase
-            .from('transactions')
-            .select('value')
-            .eq('user_id', userData.id)
-            .eq('type', 'despesa')
-            .gte('tx_date', startDate.toISOString())
-            .lte('tx_date', endDate.toISOString()),
+          const installmentStart = new Date(t.installment_start_date);
+          const monthsDiff = (date.getFullYear() - installmentStart.getFullYear()) * 12 + 
+                           (date.getMonth() - installmentStart.getMonth());
+          
+          return monthsDiff >= 0 && monthsDiff < t.total_installments;
+        });
 
-          supabase
-            .from('transactions')
-            .select('value')
-            .eq('user_id', userData.id)
-            .eq('type', 'despesa')
-            .eq('is_recurring', true)
-            .gte('tx_date', startDate.toISOString())
-            .lte('tx_date', endDate.toISOString()),
+        // Calculate regular income and expenses
+        const regularReceitas = monthRegularTransactions
+          .filter(t => t.type === 'receita')
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
-          supabase
-            .from('credit_card_bills')
-            .select('bill_amount')
-            .eq('user_id', userData.id)
-            .gte('due_date', startDate.toISOString().split('T')[0])
-            .lte('due_date', endDate.toISOString().split('T')[0])
-        ]);
+        const regularDespesas = monthRegularTransactions
+          .filter(t => t.type === 'despesa')
+          .reduce((sum, t) => sum + Number(t.value), 0);
 
-        const receitas = receitasResult.data?.reduce((sum, t) => sum + Number(t.value), 0) || 0;
-        const despesas = despesasResult.data?.reduce((sum, t) => sum + Number(t.value), 0) || 0;
-        const gastosRecorrentes = recorrentesResult.data?.reduce((sum, t) => sum + Number(t.value), 0) || 0;
+        // Calculate installment income and expenses - FIXED: Use individual installment value
+        const installmentReceitas = monthInstallmentTransactions
+          .filter(t => t.type === 'receita')
+          .reduce((sum, t) => {
+            const installmentValue = t.installment_value ? Number(t.installment_value) : Number(t.value) / Number(t.total_installments);
+            return sum + installmentValue;
+          }, 0);
+
+        const installmentDespesas = monthInstallmentTransactions
+          .filter(t => t.type === 'despesa')
+          .reduce((sum, t) => {
+            const installmentValue = t.installment_value ? Number(t.installment_value) : Number(t.value) / Number(t.total_installments);
+            return sum + installmentValue;
+          }, 0);
+
+        const receitas = regularReceitas + installmentReceitas;
+        const despesas = regularDespesas + installmentDespesas;
+
+        const gastosRecorrentes = monthRegularTransactions
+          .filter(t => t.type === 'despesa' && t.is_recurring)
+          .reduce((sum, t) => sum + Number(t.value), 0);
+
+        // Get bills for this month
+        const billsResult = await supabase
+          .from('credit_card_bills')
+          .select('bill_amount')
+          .eq('user_id', userData.id)
+          .gte('due_date', startDate.toISOString().split('T')[0])
+          .lte('due_date', endDate.toISOString().split('T')[0]);
+
         const faturas = billsResult.data?.reduce((sum, bill) => sum + Number(bill.bill_amount), 0) || 0;
 
         months.push({

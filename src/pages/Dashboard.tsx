@@ -37,13 +37,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[#121212]">Dashboard</h1>
-          <p className="text-[#64748B] mt-1">Visão geral das suas finanças</p>
-        </div>
-      </div>
-
       <ModernQuickStats
         totalBalance={totalBalance}
         monthlyIncome={monthlyIncome}
