@@ -6,6 +6,7 @@ import { useState } from "react";
 import { BillingToggle } from "./BillingToggle";
 import { SubscriptionStatus } from "./SubscriptionStatus";
 import { useCreateCheckout, useCustomerPortal } from "@/hooks/useSubscriptionMutations";
+import { useSubscription } from "@/hooks/useSubscription";
 
 const plans = [
   {
@@ -46,14 +47,19 @@ const plans = [
 ];
 
 export function PlansSection() {
-  const [isYearly, setIsYearly] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const createCheckout = useCreateCheckout();
   const customerPortal = useCustomerPortal();
+  const { data: subscription } = useSubscription();
+
+  const handleBillingCycleChange = (checked: boolean) => {
+    setBillingCycle(checked ? 'yearly' : 'monthly');
+  };
 
   const handleSubscribe = (planId: string) => {
     createCheckout.mutate({
       planType: planId,
-      billingCycle: isYearly ? 'yearly' : 'monthly'
+      billingCycle: billingCycle
     });
   };
 
@@ -68,16 +74,19 @@ export function PlansSection() {
         <p className="text-gray-600 mt-2">Escolha o plano ideal para suas necessidades</p>
       </div>
 
-      <SubscriptionStatus onManage={handleManageSubscription} />
+      <SubscriptionStatus subscription={subscription} />
 
       <div className="space-y-4">
-        <BillingToggle isYearly={isYearly} onToggle={setIsYearly} />
+        <BillingToggle 
+          billingCycle={billingCycle} 
+          onBillingCycleChange={handleBillingCycleChange} 
+        />
 
         <div className="grid md:grid-cols-2 gap-6">
           {plans.map((plan) => {
             const Icon = plan.icon;
-            const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
-            const savings = isYearly ? Math.round(((plan.monthlyPrice * 12) - plan.yearlyPrice) / (plan.monthlyPrice * 12) * 100) : 0;
+            const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+            const savings = billingCycle === 'yearly' ? Math.round(((plan.monthlyPrice * 12) - plan.yearlyPrice) / (plan.monthlyPrice * 12) * 100) : 0;
 
             return (
               <Card 
@@ -105,10 +114,10 @@ export function PlansSection() {
                         R$ {price.toFixed(2).replace('.', ',')}
                       </span>
                       <span className="text-gray-500 ml-1">
-                        /{isYearly ? 'ano' : 'mês'}
+                        /{billingCycle === 'yearly' ? 'ano' : 'mês'}
                       </span>
                     </div>
-                    {isYearly && savings > 0 && (
+                    {billingCycle === 'yearly' && savings > 0 && (
                       <div className="text-sm text-green-600 font-medium mt-1">
                         Economize {savings}%
                       </div>
@@ -138,6 +147,18 @@ export function PlansSection() {
             );
           })}
         </div>
+
+        {subscription && subscription.status === 'active' && (
+          <div className="flex justify-center mt-6">
+            <Button 
+              variant="outline" 
+              onClick={handleManageSubscription}
+              disabled={customerPortal.isPending}
+            >
+              {customerPortal.isPending ? 'Carregando...' : 'Gerenciar Assinatura'}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
