@@ -1,21 +1,32 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, X } from 'lucide-react';
 
-interface WelcomeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+export function WelcomeModal() {
+  const [isOpen, setIsOpen] = useState(false);
 
-export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
+  useEffect(() => {
+    // Check if user has seen welcome modal before
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeModal');
+    if (!hasSeenWelcome) {
+      setIsOpen(true);
+    }
+  }, []);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    localStorage.setItem('hasSeenWelcomeModal', 'true');
+  };
+
   const handleContactIA = () => {
     window.open('https://wa.me/5551995915520', '_blank');
-    onClose();
+    handleClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-white border-[#DEDEDE] max-w-md">
         <DialogHeader>
           <div className="flex justify-center mb-4">
@@ -54,7 +65,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
               Falar com Bolsofy IA
             </Button>
             <Button
-              onClick={onClose}
+              onClick={handleClose}
               variant="outline"
               className="border-[#DEDEDE] text-[#64748B] hover:bg-gray-50"
             >
