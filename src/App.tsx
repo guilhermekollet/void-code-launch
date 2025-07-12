@@ -18,7 +18,6 @@ import Recorrentes from "./pages/Recorrentes";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import Assinatura from "./pages/Assinatura";
-import EmailConfirmation from "./pages/EmailConfirmation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,7 +40,6 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
-            <Route path="/email-confirmation" element={<EmailConfirmation />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Layout>

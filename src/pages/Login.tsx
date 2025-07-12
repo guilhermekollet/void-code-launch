@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Mail, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 type AuthStep = 'phone' | 'email-sent';
@@ -196,7 +196,6 @@ export default function Login() {
                 onClick={() => window.open('https://wa.me/5551992527815', '_blank')}
                 className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white"
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
                 Suporte via WhatsApp
               </Button>
             </div>

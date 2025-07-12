@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, ArrowRight, Check, MessageCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { IOSSwitch } from '@/components/ui/ios-switch';
 
@@ -559,7 +558,7 @@ export default function Register() {
                     value={formData.phone}
                     onChange={(phone) => handleInputChange('phone', phone.replace(/\D/g, ''))}
                   />
-                  {formData.phone && !validatePhone(formData.phone) && (
+                  {formData.phone && formData.phone.length > 2 && !validatePhone(formData.phone) && (
                     <p className="text-sm text-red-500">Telefone inválido</p>
                   )}
                 </div>
@@ -709,7 +708,6 @@ export default function Register() {
                 onClick={() => window.open('https://wa.me/5551992527815', '_blank')}
                 className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white mb-4"
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
                 Precisa de ajuda? Fale conosco
               </Button>
             </div>
