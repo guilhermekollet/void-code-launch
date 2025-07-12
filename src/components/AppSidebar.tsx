@@ -91,15 +91,37 @@ export function AppSidebar() {
   const navigate = useNavigate();
 
   const getPlanInfo = () => {
-    if (!subscription) return { icon: Circle, name: 'Free', color: 'text-gray-500 bg-gray-50' };
+    if (!subscription || subscription.plan_type === 'free') {
+      return { 
+        icon: Circle, 
+        name: 'Gratuito', 
+        color: 'text-gray-600 bg-gray-100',
+        status: 'Plano gratuito'
+      };
+    }
     
     switch (subscription.plan_type) {
       case 'premium':
-        return { icon: Crown, name: 'Premium', color: 'text-white bg-[#61710C]' };
+        return { 
+          icon: Crown, 
+          name: 'Premium', 
+          color: 'text-white bg-[#61710C]',
+          status: subscription.status === 'active' ? 'Ativo' : 'Inativo'
+        };
       case 'basic':
-        return { icon: Star, name: 'Básico', color: 'text-black bg-[#CFF500]' };
+        return { 
+          icon: Star, 
+          name: 'Básico', 
+          color: 'text-black bg-[#CFF500]',
+          status: subscription.status === 'active' ? 'Ativo' : 'Inativo'
+        };
       default:
-        return { icon: Circle, name: 'Free', color: 'text-gray-500 bg-gray-50' };
+        return { 
+          icon: Circle, 
+          name: 'Gratuito', 
+          color: 'text-gray-600 bg-gray-100',
+          status: 'Plano gratuito'
+        };
     }
   };
 
@@ -160,19 +182,26 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-6 bg-white space-y-4">
-        {/* Plan Status Card */}
+        {/* Enhanced Plan Status Card */}
         <Card 
           className={`${planInfo.color} border-0 shadow-sm cursor-pointer hover:opacity-80 transition-opacity`}
           onClick={handlePlanCardClick}
         >
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <PlanIcon className="h-4 w-4" />
-              <div className="flex flex-col">
-                <span className="text-xs font-medium">Plano {planInfo.name}</span>
-                <span className="text-xs opacity-70">
-                  {subscription?.status === 'active' ? 'Ativo' : 'Trial'}
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <PlanIcon className="h-5 w-5" />
+              </div>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-semibold truncate">Plano {planInfo.name}</span>
+                <span className="text-xs opacity-80 truncate">
+                  {planInfo.status}
                 </span>
+                {subscription?.status === 'active' && subscription.plan_type !== 'free' && (
+                  <span className="text-xs opacity-70 truncate">
+                    Clique para gerenciar
+                  </span>
+                )}
               </div>
             </div>
           </CardContent>

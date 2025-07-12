@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -18,12 +19,18 @@ export function AIAgentSection() {
   const [phoneNumber, setPhoneNumber] = useState("");
 
   useEffect(() => {
+    // Prioridade: 1º AI settings, 2º user profile phone
+    if (aiSettings?.phone_number) {
+      setPhoneNumber(aiSettings.phone_number);
+      setIsEnabled(aiSettings.is_enabled);
+    } else if (userProfile?.phone_number) {
+      // Auto-preencher com o telefone da tabela users
+      setPhoneNumber(userProfile.phone_number);
+      setIsEnabled(aiSettings?.is_enabled || false);
+    }
+    
     if (aiSettings) {
       setIsEnabled(aiSettings.is_enabled);
-      setPhoneNumber(aiSettings.phone_number || "");
-    } else if (userProfile?.phone_number) {
-      // If no AI settings but user has phone, use user's phone
-      setPhoneNumber(userProfile.phone_number);
     }
   }, [aiSettings, userProfile]);
 
@@ -35,7 +42,7 @@ export function AIAgentSection() {
         phone_number: phoneNumber,
       });
 
-      // Also update the user's phone number to keep them in sync
+      // Sincronizar o telefone na tabela users se for diferente
       if (userProfile && userProfile.phone_number !== phoneNumber) {
         await updateUserProfile.mutateAsync({
           phone_number: phoneNumber,

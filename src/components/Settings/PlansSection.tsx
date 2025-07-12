@@ -29,8 +29,8 @@ const plans = [
     id: 'premium',
     name: 'Premium',
     description: 'Para quem quer controle total',
-    monthlyPrice: 39.90,
-    yearlyPrice: 399.90,
+    monthlyPrice: 29.90,
+    yearlyPrice: 289.90,
     icon: Crown,
     features: [
       'Todos os recursos do Básico',
@@ -67,6 +67,10 @@ export function PlansSection() {
     customerPortal.mutate();
   };
 
+  const isActivePlan = (planId: string) => {
+    return subscription?.status === 'active' && subscription?.plan_type === planId;
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -77,25 +81,34 @@ export function PlansSection() {
       <SubscriptionStatus subscription={subscription} />
 
       <div className="space-y-4">
-        <BillingToggle 
-          billingCycle={billingCycle} 
-          onBillingCycleChange={handleBillingCycleChange} 
-        />
+        <div className="flex justify-center">
+          <BillingToggle 
+            billingCycle={billingCycle} 
+            onBillingCycleChange={handleBillingCycleChange} 
+          />
+        </div>
 
         <div className="grid md:grid-cols-2 gap-6">
           {plans.map((plan) => {
             const Icon = plan.icon;
             const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
             const savings = billingCycle === 'yearly' ? Math.round(((plan.monthlyPrice * 12) - plan.yearlyPrice) / (plan.monthlyPrice * 12) * 100) : 0;
+            const isPlanActive = isActivePlan(plan.id);
 
             return (
               <Card 
                 key={plan.id} 
-                className={`relative ${plan.popular ? `${plan.borderColor} border-2` : 'border-gray-200'}`}
+                className={`relative ${plan.popular ? `${plan.borderColor} border-2` : 'border-gray-200'} ${isPlanActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
               >
                 {plan.popular && (
                   <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 ${plan.color} px-3 py-1 rounded-full text-xs font-medium`}>
                     Mais Popular
+                  </div>
+                )}
+
+                {isPlanActive && (
+                  <div className="absolute -top-3 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Plano Atual
                   </div>
                 )}
                 
@@ -136,29 +149,22 @@ export function PlansSection() {
                   </ul>
 
                   <Button 
-                    className={`w-full ${plan.color} hover:opacity-90`}
-                    onClick={() => handleSubscribe(plan.id)}
-                    disabled={createCheckout.isPending}
+                    className={`w-full ${isPlanActive ? 'bg-gray-600 hover:bg-gray-700' : plan.color + ' hover:opacity-90'}`}
+                    onClick={isPlanActive ? handleManageSubscription : () => handleSubscribe(plan.id)}
+                    disabled={createCheckout.isPending || customerPortal.isPending}
                   >
-                    {createCheckout.isPending ? 'Processando...' : 'Assinar Agora'}
+                    {createCheckout.isPending || customerPortal.isPending 
+                      ? 'Processando...' 
+                      : isPlanActive 
+                        ? 'Gerenciar Assinatura' 
+                        : 'Assinar Agora'
+                    }
                   </Button>
                 </CardContent>
               </Card>
             );
           })}
         </div>
-
-        {subscription && subscription.status === 'active' && (
-          <div className="flex justify-center mt-6">
-            <Button 
-              variant="outline" 
-              onClick={handleManageSubscription}
-              disabled={customerPortal.isPending}
-            >
-              {customerPortal.isPending ? 'Carregando...' : 'Gerenciar Assinatura'}
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
