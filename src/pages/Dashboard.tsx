@@ -35,6 +35,21 @@ export default function Dashboard() {
     return <div>Carregando...</div>;
   }
 
+  // Transform transactions to match expected interface
+  const recentTransactions = transactions.slice(0, 10).map(transaction => ({
+    id: transaction.id,
+    description: transaction.description || 'Sem descrição',
+    amount: transaction.amount,
+    type: transaction.type,
+    category: transaction.category,
+    tx_date: transaction.tx_date,
+    is_recurring: transaction.is_recurring,
+    is_installment: transaction.is_installment,
+    installment_number: transaction.installment_number,
+    total_installments: transaction.total_installments,
+    registered_at: transaction.registered_at
+  }));
+
   return (
     <div className="space-y-8 p-6">
       <ModernQuickStats
@@ -52,7 +67,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentTransactions 
-          transactions={transactions.slice(0, 10)} 
+          transactions={recentTransactions}
           formatCurrency={formatCurrency}
         />
         <CreditCardBillsSection />

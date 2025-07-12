@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useTransactions } from "@/hooks/useFinancialData";
 import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
@@ -24,6 +23,8 @@ interface Transaction {
   total_installments?: number;
   credit_card_id?: number;
   is_credit_card_expense?: boolean;
+  installment_start_date?: string | null;
+  installment_value?: number | null;
 }
 
 export default function Transacoes() {
@@ -89,7 +90,7 @@ export default function Transacoes() {
       }
 
       // Filter by search
-      if (filters.search && !transaction.description.toLowerCase().includes(filters.search.toLowerCase())) {
+      if (filters.search && !transaction.description?.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
       }
 
@@ -115,7 +116,7 @@ export default function Transacoes() {
           comparison = a.category.localeCompare(b.category);
           break;
         case 'description':
-          comparison = a.description.localeCompare(b.description);
+          comparison = (a.description || '').localeCompare(b.description || '');
           break;
         default:
           return 0;
@@ -161,7 +162,7 @@ export default function Transacoes() {
   };
 
   const handleDeleteTransaction = (id: number, description: string) => {
-    setDeletingTransaction({ id, description });
+    setDeletingTransaction({ id, description: description || 'Transação sem descrição' });
   };
 
   const handleConfirmDelete = (id: number) => {

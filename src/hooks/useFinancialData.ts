@@ -149,7 +149,7 @@ export function useTransactions() {
       const internalUserId = userData.id;
       console.log('[useTransactions] Using internal user ID:', internalUserId);
 
-      // Fetch recent transactions
+      // Fetch recent transactions with all required fields
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select(`
@@ -163,6 +163,10 @@ export function useTransactions() {
           is_installment,
           installment_number,
           total_installments,
+          installment_start_date,
+          installment_value,
+          credit_card_id,
+          is_credit_card_expense,
           registered_at
         `)
         .eq('user_id', internalUserId)
@@ -175,9 +179,179 @@ export function useTransactions() {
       }
 
       console.log('[useTransactions] Found transactions:', transactions?.length || 0);
-      return transactions || [];
+      
+      // Map the data to include amount field and handle nulls
+      return transactions?.map(transaction => ({
+        ...transaction,
+        amount: Number(transaction.value) || 0, // Map value to amount
+        installment_start_date: transaction.installment_start_date || null,
+        installment_value: transaction.installment_value || null,
+        credit_card_id: transaction.credit_card_id || null,
+        is_credit_card_expense: transaction.is_credit_card_expense || false,
+      })) || [];
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+}
+
+// Add missing exports for chart data functionality
+export function useFinancialMetrics() {
+  const { data: financialData } = useFinancialData();
+  
+  return {
+    totalBalance: financialData?.totalBalance || 0,
+    monthlyIncome: financialData?.monthlyIncome || 0,
+    monthlyExpenses: financialData?.monthlyExpenses || 0,
+    monthlyRecurringExpenses: financialData?.monthlyRecurringExpenses || 0
+  };
+}
+
+export function useChartData() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['chartData', user?.id],
+    queryFn: async () => {
+      if (!user?.id) {
+        return { monthlyData: [], categoryData: [] };
+      }
+
+      // Get user's internal ID
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, completed_onboarding')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData?.completed_onboarding) {
+        return { monthlyData: [], categoryData: [] };
+      }
+
+      // Fetch transactions for chart data
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .order('tx_date', { ascending: false });
+
+      if (!transactions) {
+        return { monthlyData: [], categoryData: [] };
+      }
+
+      // Process monthly data
+      const monthlyMap = new Map();
+      const categoryMap = new Map();
+
+      transactions.forEach(transaction => {
+        const date = new Date(transaction.tx_date);
+        const monthKey = date.toLocaleDateString('pt-BR', { month: 'short' });
+        const value = Number(transaction.value) || 0;
+
+        // Monthly data
+        if (!monthlyMap.has(monthKey)) {
+          monthlyMap.set(monthKey, { mes: monthKey, receitas: 0, despesas: 0, gastosRecorrentes: 0 });
+        }
+
+        const monthData = monthlyMap.get(monthKey);
+        if (transaction.type === 'receita') {
+          monthData.receitas += value;
+        } else if (transaction.type === 'despesa') {
+          monthData.despesas += Math.abs(value);
+          if (transaction.is_recurring) {
+            monthData.gastosRecorrentes += Math.abs(value);
+          }
+        }
+
+        // Category data
+        if (transaction.type === 'despesa') {
+          if (!categoryMap.has(transaction.category)) {
+            categoryMap.set(transaction.category, {
+              name: transaction.category,
+              value: 0,
+              color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`
+            });
+          }
+          categoryMap.get(transaction.category).value += Math.abs(value);
+        }
+      });
+
+      return {
+        monthlyData: Array.from(monthlyMap.values()).slice(0, 12),
+        categoryData: Array.from(categoryMap.values()).sort((a, b) => b.value - a.value)
+      };
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useChartDataWithInstallments() {
+  const { data: chartData } = useChartData();
+  return chartData?.monthlyData || [];
+}
+
+export function useDailyData(days: number) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['dailyData', user?.id, days],
+    queryFn: async () => {
+      if (!user?.id) {
+        return [];
+      }
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, completed_onboarding')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData?.completed_onboarding) {
+        return [];
+      }
+
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userData.id)
+        .gte('tx_date', startDate.toISOString())
+        .lte('tx_date', endDate.toISOString())
+        .order('tx_date', { ascending: true });
+
+      if (!transactions) {
+        return [];
+      }
+
+      const dailyMap = new Map();
+
+      transactions.forEach(transaction => {
+        const date = new Date(transaction.tx_date);
+        const dayKey = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+        const value = Number(transaction.value) || 0;
+
+        if (!dailyMap.has(dayKey)) {
+          dailyMap.set(dayKey, { mes: dayKey, receitas: 0, despesas: 0, gastosRecorrentes: 0 });
+        }
+
+        const dayData = dailyMap.get(dayKey);
+        if (transaction.type === 'receita') {
+          dayData.receitas += value;
+        } else if (transaction.type === 'despesa') {
+          dayData.despesas += Math.abs(value);
+          if (transaction.is_recurring) {
+            dayData.gastosRecorrentes += Math.abs(value);
+          }
+        }
+      });
+
+      return Array.from(dailyMap.values());
+    },
+    enabled: !!user?.id && days > 0,
+    staleTime: 1000 * 60 * 2,
   });
 }
