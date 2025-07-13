@@ -572,7 +572,7 @@ export function useExportReport() {
     }
   };
 
-  const exportToPDF = useCallback(async () => {
+  const exportToPDF = useCallback(async (selectedPeriod: string) => {
     setIsExporting(true);
     
     try {
@@ -590,7 +590,7 @@ export function useExportReport() {
 
       const pdf = await convertHTMLToPDF(htmlContent);
       
-      const fileName = `relatorio-financeiro-bolsofy-${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `relatorio-financeiro-bolsofy-${selectedPeriod}-${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
       
       toast({
@@ -609,7 +609,7 @@ export function useExportReport() {
     }
   }, [totalBalance, monthlyIncome, monthlyExpenses, monthlyRecurringExpenses, monthlyData, categoryData, toast]);
 
-  const exportToExcel = useCallback(async () => {
+  const exportToExcel = useCallback(async (selectedPeriod: string) => {
     setIsExporting(true);
     
     try {
@@ -620,6 +620,7 @@ export function useExportReport() {
 
       // Criar dados para Excel
       const excelData = {
+        period: selectedPeriod,
         metrics: [
           { Métrica: 'Receitas do Mês', Valor: formatCurrency(monthlyIncome) },
           { Métrica: 'Despesas do Mês', Valor: formatCurrency(monthlyExpenses) },
@@ -646,7 +647,7 @@ export function useExportReport() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `relatorio-financeiro-bolsofy-${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `relatorio-financeiro-bolsofy-${selectedPeriod}-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
