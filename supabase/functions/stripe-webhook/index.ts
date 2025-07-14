@@ -38,7 +38,8 @@ serve(async (req) => {
 
     let event;
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      // CRITICAL FIX: Use constructEventAsync for Deno edge environment
+      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
       logStep("✅ Webhook signature verified", { eventType: event.type, eventId: event.id });
     } catch (err) {
       logStep("❌ Webhook signature verification failed", { error: err.message });
@@ -121,7 +122,7 @@ serve(async (req) => {
           paymentConfirmed: onboardingData.payment_confirmed
         });
 
-        // Atualizar payment_confirmed para true
+        // GARANTIR que payment_confirmed seja atualizado para true
         const { error: updatePaymentError } = await supabase
           .from("onboarding")
           .update({ 
@@ -131,11 +132,11 @@ serve(async (req) => {
           .eq("id", onboardingData.id);
 
         if (updatePaymentError) {
-          logStep("❌ Failed to update payment_confirmed", { error: updatePaymentError.message });
+          logStep("❌ CRITICAL: Failed to update payment_confirmed", { error: updatePaymentError.message });
           return new Response("Failed to update payment status", { status: 500 });
         }
 
-        logStep("✅ Updated payment_confirmed to true", { onboardingId: onboardingData.id });
+        logStep("✅ CONFIRMED: Updated payment_confirmed to true", { onboardingId: onboardingData.id });
 
         // Verificar se usuário já existe
         const { data: existingUser, error: existingUserError } = await supabase
@@ -227,7 +228,7 @@ serve(async (req) => {
           return new Response("Failed to create user", { status: 500 });
         }
 
-        logStep("✅ User created successfully", {
+        logStep("✅ User created successfully in public.users", {
           userId: newUser.id,
           authUserId: authUser.user.id,
           email: onboardingData.email
@@ -251,13 +252,19 @@ serve(async (req) => {
           logStep("✅ Updated trial dates in onboarding");
         }
 
-        logStep("🎊 === WEBHOOK PROCESSING COMPLETED ===", {
+        logStep("🎊 === WEBHOOK PROCESSING COMPLETED SUCCESSFULLY ===", {
           userId: newUser.id,
           authUserId: authUser.user.id,
           email: onboardingData.email,
-          paymentConfirmed: true
+          paymentConfirmed: true,
+          trialStart: trialStart.toISOString(),
+          trialEnd: trialEnd.toISOString()
         });
+      } else {
+        logStep("⚠️ Payment not confirmed", { paymentStatus: session.payment_status });
       }
+    } else {
+      logStep("ℹ️ Unhandled event type", { eventType: event.type });
     }
 
     return new Response("OK", { status: 200 });
