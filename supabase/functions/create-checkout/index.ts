@@ -50,6 +50,13 @@ serve(async (req) => {
       throw new Error(`Configuração de preço inválida: ${planType} - ${billingCycle}`);
     }
 
+    // Criar cliente Supabase para atualizações
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } }
+    );
+
     const origin = req.headers.get("origin") || "http://localhost:3000";
     
     // Criar sessão do Stripe
@@ -83,14 +90,8 @@ serve(async (req) => {
 
     logStep("Stripe session created", { sessionId: session.id, url: session.url });
 
-    // Atualizar onboarding com session_id real
+    // Atualizar onboarding com session_id
     if (onboardingId) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-        { auth: { persistSession: false } }
-      );
-
       const { error: updateError } = await supabase
         .from('onboarding')
         .update({ 

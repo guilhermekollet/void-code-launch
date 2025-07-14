@@ -2,7 +2,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,42 +12,6 @@ const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
-
-async function verifyStripeSignature(
-  payload: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  try {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
-    
-    const parts = signature.split(',');
-    const timestamp = parts.find(p => p.startsWith('t='))?.split('=')[1];
-    const hash = parts.find(p => p.startsWith('v1='))?.split('=')[1];
-    
-    if (!timestamp || !hash) return false;
-    
-    const signedPayload = `${timestamp}.${payload}`;
-    const expectedHash = await crypto.subtle.verify(
-      "HMAC",
-      key,
-      new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(signedPayload))),
-      new Uint8Array(Array.from(atob(hash)).map(c => c.charCodeAt(0)))
-    );
-    
-    return expectedHash;
-  } catch (error) {
-    logStep("Signature verification failed", { error: error.message });
-    return false;
-  }
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -79,14 +42,15 @@ serve(async (req) => {
     const body = await req.text();
     logStep("Payload received", { bodyLength: body.length });
 
-    // Verify webhook signature
-    const isValid = await verifyStripeSignature(body, signature, webhookSecret);
-    if (!isValid) {
-      throw new Error("Invalid webhook signature");
-    }
-
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-    const event = JSON.parse(body);
+    
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      logStep("Webhook signature verification failed", { error: err.message });
+      return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    }
     
     logStep("Event received", { type: event.type, id: event.id });
 

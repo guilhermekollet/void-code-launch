@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle, MessageCircle, ArrowRight, Clock } from 'lucide-react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { ConfettiRain } from '@/components/ConfettiRain';
 import { supabase } from '@/integrations/supabase/client';
 

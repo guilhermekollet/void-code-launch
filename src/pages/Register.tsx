@@ -1,703 +1,381 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
-import { ProgressBar } from '@/components/ui/progress-bar';
-import { IOSSwitch } from '@/components/ui/ios-switch';
-
-interface Plan {
-  id: string;
-  name: string;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  features: string[];
-  stripeLinks: {
-    monthly: string;
-    yearly: string;
-  };
-}
-
-const plans: Plan[] = [
-  {
-    id: 'basic',
-    name: 'Básico',
-    monthlyPrice: 19.90,
-    yearlyPrice: 199.90,
-    features: [
-      'Controle de gastos básico',
-      'Relatórios mensais',
-      'Até 3 cartões de crédito',
-      'Suporte por email'
-    ],
-    stripeLinks: {
-      monthly: 'https://buy.stripe.com/test_bJe28r23b5uk7G3bUafQI00',
-      yearly: 'https://buy.stripe.com/test_fZubJ16jrcWM2lJ8HYfQI01'
-    }
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    monthlyPrice: 29.90,
-    yearlyPrice: 289.90,
-    features: [
-      'Controle completo de gastos',
-      'Relatórios detalhados',
-      'Cartões ilimitados',
-      'Suporte prioritário',
-      'Análises avançadas',
-      'Integração com bancos'
-    ],
-    stripeLinks: {
-      monthly: 'https://buy.stripe.com/test_8x28wP37f0a00dB3nEfQI02',
-      yearly: 'https://buy.stripe.com/test_3cI4gz5fng8Ye4r1fwfQI03'
-    }
-  }
-];
-
-type RegistrationStep = 'name' | 'email' | 'phone' | 'plan';
-
-interface FormData {
-  name: string;
-  email: string;
-  confirmEmail: string;
-  phone: string;
-  selectedPlan: string;
-  billingCycle: 'monthly' | 'yearly';
-}
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 export default function Register() {
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('name');
-  const [formData, setFormData] = useState<FormData>({
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
-    confirmEmail: '',
-    phone: '55',
-    selectedPlan: '',
+    phone: '',
+    selectedPlan: 'basic',
     billingCycle: 'monthly'
   });
-  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
-  const [checkingEmail, setCheckingEmail] = useState(false);
-  const [checkingPhone, setCheckingPhone] = useState(false);
-  const [isContinuation, setIsContinuation] = useState(false);
-  const [onboardingId, setOnboardingId] = useState<string | null>(null);
-  const [processingPayment, setProcessingPayment] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { toast } = useToast();
 
-  const steps = ['Nome', 'Email', 'Telefone', 'Plano'];
-  const stepKeys: RegistrationStep[] = ['name', 'email', 'phone', 'plan'];
-  const currentStepIndex = stepKeys.indexOf(currentStep);
-
-  useEffect(() => {
-    if (user) {
-      navigate('/', { replace: true });
-    }
-  }, [user, navigate]);
-
-  const validateName = (name: string): boolean => {
-    const nameParts = name.trim().split(' ').filter(part => part.length > 0);
-    return nameParts.length >= 2;
-  };
-
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePhone = (phone: string): boolean => {
-    return phone.length >= 10;
-  };
-
-  const checkEmailExists = async (email: string): Promise<any> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('check-email-exists', {
-        body: { email }
-      });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error checking email:', error);
-      return { exists: false, canContinue: false };
-    }
-  };
-
-  const checkPhoneExists = async (phone: string): Promise<any> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('check-phone-exists', {
-        body: { phoneNumber: phone }
-      });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error checking phone:', error);
-      return { exists: false };
-    }
-  };
-
-  const saveOrUpdateOnboarding = async (stage: string, updateData: Partial<FormData> = {}) => {
-    try {
-      const dataToSave = {
-        name: updateData.name || formData.name,
-        email: updateData.email || formData.email,
-        phone: (updateData.phone || formData.phone).replace(/\D/g, ''),
-        selected_plan: updateData.selectedPlan || formData.selectedPlan,
-        billing_cycle: updateData.billingCycle || formData.billingCycle,
-        registration_stage: stage
-      };
-
-      if (onboardingId) {
-        const { error } = await supabase
-          .from('onboarding')
-          .update(dataToSave)
-          .eq('id', onboardingId);
-
-        if (error) throw error;
-        console.log('Updated onboarding record:', onboardingId);
-      } else {
-        const { data: existingRecord } = await supabase
-          .from('onboarding')
-          .select('id')
-          .eq('email', dataToSave.email)
-          .single();
-
-        if (existingRecord) {
-          const { error } = await supabase
-            .from('onboarding')
-            .update(dataToSave)
-            .eq('id', existingRecord.id);
-
-          if (error) throw error;
-          setOnboardingId(existingRecord.id);
-          console.log('Updated existing onboarding record:', existingRecord.id);
-        } else {
-          const { data, error } = await supabase
-            .from('onboarding')
-            .insert([dataToSave])
-            .select('id')
-            .single();
-
-          if (error) throw error;
-          if (data) setOnboardingId(data.id);
-          console.log('Created new onboarding record:', data?.id);
-        }
-      }
-
-      toast({
-        title: "Progresso salvo",
-        description: "Seus dados foram salvos com segurança.",
-        duration: 2000
-      });
-    } catch (error) {
-      console.error('Error saving onboarding data:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar progresso. Tente novamente.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const loadExistingData = (existingData: any) => {
-    setFormData({
-      name: existingData.name || '',
-      email: existingData.email || '',
-      confirmEmail: existingData.email || '',
-      phone: existingData.phone || '55',
-      selectedPlan: existingData.selectedPlan || '',
-      billingCycle: existingData.billingCycle || 'monthly'
-    });
-
-    if (existingData.onboardingId) {
-      setOnboardingId(existingData.onboardingId);
-    }
-
-    const stage = existingData.registrationStage;
-    if (stage === 'phone') {
-      setCurrentStep('plan');
-    } else if (stage === 'plan' || stage === 'payment') {
-      setCurrentStep('plan');
-    } else if (stage === 'email') {
-      setCurrentStep('phone');
-    } else {
-      setCurrentStep('name');
-    }
-
-    setIsContinuation(true);
-  };
-
-  const canProceedFromStep = (step: RegistrationStep): boolean => {
-    switch (step) {
-      case 'name':
-        return validateName(formData.name);
-      case 'email':
-        return validateEmail(formData.email) && 
-               validateEmail(formData.confirmEmail) && 
-               formData.email === formData.confirmEmail;
-      case 'phone':
-        return validatePhone(formData.phone);
-      case 'plan':
-        return formData.selectedPlan !== '';
-      default:
-        return false;
-    }
-  };
-
-  const handleNext = async () => {
-    if (!canProceedFromStep(currentStep)) {
-      let errorMessage = '';
-      switch (currentStep) {
-        case 'name':
-          errorMessage = 'Por favor, insira nome e sobrenome';
-          break;
-        case 'email':
-          errorMessage = 'Por favor, insira emails válidos e iguais';
-          break;
-        case 'phone':
-          errorMessage = 'Por favor, insira um telefone válido';
-          break;
-        case 'plan':
-          errorMessage = 'Por favor, selecione um plano';
-          break;
-      }
-      toast({
-        title: "Dados incompletos",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (currentStep === 'name') {
-      await saveOrUpdateOnboarding('name');
-      const nextIndex = currentStepIndex + 1;
-      if (nextIndex < stepKeys.length) {
-        setCurrentStep(stepKeys[nextIndex]);
-      }
-      return;
-    }
-
-    if (currentStep === 'email') {
-      setCheckingEmail(true);
-      const emailCheckResult = await checkEmailExists(formData.email);
-      setCheckingEmail(false);
-
-      if (emailCheckResult.exists && emailCheckResult.completed) {
-        if (emailCheckResult.shouldCreateUser) {
-          toast({
-            title: "Cadastro concluído",
-            description: "Redirecionando para o dashboard...",
-          });
-          return;
-        }
-        
-        toast({
-          title: "Email já cadastrado",
-          description: emailCheckResult.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (emailCheckResult.canContinue && emailCheckResult.existingData) {
-        toast({
-          title: "Cadastro encontrado",
-          description: emailCheckResult.message,
-        });
-        loadExistingData(emailCheckResult.existingData);
-        return;
-      }
-
-      await saveOrUpdateOnboarding('email');
-      const nextIndex = currentStepIndex + 1;
-      if (nextIndex < stepKeys.length) {
-        setCurrentStep(stepKeys[nextIndex]);
-      }
-      return;
-    }
-
-    if (currentStep === 'phone') {
-      setCheckingPhone(true);
-      const phoneCheckResult = await checkPhoneExists(formData.phone);
-      setCheckingPhone(false);
-
-      if (phoneCheckResult.exists) {
-        toast({
-          title: "Telefone já cadastrado",
-          description: phoneCheckResult.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      await saveOrUpdateOnboarding('phone');
-      const nextIndex = currentStepIndex + 1;
-      if (nextIndex < stepKeys.length) {
-        setCurrentStep(stepKeys[nextIndex]);
-      }
-      return;
-    }
-
-    if (currentStep === 'plan') {
-      await saveOrUpdateOnboarding('plan');
-    }
-
-    const nextIndex = currentStepIndex + 1;
-    if (nextIndex < stepKeys.length) {
-      setCurrentStep(stepKeys[nextIndex]);
-    }
-  };
-
-  const handleBack = () => {
-    const prevIndex = currentStepIndex - 1;
-    if (prevIndex >= 0) {
-      setCurrentStep(stepKeys[prevIndex]);
-    }
-  };
-
-  const handleInputChange = (field: keyof FormData, value: string) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePlanSelect = (planId: string) => {
-    setFormData(prev => ({ ...prev, selectedPlan: planId }));
-  };
-
-  const handleFinishRegistration = async () => {
-    if (!formData.selectedPlan) {
-      toast({
-        title: "Erro",
-        description: "Por favor, selecione um plano.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setProcessingPayment(true);
-
-    try {
-      await saveOrUpdateOnboarding('payment');
-
-      const selectedPlan = plans.find(plan => plan.id === formData.selectedPlan);
-      if (!selectedPlan) {
-        throw new Error('Plano selecionado não encontrado');
+  const handleNextStep = async () => {
+    if (currentStep === 1) {
+      if (!formData.name || !formData.email || !formData.phone) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Por favor, preencha todos os campos.",
+          variant: "destructive"
+        });
+        return;
       }
 
-      const stripeLink = formData.billingCycle === 'monthly' 
-        ? selectedPlan.stripeLinks.monthly 
-        : selectedPlan.stripeLinks.yearly;
+      // Verificar se email já existe
+      try {
+        const { data: emailExists } = await supabase.functions.invoke('check-email-exists', {
+          body: { email: formData.email }
+        });
+        
+        if (emailExists?.exists) {
+          toast({
+            title: "Email já cadastrado",
+            description: "Este email já está em uso. Faça login ou use outro email.",
+            variant: "destructive"
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar email:', error);
+      }
 
-      console.log('Redirecting to Stripe:', {
-        plan: formData.selectedPlan,
-        cycle: formData.billingCycle,
-        link: stripeLink
+      // Verificar se telefone já existe
+      try {
+        const { data: phoneExists } = await supabase.functions.invoke('check-phone-exists', {
+          body: { phone: formData.phone }
+        });
+        
+        if (phoneExists?.exists) {
+          toast({
+            title: "Telefone já cadastrado",
+            description: "Este telefone já está em uso. Faça login ou use outro telefone.",
+            variant: "destructive"
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar telefone:', error);
+      }
+
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      await handleSubscribe();
+    }
+  };
+
+  const handleSubscribe = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Criar ou atualizar registro de onboarding
+      const { data: onboardingData, error: onboardingError } = await supabase
+        .from('onboarding')
+        .insert({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          selected_plan: formData.selectedPlan,
+          billing_cycle: formData.billingCycle,
+          registration_stage: 'payment'
+        })
+        .select()
+        .single();
+
+      if (onboardingError) {
+        throw new Error('Erro ao criar registro de onboarding');
+      }
+
+      // Criar sessão do Stripe usando o edge function
+      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          planType: formData.selectedPlan,
+          billingCycle: formData.billingCycle,
+          onboardingId: onboardingData.id
+        }
       });
 
+      if (checkoutError) {
+        throw new Error('Erro ao criar sessão de pagamento');
+      }
+
+      // Salvar dados no localStorage para fallback
       localStorage.setItem('registrationData', JSON.stringify({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone.replace(/\D/g, ''),
-        plan: formData.selectedPlan,
-        billingCycle: formData.billingCycle,
-        onboardingId: onboardingId
+        ...formData,
+        onboardingId: onboardingData.id
       }));
 
-      window.location.href = stripeLink;
+      // Redirecionar para o Stripe
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url;
+      } else {
+        throw new Error('URL de pagamento não encontrada');
+      }
+
     } catch (error) {
-      console.error('Error during registration:', error);
+      console.error('Erro no processo de assinatura:', error);
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro inesperado. Tente novamente.",
+        description: "Erro ao processar pagamento. Tente novamente.",
         variant: "destructive"
       });
     } finally {
-      setProcessingPayment(false);
+      setIsLoading(false);
     }
   };
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(price);
+  const handlePrevStep = () => {
+    setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
-  const getDiscountPercentage = (): number => {
-    return 20; // 20% de desconto para planos anuais
-  };
+  const plans = [
+    {
+      id: 'basic',
+      name: 'Básico',
+      monthlyPrice: 19.90,
+      yearlyPrice: 199.90,
+      features: [
+        'Controle de gastos pessoais',
+        'Categorização automática',
+        'Relatórios básicos',
+        'Suporte por email'
+      ]
+    },
+    {
+      id: 'premium',
+      name: 'Premium',
+      monthlyPrice: 29.90,
+      yearlyPrice: 289.90,
+      features: [
+        'Todos os recursos do Básico',
+        'Relatórios avançados',
+        'Integração com bancos',
+        'Análise preditiva',
+        'Suporte prioritário',
+        'Exportação de dados'
+      ],
+      popular: true
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="sticky top-0 z-50">
-        <ProgressBar steps={steps} currentStep={currentStepIndex} />
-      </div>
-
-      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] px-4 py-8">
-        <div className="w-full max-w-lg">
-          <div className="text-center pb-6">
-            <div className="flex justify-center mb-4">
-              <img 
-                src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
-                alt="Bolsofy Logo" 
-                className="h-12 w-auto" 
-              />
-            </div>
-            {isContinuation && (
-              <div className="text-center mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  ✨ Continuando seu cadastro
-                </p>
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-2xl mx-auto px-4">
+        <div className="mb-8">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/login')}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar para Login
+          </Button>
           
-          <div className="space-y-6">
-            {currentStep === 'name' && (
-              <div className="space-y-4">
-                <div className="text-center mb-6">
-                  <h2 className="text-xl font-semibold text-[#121212]">Qual é o seu nome?</h2>
-                  <p className="text-sm text-[#64748B]">Insira seu nome completo</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-[#121212]">Nome completo *</Label>
-                  <Input 
-                    id="name" 
-                    type="text" 
-                    placeholder="Nome Sobrenome" 
-                    value={formData.name} 
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="border-[#DEDEDE] focus:border-[#61710C]" 
-                  />
-                  {formData.name && !validateName(formData.name) && (
-                    <p className="text-sm text-red-500">Digite nome e sobrenome</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {currentStep === 'email' && (
-              <div className="space-y-4">
-                <div className="text-center mb-6">
-                  <h2 className="text-xl font-semibold text-[#121212]">Qual é o seu email?</h2>
-                  <p className="text-sm text-[#64748B]">Insira um email válido</p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-[#121212]">Email *</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="seu@email.com" 
-                      value={formData.email} 
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C]" 
-                    />
-                    {formData.email && !validateEmail(formData.email) && (
-                      <p className="text-sm text-red-500">Email inválido</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmEmail" className="text-[#121212]">Confirmar email *</Label>
-                    <Input 
-                      id="confirmEmail" 
-                      type="email" 
-                      placeholder="seu@email.com" 
-                      value={formData.confirmEmail} 
-                      onChange={(e) => handleInputChange('confirmEmail', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C]" 
-                    />
-                    {formData.confirmEmail && formData.email !== formData.confirmEmail && (
-                      <p className="text-sm text-red-500">Emails não coincidem</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {currentStep === 'phone' && (
-              <div className="space-y-4">
-                <div className="text-center mb-6">
-                  <h2 className="text-xl font-semibold text-[#121212]">Qual é o seu telefone?</h2>
-                  <p className="text-sm text-[#64748B]">Insira seu número com DDD</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-[#121212]">Telefone *</Label>
-                  <PhoneInput
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(phone) => handleInputChange('phone', phone.replace(/\D/g, ''))}
-                  />
-                  {formData.phone && formData.phone.length > 2 && !validatePhone(formData.phone) && (
-                    <p className="text-sm text-red-500">Telefone inválido</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {currentStep === 'plan' && (
-              <div className="space-y-4">
-                <div className="text-center mb-6">
-                  <h2 className="text-xl font-semibold text-[#121212]">Escolha seu plano</h2>
-                  <p className="text-sm text-[#64748B]">Selecione o plano ideal para você</p>
-                </div>
-
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  <span className={`text-sm ${formData.billingCycle === 'monthly' ? 'text-[#121212] font-medium' : 'text-[#64748B]'}`}>
-                    Mensal
-                  </span>
-                  <IOSSwitch
-                    checked={formData.billingCycle === 'yearly'}
-                    onCheckedChange={(checked) => handleInputChange('billingCycle', checked ? 'yearly' : 'monthly')}
-                  />
-                  <span className={`text-sm ${formData.billingCycle === 'yearly' ? 'text-[#121212] font-medium' : 'text-[#64748B]'}`}>
-                    Anual
-                  </span>
-                  {formData.billingCycle === 'yearly' && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      20% de desconto
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {plans.map((plan) => (
-                    <div
-                      key={plan.id}
-                      className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                        formData.selectedPlan === plan.id
-                          ? 'border-[#61710C] bg-green-50'
-                          : 'border-[#DEDEDE] hover:border-[#61710C]'
-                      }`}
-                      onClick={() => handlePlanSelect(plan.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                formData.selectedPlan === plan.id
-                                  ? 'border-[#61710C] bg-[#61710C]'
-                                  : 'border-gray-300'
-                              }`}
-                            >
-                              {formData.selectedPlan === plan.id && (
-                                <Check className="w-3 h-3 text-white" />
-                              )}
-                            </div>
-                            <h3 className="font-semibold text-[#121212]">{plan.name}</h3>
-                          </div>
-                          
-                          <div className="mt-2 ml-8">
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-2xl font-bold text-[#121212]">
-                                {formatPrice(formData.billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)}
-                              </span>
-                              <span className="text-sm text-[#64748B]">
-                                /{formData.billingCycle === 'monthly' ? 'mês' : 'ano'}
-                              </span>
-                            </div>
-                            
-                            {formData.billingCycle === 'yearly' && (
-                              <div className="text-sm text-green-600">
-                                {getDiscountPercentage()}% de desconto
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedPlan(expandedPlan === plan.id ? null : plan.id);
-                          }}
-                          className="text-[#61710C]"
-                        >
-                          {expandedPlan === plan.id ? 'Ocultar' : 'Detalhes'}
-                        </Button>
-                      </div>
-                      
-                      {expandedPlan === plan.id && (
-                        <div className="mt-4 ml-8 space-y-2">
-                          {plan.features.map((feature, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <Check className="w-4 h-4 text-green-500" />
-                              <span className="text-sm text-[#64748B]">{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-1.5 pt-6">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStepIndex === 0}
-                className="flex items-center gap-2 w-full"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </Button>
-              
-              {currentStep !== 'plan' ? (
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceedFromStep(currentStep) || checkingEmail || checkingPhone}
-                  className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2 w-full"
-                >
-                  {checkingEmail ? 'Verificando email...' : checkingPhone ? 'Verificando telefone...' : 'Próximo'}
-                  <ArrowRight className="w-4 h-4 text-white" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleFinishRegistration}
-                  disabled={!canProceedFromStep(currentStep) || processingPayment}
-                  className="bg-[#61710C] hover:bg-[#4a5709] text-white flex items-center gap-2 w-full"
-                >
-                  {processingPayment ? 'Processando...' : 'Finalizar Cadastro'}
-                  <ArrowRight className="w-4 h-4 text-white" />
-                </Button>
-              )}
-            </div>
-
-            <div className="text-center pt-4">
-              <Button
-                variant="outline"
-                onClick={() => window.open('https://wa.me/5551992527815', '_blank')}
-                className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white mb-4"
-              >
-                Precisa de ajuda? Fale conosco
-              </Button>
-            </div>
-
-            <div className="text-center border-t border-[#DEDEDE] pt-4">
-              <p className="text-sm text-[#64748B]">
-                Já tem uma conta?{' '}
-                <Link to="/login" className="text-[#61710C] hover:underline font-medium">
-                  Faça login
-                </Link>
-              </p>
-            </div>
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Crie sua conta
+            </h1>
+            <p className="text-xl text-gray-600">
+              Comece sua jornada financeira conosco
+            </p>
           </div>
         </div>
+
+        <div className="mb-8">
+          <div className="flex items-center justify-center space-x-4">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+              currentStep >= 1 ? 'bg-[#61710C] text-white' : 'bg-gray-300 text-gray-600'
+            }`}>
+              1
+            </div>
+            <div className={`h-1 w-20 ${currentStep >= 2 ? 'bg-[#61710C]' : 'bg-gray-300'}`}></div>
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+              currentStep >= 2 ? 'bg-[#61710C] text-white' : 'bg-gray-300 text-gray-600'
+            }`}>
+              2
+            </div>
+          </div>
+          <div className="flex justify-between mt-2 text-sm text-gray-600">
+            <span>Dados Pessoais</span>
+            <span>Plano</span>
+          </div>
+        </div>
+
+        {currentStep === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Dados Pessoais</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome completo</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Digite seu nome completo"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Digite seu email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="Digite seu telefone"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                />
+              </div>
+
+              <Button 
+                onClick={handleNextStep}
+                className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white"
+                size="lg"
+              >
+                Próximo
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {currentStep === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Escolha seu Plano</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center">
+                <div className="flex items-center space-x-2">
+                  <span className={formData.billingCycle === 'monthly' ? 'text-gray-900' : 'text-gray-500'}>
+                    Mensal
+                  </span>
+                  <button
+                    onClick={() => handleInputChange('billingCycle', formData.billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      formData.billingCycle === 'yearly' ? 'bg-[#61710C]' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                        formData.billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={formData.billingCycle === 'yearly' ? 'text-gray-900' : 'text-gray-500'}>
+                    Anual
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-6">
+                {plans.map((plan) => {
+                  const price = formData.billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+                  const isSelected = formData.selectedPlan === plan.id;
+                  
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`relative p-6 border rounded-lg cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'border-[#61710C] bg-[#61710C]/5' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleInputChange('selectedPlan', plan.id)}
+                    >
+                      {plan.popular && (
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#61710C] text-white px-3 py-1 rounded-full text-xs font-medium">
+                          Mais Popular
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold">{plan.name}</h3>
+                          <div className="flex items-baseline">
+                            <span className="text-2xl font-bold">
+                              R$ {price.toFixed(2).replace('.', ',')}
+                            </span>
+                            <span className="text-gray-500 ml-1">
+                              /{formData.billingCycle === 'yearly' ? 'ano' : 'mês'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 ${
+                          isSelected ? 'border-[#61710C] bg-[#61710C]' : 'border-gray-300'
+                        }`}>
+                          {isSelected && (
+                            <div className="w-full h-full rounded-full bg-white transform scale-50"></div>
+                          )}
+                        </div>
+                      </div>
+
+                      <ul className="space-y-2">
+                        {plan.features.map((feature, index) => (
+                          <li key={index} className="flex items-center text-sm">
+                            <span className="w-2 h-2 bg-[#61710C] rounded-full mr-2"></span>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex space-x-4">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  className="flex-1"
+                >
+                  Voltar
+                </Button>
+                <Button
+                  onClick={handleNextStep}
+                  disabled={isLoading}
+                  className="flex-1 bg-[#61710C] hover:bg-[#4a5709] text-white"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    'Assinar Agora'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
