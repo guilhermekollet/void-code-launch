@@ -11,7 +11,6 @@ export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [userCreated, setUserCreated] = useState(false);
-  const [pollingCount, setPollingCount] = useState(0);
   const [processingManually, setProcessingManually] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -21,6 +20,7 @@ export default function PaymentSuccess() {
   useEffect(() => {
     const checkUserCreation = async () => {
       if (!sessionId) {
+        console.error('[PAYMENT-SUCCESS] No session ID found in URL');
         toast({
           title: "Erro",
           description: "ID da sessão não encontrado.",
@@ -31,7 +31,7 @@ export default function PaymentSuccess() {
       }
 
       try {
-        console.log('Checking if user was created by webhook for session:', sessionId);
+        console.log('[PAYMENT-SUCCESS] Starting user creation check for session:', sessionId);
         
         // Check if onboarding exists and if payment was confirmed by webhook
         const { data: onboardingData, error: onboardingError } = await supabase
@@ -41,28 +41,21 @@ export default function PaymentSuccess() {
           .single();
 
         if (onboardingError) {
-          console.error('Error fetching onboarding data:', onboardingError);
-          if (pollingCount < 15) { // Poll for up to 45 seconds (15 * 3s)
-            setTimeout(() => {
-              setPollingCount(prev => prev + 1);
-              checkUserCreation();
-            }, 3000);
-            return;
-          } else {
-            console.log('Polling timeout, onboarding data not found');
-            setLoading(false);
-            return;
-          }
+          console.error('[PAYMENT-SUCCESS] Error fetching onboarding data:', onboardingError);
+          console.log('[PAYMENT-SUCCESS] Will retry in 3 seconds...');
+          setTimeout(checkUserCreation, 3000);
+          return;
         }
 
-        console.log('Onboarding data found:', {
+        console.log('[PAYMENT-SUCCESS] Onboarding data found:', {
           id: onboardingData.id,
           email: onboardingData.email,
-          payment_confirmed: onboardingData.payment_confirmed
+          payment_confirmed: onboardingData.payment_confirmed,
+          stripe_session_id: onboardingData.stripe_session_id
         });
 
         if (onboardingData.payment_confirmed) {
-          console.log('Payment confirmed by webhook, checking if user exists in users table');
+          console.log('[PAYMENT-SUCCESS] Payment confirmed by webhook, checking if user exists in users table');
           
           // Double-check if user was actually created
           const { data: userData, error: userError } = await supabase
@@ -72,7 +65,7 @@ export default function PaymentSuccess() {
             .single();
 
           if (userData) {
-            console.log('User found in users table:', userData);
+            console.log('[PAYMENT-SUCCESS] User found in users table:', userData);
             setUserCreated(true);
             
             toast({
@@ -83,48 +76,45 @@ export default function PaymentSuccess() {
             // Store user email for login
             localStorage.setItem('newUserEmail', onboardingData.email);
             localStorage.removeItem('registrationData');
+            setLoading(false);
           } else {
-            console.log('Payment confirmed but user not found in users table, needs manual processing');
+            console.log('[PAYMENT-SUCCESS] Payment confirmed but user not found in users table, needs manual processing');
             setLoading(false);
           }
-        } else if (pollingCount < 15) {
-          // Keep polling for webhook to process payment
-          console.log(`Polling for payment confirmation... attempt ${pollingCount + 1}`);
-          setTimeout(() => {
-            setPollingCount(prev => prev + 1);
-            checkUserCreation();
-          }, 3000);
-          return;
         } else {
-          console.log('Polling timeout, payment not confirmed by webhook');
-          setLoading(false);
+          // Keep polling for webhook to process payment
+          console.log('[PAYMENT-SUCCESS] Payment not confirmed yet, retrying in 3 seconds...');
+          setTimeout(checkUserCreation, 3000);
         }
       } catch (error) {
-        console.error('Error checking user creation:', error);
+        console.error('[PAYMENT-SUCCESS] Error checking user creation:', error);
         setLoading(false);
       }
     };
 
     checkUserCreation();
-  }, [sessionId, navigate, toast, pollingCount]);
+  }, [sessionId, navigate, toast]);
 
   const handleTryAgain = async () => {
     if (!sessionId) return;
 
     setProcessingManually(true);
     try {
-      console.log('Triggering manual payment processing for session:', sessionId);
+      console.log('[PAYMENT-SUCCESS] Triggering manual payment processing for session:', sessionId);
       
       const { data, error } = await supabase.functions.invoke('process-payment-manually', {
         body: { sessionId }
       });
 
       if (error) {
+        console.error('[PAYMENT-SUCCESS] Manual processing error:', error);
         throw new Error(error.message || 'Erro ao processar pagamento manualmente');
       }
 
+      console.log('[PAYMENT-SUCCESS] Manual processing response:', data);
+
       if (data.success) {
-        console.log('Manual processing successful:', data);
+        console.log('[PAYMENT-SUCCESS] Manual processing successful:', data);
         toast({
           title: "Conta criada com sucesso!",
           description: "Seu trial de 7 dias começou!",
@@ -137,7 +127,7 @@ export default function PaymentSuccess() {
         throw new Error(data.error || 'Erro desconhecido no processamento manual');
       }
     } catch (error) {
-      console.error('Error in manual processing:', error);
+      console.error('[PAYMENT-SUCCESS] Error in manual processing:', error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Erro ao processar pagamento. Tente novamente.",
@@ -167,9 +157,6 @@ export default function PaymentSuccess() {
                 <p className="text-[#64748B] text-sm mb-4">
                   Aguarde enquanto confirmamos seu pagamento e criamos sua conta.
                 </p>
-                <div className="text-xs text-[#64748B] mb-4">
-                  Tentativa {pollingCount + 1} de 15
-                </div>
                 <div className="flex justify-center space-x-1">
                   <div className="w-2 h-2 bg-[#61710C] rounded-full animate-pulse"></div>
                   <div className="w-2 h-2 bg-[#61710C] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>

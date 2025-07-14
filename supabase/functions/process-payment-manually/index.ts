@@ -9,12 +9,14 @@ const corsHeaders = {
 };
 
 const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[MANUAL-PROCESS] ${step}${detailsStr}`);
+  const timestamp = new Date().toISOString();
+  const detailsStr = details ? ` - ${JSON.stringify(details, null, 2)}` : '';
+  console.log(`[${timestamp}] [MANUAL-PROCESS] ${step}${detailsStr}`);
 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
+    logStep("⚡ CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -25,31 +27,40 @@ serve(async (req) => {
   );
 
   try {
-    logStep("=== MANUAL PROCESSING STARTED ===");
+    logStep("🚀 === MANUAL PROCESSING STARTED ===");
     
     const { sessionId } = await req.json();
     if (!sessionId) {
+      logStep("❌ No session ID provided");
       throw new Error("Session ID is required");
     }
 
-    logStep("Processing session", { sessionId });
+    logStep("🎯 Processing session", { sessionId });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
+      logStep("❌ Stripe secret key not configured");
       throw new Error("Stripe secret key not configured");
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     // Verify payment status in Stripe
+    logStep("🔍 Retrieving Stripe session");
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    logStep("Stripe session retrieved", { 
+    logStep("💳 Stripe session retrieved", { 
       sessionId: session.id, 
       paymentStatus: session.payment_status,
-      customerEmail: session.customer_email
+      customerEmail: session.customer_email,
+      mode: session.mode,
+      amountTotal: session.amount_total
     });
 
     if (session.payment_status !== 'paid') {
+      logStep("❌ Payment not completed in Stripe", { 
+        paymentStatus: session.payment_status,
+        expectedStatus: 'paid'
+      });
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Payment not completed in Stripe",
@@ -61,6 +72,7 @@ serve(async (req) => {
     }
 
     // Get onboarding data
+    logStep("📋 Fetching onboarding data");
     const { data: onboardingData, error: onboardingError } = await supabase
       .from('onboarding')
       .select('*')
@@ -68,7 +80,10 @@ serve(async (req) => {
       .single();
 
     if (onboardingError || !onboardingData) {
-      logStep("Onboarding data not found", { error: onboardingError });
+      logStep("⚠️ Onboarding data not found, trying email fallback", { 
+        error: onboardingError?.message,
+        customerEmail: session.customer_email
+      });
       
       // Try to find by email if available
       if (session.customer_email) {
@@ -81,6 +96,10 @@ serve(async (req) => {
           .single();
           
         if (fallbackError || !fallbackData) {
+          logStep("❌ Email fallback failed", { 
+            error: fallbackError?.message,
+            email: session.customer_email
+          });
           return new Response(JSON.stringify({ 
             success: false, 
             error: "Onboarding data not found" 
@@ -91,14 +110,21 @@ serve(async (req) => {
         }
         
         // Update with correct session_id
-        await supabase
+        const { error: updateError } = await supabase
           .from('onboarding')
           .update({ stripe_session_id: sessionId })
           .eq('id', fallbackData.id);
           
+        if (updateError) {
+          logStep("⚠️ Failed to update session_id", { error: updateError.message });
+        } else {
+          logStep("✅ Updated onboarding with session_id");
+        }
+          
         onboardingData = { ...fallbackData, stripe_session_id: sessionId };
-        logStep("Found onboarding via email fallback");
+        logStep("✅ Found onboarding via email fallback", { onboardingId: fallbackData.id });
       } else {
+        logStep("❌ No customer email for fallback");
         return new Response(JSON.stringify({ 
           success: false, 
           error: "Onboarding data not found" 
@@ -109,17 +135,31 @@ serve(async (req) => {
       }
     }
 
+    logStep("📋 Onboarding data found", {
+      onboardingId: onboardingData.id,
+      email: onboardingData.email,
+      name: onboardingData.name,
+      paymentConfirmed: onboardingData.payment_confirmed
+    });
+
     // Check if user already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser, error: existingUserError } = await supabase
       .from('users')
-      .select('id, user_id')
+      .select('id, user_id, email')
       .eq('email', onboardingData.email)
       .single();
 
+    if (existingUserError && existingUserError.code !== 'PGRST116') {
+      logStep("❌ Error checking existing user", { error: existingUserError.message });
+    }
+
     if (existingUser) {
-      logStep("User already exists, updating payment confirmation");
+      logStep("👤 User already exists, updating payment confirmation", {
+        userId: existingUser.id,
+        email: existingUser.email
+      });
       
-      await supabase
+      const { error: updateError } = await supabase
         .from('onboarding')
         .update({ 
           payment_confirmed: true,
@@ -127,10 +167,17 @@ serve(async (req) => {
         })
         .eq('id', onboardingData.id);
 
+      if (updateError) {
+        logStep("❌ Failed to update payment confirmation", { error: updateError.message });
+      } else {
+        logStep("✅ Payment confirmation updated for existing user");
+      }
+
       return new Response(JSON.stringify({ 
         success: true, 
         message: "User already exists, payment confirmed",
-        userId: existingUser.id
+        userId: existingUser.id,
+        email: existingUser.email
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -138,7 +185,12 @@ serve(async (req) => {
     }
 
     // Create auth user
-    logStep("Creating auth user");
+    logStep("👨‍💼 Creating auth user", {
+      email: onboardingData.email,
+      phone: onboardingData.phone,
+      name: onboardingData.name
+    });
+    
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: onboardingData.email,
       phone: onboardingData.phone,
@@ -150,7 +202,10 @@ serve(async (req) => {
     });
 
     if (authError || !authUser.user) {
-      logStep("Failed to create auth user", { error: authError });
+      logStep("💥 Failed to create auth user", { 
+        error: authError?.message,
+        errorCode: authError?.status
+      });
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Failed to create auth user",
@@ -161,10 +216,20 @@ serve(async (req) => {
       });
     }
 
+    logStep("✅ Auth user created successfully", { 
+      authUserId: authUser.user.id,
+      email: authUser.user.email
+    });
+
     // Calculate trial dates
     const trialStart = new Date();
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 7);
+
+    logStep("📅 Trial dates calculated", {
+      trialStart: trialStart.toISOString(),
+      trialEnd: trialEnd.toISOString()
+    });
 
     // Create user in public.users table
     const { data: newUser, error: userError } = await supabase
@@ -184,9 +249,19 @@ serve(async (req) => {
       .single();
 
     if (userError) {
-      logStep("Failed to create user", { error: userError });
+      logStep("💥 Failed to create user in public.users table", { 
+        error: userError.message,
+        errorCode: userError.code
+      });
+      
       // Clean up auth user
-      await supabase.auth.admin.deleteUser(authUser.user.id);
+      try {
+        await supabase.auth.admin.deleteUser(authUser.user.id);
+        logStep("🧹 Cleaned up auth user after failed user creation");
+      } catch (cleanupError) {
+        logStep("⚠️ Failed to cleanup auth user", { error: cleanupError });
+      }
+      
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Failed to create user",
@@ -197,8 +272,14 @@ serve(async (req) => {
       });
     }
 
+    logStep("✅ User created successfully in public.users table", {
+      userId: newUser.id,
+      authUserId: authUser.user.id,
+      email: onboardingData.email
+    });
+
     // Update onboarding status
-    await supabase
+    const { error: updateError } = await supabase
       .from('onboarding')
       .update({ 
         payment_confirmed: true,
@@ -208,9 +289,17 @@ serve(async (req) => {
       })
       .eq('id', onboardingData.id);
 
-    logStep("=== MANUAL PROCESSING COMPLETED ===", {
+    if (updateError) {
+      logStep("⚠️ Failed to update onboarding (non-critical)", { error: updateError.message });
+    } else {
+      logStep("✅ Onboarding updated with payment_confirmed = true");
+    }
+
+    logStep("🎊 === MANUAL PROCESSING COMPLETED ===", {
       userId: newUser.id,
-      email: onboardingData.email
+      authUserId: authUser.user.id,
+      email: onboardingData.email,
+      paymentConfirmed: true
     });
 
     return new Response(JSON.stringify({ 
@@ -225,7 +314,10 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("=== MANUAL PROCESSING ERROR ===", { message: errorMessage });
+    logStep("💥 === MANUAL PROCESSING ERROR ===", { 
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return new Response(JSON.stringify({ 
       success: false, 
       error: errorMessage 
