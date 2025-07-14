@@ -7,6 +7,8 @@ import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Content-Type": "application/json",
 };
 
 const logStep = (step: string, details?: any) => {
@@ -50,27 +52,38 @@ async function verifyStripeSignature(
     }
     
     const signedPayload = `${timestamp}.${payload}`;
-    const expectedHashBuffer = await crypto.subtle.importKey(
-      "raw", 
-      Uint8Array.from(atob(hash), c => c.charCodeAt(0)), 
-      { name: "HMAC", hash: "SHA-256" }, 
-      false, 
-      ["verify"]
+    const expectedHashBytes = new Uint8Array(
+      Array.from(atob(hash)).map(char => char.charCodeAt(0))
     );
     
-    const isValid = await crypto.subtle.verify(
+    const actualHashBuffer = await crypto.subtle.sign(
       "HMAC",
       key,
-      await crypto.subtle.sign("HMAC", key, encoder.encode(signedPayload)),
-      await crypto.subtle.exportKey("raw", expectedHashBuffer)
+      encoder.encode(signedPayload)
     );
+    const actualHashBytes = new Uint8Array(actualHashBuffer);
     
-    logStep("✅ Signature verification result", { 
-      isValid,
+    // Compare hashes
+    if (expectedHashBytes.length !== actualHashBytes.length) {
+      logStep("❌ Hash length mismatch", { 
+        expected: expectedHashBytes.length,
+        actual: actualHashBytes.length
+      });
+      return false;
+    }
+    
+    for (let i = 0; i < expectedHashBytes.length; i++) {
+      if (expectedHashBytes[i] !== actualHashBytes[i]) {
+        logStep("❌ Hash comparison failed at byte", { index: i });
+        return false;
+      }
+    }
+    
+    logStep("✅ Signature verification successful", { 
       timestamp,
       hashLength: hash.length
     });
-    return isValid;
+    return true;
   } catch (error) {
     logStep("💥 Signature verification error", { 
       error: error.message,
@@ -83,7 +96,10 @@ async function verifyStripeSignature(
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     logStep("⚡ CORS preflight request");
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 200
+    });
   }
 
   const supabase = createClient(
@@ -112,7 +128,12 @@ serve(async (req) => {
     
     if (!stripeKey || !webhookSecret) {
       logStep("❌ Missing Stripe configuration");
-      throw new Error("Missing Stripe configuration");
+      return new Response(JSON.stringify({ 
+        error: "Stripe configuration missing" 
+      }), {
+        headers: corsHeaders,
+        status: 500,
+      });
     }
 
     const signature = req.headers.get("stripe-signature");
@@ -120,7 +141,12 @@ serve(async (req) => {
       logStep("❌ Missing Stripe signature header", {
         headers: Object.fromEntries(req.headers.entries())
       });
-      throw new Error("Missing Stripe signature");
+      return new Response(JSON.stringify({ 
+        error: "Missing Stripe signature" 
+      }), {
+        headers: corsHeaders,
+        status: 400,
+      });
     }
 
     const body = await req.text();
@@ -139,7 +165,12 @@ serve(async (req) => {
           hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
         )
       });
-      throw new Error("Invalid webhook signature");
+      return new Response(JSON.stringify({ 
+        error: "Invalid signature" 
+      }), {
+        headers: corsHeaders,
+        status: 401,
+      });
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
@@ -209,7 +240,7 @@ serve(async (req) => {
               logStep("✅ Updated onboarding with session_id", { onboardingId: fallbackData.id });
             }
               
-            onboardingData = { ...fallbackData, stripe_session_id: session.id };
+            Object.assign(fallbackData, { stripe_session_id: session.id });
             logStep("✅ Found onboarding via email fallback", { onboardingId: fallbackData.id });
           } else {
             logStep("❌ No customer email available for fallback");
@@ -489,7 +520,7 @@ serve(async (req) => {
     });
     
     return new Response(JSON.stringify({ received: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: corsHeaders,
       status: 200,
     });
 
@@ -501,8 +532,11 @@ serve(async (req) => {
       errorType: error instanceof Error ? error.constructor.name : typeof error
     });
     
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ 
+      error: "Webhook processing failed",
+      details: errorMessage 
+    }), {
+      headers: corsHeaders,
       status: 500,
     });
   }

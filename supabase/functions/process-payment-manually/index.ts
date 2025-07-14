@@ -6,6 +6,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Content-Type": "application/json",
 };
 
 const logStep = (step: string, details?: any) => {
@@ -15,9 +17,25 @@ const logStep = (step: string, details?: any) => {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     logStep("⚡ CORS preflight request");
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 200
+    });
+  }
+
+  // Validate request method
+  if (req.method !== "POST") {
+    logStep("❌ Invalid request method", { method: req.method });
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: "Method not allowed" 
+    }), {
+      headers: corsHeaders,
+      status: 405,
+    });
   }
 
   const supabase = createClient(
@@ -29,10 +47,33 @@ serve(async (req) => {
   try {
     logStep("🚀 === MANUAL PROCESSING STARTED ===");
     
-    const { sessionId } = await req.json();
-    if (!sessionId) {
-      logStep("❌ No session ID provided");
-      throw new Error("Session ID is required");
+    // Validate request body
+    let requestBody;
+    try {
+      const requestText = await req.text();
+      logStep("📨 Raw request body", { body: requestText.substring(0, 500) });
+      requestBody = JSON.parse(requestText);
+    } catch (parseError) {
+      logStep("❌ Failed to parse request body", { error: parseError.message });
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Invalid JSON in request body" 
+      }), {
+        headers: corsHeaders,
+        status: 400,
+      });
+    }
+
+    const { sessionId } = requestBody;
+    if (!sessionId || typeof sessionId !== 'string') {
+      logStep("❌ No valid session ID provided", { sessionId });
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Session ID is required and must be a string" 
+      }), {
+        headers: corsHeaders,
+        status: 400,
+      });
     }
 
     logStep("🎯 Processing session", { sessionId });
@@ -40,14 +81,36 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
       logStep("❌ Stripe secret key not configured");
-      throw new Error("Stripe secret key not configured");
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Stripe configuration error" 
+      }), {
+        headers: corsHeaders,
+        status: 500,
+      });
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     // Verify payment status in Stripe
     logStep("🔍 Retrieving Stripe session");
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    let session;
+    try {
+      session = await stripe.checkout.sessions.retrieve(sessionId);
+    } catch (stripeError) {
+      logStep("❌ Failed to retrieve Stripe session", { 
+        error: stripeError.message,
+        sessionId 
+      });
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Session not found in Stripe" 
+      }), {
+        headers: corsHeaders,
+        status: 404,
+      });
+    }
+
     logStep("💳 Stripe session retrieved", { 
       sessionId: session.id, 
       paymentStatus: session.payment_status,
@@ -63,10 +126,10 @@ serve(async (req) => {
       });
       return new Response(JSON.stringify({ 
         success: false, 
-        error: "Payment not completed in Stripe",
+        error: "Payment not completed",
         paymentStatus: session.payment_status
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
         status: 400,
       });
     }
@@ -102,9 +165,9 @@ serve(async (req) => {
           });
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "Onboarding data not found" 
+            error: "Onboarding data not found for this payment" 
           }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: corsHeaders,
             status: 404,
           });
         }
@@ -121,15 +184,15 @@ serve(async (req) => {
           logStep("✅ Updated onboarding with session_id");
         }
           
-        onboardingData = { ...fallbackData, stripe_session_id: sessionId };
+        Object.assign(fallbackData, { stripe_session_id: sessionId });
         logStep("✅ Found onboarding via email fallback", { onboardingId: fallbackData.id });
       } else {
         logStep("❌ No customer email for fallback");
         return new Response(JSON.stringify({ 
           success: false, 
-          error: "Onboarding data not found" 
+          error: "No onboarding data found" 
         }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: corsHeaders,
           status: 404,
         });
       }
@@ -179,7 +242,7 @@ serve(async (req) => {
         userId: existingUser.id,
         email: existingUser.email
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
         status: 200,
       });
     }
@@ -208,10 +271,10 @@ serve(async (req) => {
       });
       return new Response(JSON.stringify({ 
         success: false, 
-        error: "Failed to create auth user",
+        error: "Failed to create user account",
         details: authError?.message
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
         status: 500,
       });
     }
@@ -264,10 +327,10 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         success: false, 
-        error: "Failed to create user",
+        error: "Failed to create user account",
         details: userError.message
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
         status: 500,
       });
     }
@@ -308,7 +371,7 @@ serve(async (req) => {
       userId: newUser.id,
       email: onboardingData.email
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: corsHeaders,
       status: 200,
     });
 
@@ -320,9 +383,10 @@ serve(async (req) => {
     });
     return new Response(JSON.stringify({ 
       success: false, 
-      error: errorMessage 
+      error: "Internal server error",
+      details: errorMessage
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: corsHeaders,
       status: 500,
     });
   }
