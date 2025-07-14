@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle, MessageCircle, ArrowRight, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
+import { CheckCircle, MessageCircle, ArrowRight, RefreshCw, AlertTriangle } from 'lucide-react';
 import { ConfettiRain } from '@/components/ConfettiRain';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -58,11 +58,6 @@ export default function PaymentSuccess() {
         console.error('[PAYMENT-SUCCESS] Max attempts reached, stopping polling');
         setLoading(false);
         setError('Tempo limite excedido. Tente processar manualmente.');
-        toast({
-          title: "Tempo Limite",
-          description: "Não foi possível confirmar automaticamente. Use o botão 'Tentar Novamente'.",
-          variant: "destructive"
-        });
         return;
       }
 
@@ -221,9 +216,6 @@ export default function PaymentSuccess() {
                 <p className="text-[#64748B] text-sm mb-4">
                   Aguarde enquanto confirmamos seu pagamento e criamos sua conta.
                 </p>
-                <p className="text-xs text-[#64748B] mb-4">
-                  Tentativa {attemptsRef.current} de {maxAttemptsRef.current}
-                </p>
                 <div className="flex justify-center space-x-1">
                   <div className="w-2 h-2 bg-[#61710C] rounded-full animate-pulse"></div>
                   <div className="w-2 h-2 bg-[#61710C] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
@@ -249,7 +241,7 @@ export default function PaymentSuccess() {
                 {error ? (
                   <AlertTriangle className="w-12 h-12 text-red-600" />
                 ) : (
-                  <Clock className="w-12 h-12 text-yellow-600" />
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600"></div>
                 )}
               </div>
             </div>
@@ -365,7 +357,7 @@ export default function PaymentSuccess() {
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <Clock className="w-5 h-5 text-blue-600" />
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
                   <h3 className="font-semibold text-blue-800">Trial Gratuito Iniciado!</h3>
                 </div>
                 <p className="text-sm text-blue-700">

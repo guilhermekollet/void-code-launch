@@ -2,14 +2,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Content-Type": "application/json",
-};
 
 const logStep = (step: string, details?: any) => {
   const timestamp = new Date().toISOString();
@@ -17,91 +9,7 @@ const logStep = (step: string, details?: any) => {
   console.log(`[${timestamp}] [STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
 
-async function verifyStripeSignature(
-  payload: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  try {
-    logStep("🔐 Starting signature verification", { 
-      signatureLength: signature.length,
-      payloadLength: payload.length,
-      secretPrefix: secret.substring(0, 10) + "..."
-    });
-    
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
-    
-    const parts = signature.split(',');
-    const timestamp = parts.find(p => p.startsWith('t='))?.split('=')[1];
-    const hash = parts.find(p => p.startsWith('v1='))?.split('=')[1];
-    
-    if (!timestamp || !hash) {
-      logStep("❌ Missing timestamp or hash in signature", { 
-        signature,
-        timestamp: !!timestamp, 
-        hash: !!hash 
-      });
-      return false;
-    }
-    
-    const signedPayload = `${timestamp}.${payload}`;
-    const expectedHashBytes = new Uint8Array(
-      Array.from(atob(hash)).map(char => char.charCodeAt(0))
-    );
-    
-    const actualHashBuffer = await crypto.subtle.sign(
-      "HMAC",
-      key,
-      encoder.encode(signedPayload)
-    );
-    const actualHashBytes = new Uint8Array(actualHashBuffer);
-    
-    // Compare hashes
-    if (expectedHashBytes.length !== actualHashBytes.length) {
-      logStep("❌ Hash length mismatch", { 
-        expected: expectedHashBytes.length,
-        actual: actualHashBytes.length
-      });
-      return false;
-    }
-    
-    for (let i = 0; i < expectedHashBytes.length; i++) {
-      if (expectedHashBytes[i] !== actualHashBytes[i]) {
-        logStep("❌ Hash comparison failed at byte", { index: i });
-        return false;
-      }
-    }
-    
-    logStep("✅ Signature verification successful", { 
-      timestamp,
-      hashLength: hash.length
-    });
-    return true;
-  } catch (error) {
-    logStep("💥 Signature verification error", { 
-      error: error.message,
-      errorType: error.constructor.name
-    });
-    return false;
-  }
-}
-
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    logStep("⚡ CORS preflight request");
-    return new Response(null, { 
-      headers: corsHeaders,
-      status: 200
-    });
-  }
-
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -109,190 +17,144 @@ serve(async (req) => {
   );
 
   try {
-    logStep("🚀 === WEBHOOK STARTED ===", {
-      method: req.method,
-      url: req.url,
-      userAgent: req.headers.get("user-agent"),
-      contentType: req.headers.get("content-type")
-    });
+    logStep("🎯 === STRIPE WEBHOOK STARTED ===");
     
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    
-    logStep("🔧 Environment check", { 
-      hasStripeKey: !!stripeKey, 
-      hasWebhookSecret: !!webhookSecret,
-      webhookSecretPrefix: webhookSecret?.substring(0, 15) + "...",
-      supabaseUrl: Deno.env.get("SUPABASE_URL")?.substring(0, 30) + "..."
-    });
-    
-    if (!stripeKey || !webhookSecret) {
-      logStep("❌ Missing Stripe configuration");
-      return new Response(JSON.stringify({ 
-        error: "Stripe configuration missing" 
-      }), {
-        headers: corsHeaders,
-        status: 500,
-      });
-    }
-
-    const signature = req.headers.get("stripe-signature");
+    const signature = req.headers.get("Stripe-Signature");
     if (!signature) {
-      logStep("❌ Missing Stripe signature header", {
-        headers: Object.fromEntries(req.headers.entries())
-      });
-      return new Response(JSON.stringify({ 
-        error: "Missing Stripe signature" 
-      }), {
-        headers: corsHeaders,
-        status: 400,
-      });
+      logStep("❌ Missing Stripe signature");
+      return new Response("Missing Stripe signature", { status: 400 });
     }
 
     const body = await req.text();
-    logStep("📨 Received payload", { 
-      bodyLength: body.length,
-      bodyPreview: body.substring(0, 200) + "...",
-      signature: signature.substring(0, 50) + "..."
-    });
-
-    // Verify webhook signature
-    const isValid = await verifyStripeSignature(body, signature, webhookSecret);
-    if (!isValid) {
-      logStep("🚫 Invalid webhook signature - rejecting request", {
-        signature: signature.substring(0, 50) + "...",
-        bodyHash: await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body)).then(
-          hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-        )
-      });
-      return new Response(JSON.stringify({ 
-        error: "Invalid signature" 
-      }), {
-        headers: corsHeaders,
-        status: 401,
-      });
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      logStep("❌ STRIPE_WEBHOOK_SECRET not configured");
+      return new Response("Webhook secret not configured", { status: 500 });
     }
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-    const event = JSON.parse(body);
-    
-    logStep("🎯 Processing event", { 
-      type: event.type, 
-      id: event.id,
-      created: new Date(event.created * 1000).toISOString(),
-      livemode: event.livemode
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+      apiVersion: "2023-10-16",
     });
 
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object;
-        logStep("💳 Processing checkout session", { 
-          sessionId: session.id,
-          paymentStatus: session.payment_status,
-          customerEmail: session.customer_email,
-          mode: session.mode,
-          amountTotal: session.amount_total,
-          currency: session.currency
-        });
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      logStep("✅ Webhook signature verified", { eventType: event.type, eventId: event.id });
+    } catch (err) {
+      logStep("❌ Webhook signature verification failed", { error: err.message });
+      return new Response(`Webhook signature verification failed: ${err.message}`, { status: 400 });
+    }
 
-        // Get onboarding data
-        const { data: onboardingData, error: onboardingError } = await supabase
-          .from('onboarding')
-          .select('*')
-          .eq('stripe_session_id', session.id)
+    logStep("🎫 Processing webhook event", { 
+      type: event.type, 
+      id: event.id,
+      created: new Date(event.created * 1000).toISOString()
+    });
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      
+      logStep("💳 Processing checkout.session.completed", {
+        sessionId: session.id,
+        customerEmail: session.customer_email,
+        paymentStatus: session.payment_status,
+        mode: session.mode,
+        amountTotal: session.amount_total
+      });
+
+      if (session.payment_status === "paid") {
+        // Buscar dados do onboarding pelo session_id
+        let { data: onboardingData, error: onboardingError } = await supabase
+          .from("onboarding")
+          .select("*")
+          .eq("stripe_session_id", session.id)
           .single();
 
-        if (onboardingError || !onboardingData) {
-          logStep("⚠️ Onboarding data not found, trying fallback", { 
-            sessionId: session.id, 
-            error: onboardingError?.message,
-            customerEmail: session.customer_email
+        if (onboardingError && session.customer_email) {
+          logStep("⚠️ Onboarding not found by session_id, trying email fallback", { 
+            sessionId: session.id,
+            customerEmail: session.customer_email,
+            error: onboardingError.message
           });
           
-          // Fallback: try to find by email if available
-          if (session.customer_email) {
-            logStep("🔍 Trying fallback search by email", { email: session.customer_email });
-            const { data: fallbackData, error: fallbackError } = await supabase
-              .from('onboarding')
-              .select('*')
-              .eq('email', session.customer_email)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-              
-            if (fallbackError || !fallbackData) {
-              logStep("❌ Fallback search failed", { 
-                error: fallbackError?.message,
-                email: session.customer_email
-              });
-              break;
-            }
+          // Fallback: buscar por email
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("onboarding")
+            .select("*")
+            .eq("email", session.customer_email)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
             
-            // Update with correct session_id
-            const { error: updateError } = await supabase
-              .from('onboarding')
-              .update({ stripe_session_id: session.id })
-              .eq('id', fallbackData.id);
-              
-            if (updateError) {
-              logStep("❌ Failed to update session_id", { error: updateError.message });
-            } else {
-              logStep("✅ Updated onboarding with session_id", { onboardingId: fallbackData.id });
-            }
-              
-            Object.assign(fallbackData, { stripe_session_id: session.id });
-            logStep("✅ Found onboarding via email fallback", { onboardingId: fallbackData.id });
+          if (fallbackError) {
+            logStep("❌ Email fallback also failed", { 
+              email: session.customer_email,
+              error: fallbackError.message
+            });
+            return new Response("Onboarding data not found", { status: 404 });
+          }
+          
+          onboardingData = fallbackData;
+          
+          // Atualizar com o session_id correto
+          const { error: updateError } = await supabase
+            .from("onboarding")
+            .update({ stripe_session_id: session.id })
+            .eq("id", fallbackData.id);
+            
+          if (updateError) {
+            logStep("⚠️ Failed to update session_id in onboarding", { error: updateError.message });
           } else {
-            logStep("❌ No customer email available for fallback");
-            break;
+            logStep("✅ Updated onboarding with correct session_id");
           }
         }
 
-        logStep("📋 Found onboarding data", { 
+        if (!onboardingData) {
+          logStep("❌ No onboarding data found", { sessionId: session.id });
+          return new Response("Onboarding data not found", { status: 404 });
+        }
+
+        logStep("📋 Found onboarding data", {
           onboardingId: onboardingData.id,
           email: onboardingData.email,
           name: onboardingData.name,
-          selectedPlan: onboardingData.selected_plan,
           paymentConfirmed: onboardingData.payment_confirmed
         });
 
-        // Check if user already exists
+        // Atualizar payment_confirmed para true
+        const { error: updatePaymentError } = await supabase
+          .from("onboarding")
+          .update({ 
+            payment_confirmed: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", onboardingData.id);
+
+        if (updatePaymentError) {
+          logStep("❌ Failed to update payment_confirmed", { error: updatePaymentError.message });
+          return new Response("Failed to update payment status", { status: 500 });
+        }
+
+        logStep("✅ Updated payment_confirmed to true", { onboardingId: onboardingData.id });
+
+        // Verificar se usuário já existe
         const { data: existingUser, error: existingUserError } = await supabase
-          .from('users')
-          .select('id, user_id, email')
-          .eq('email', onboardingData.email)
+          .from("users")
+          .select("id, email")
+          .eq("email", onboardingData.email)
           .single();
 
         if (existingUserError && existingUserError.code !== 'PGRST116') {
-          logStep("❌ Error checking existing user", { error: existingUserError.message });
+          logStep("⚠️ Error checking existing user", { error: existingUserError.message });
         }
 
         if (existingUser) {
-          logStep("👤 User already exists", { 
-            userId: existingUser.id, 
-            email: existingUser.email,
-            authUserId: existingUser.user_id
-          });
-          
-          // Just update payment confirmation
-          const { error: updateError } = await supabase
-            .from('onboarding')
-            .update({ 
-              payment_confirmed: true,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', onboardingData.id);
-            
-          if (updateError) {
-            logStep("❌ Failed to update payment confirmation", { error: updateError.message });
-          } else {
-            logStep("✅ Updated existing user payment confirmation");
-          }
-          break;
+          logStep("👤 User already exists", { userId: existingUser.id, email: existingUser.email });
+          return new Response("User already exists", { status: 200 });
         }
 
-        // Create auth user
-        logStep("👨‍💼 Creating auth user", { 
+        // Criar usuário auth
+        logStep("👨‍💼 Creating auth user", {
           email: onboardingData.email,
           phone: onboardingData.phone,
           name: onboardingData.name
@@ -311,10 +173,9 @@ serve(async (req) => {
         if (authError || !authUser.user) {
           logStep("💥 Failed to create auth user", { 
             error: authError?.message,
-            errorCode: authError?.status,
-            email: onboardingData.email
+            errorCode: authError?.status
           });
-          break;
+          return new Response("Failed to create auth user", { status: 500 });
         }
 
         logStep("✅ Auth user created successfully", { 
@@ -322,27 +183,26 @@ serve(async (req) => {
           email: authUser.user.email
         });
 
-        // Calculate trial dates (7 days from now)
+        // Calcular datas do trial
         const trialStart = new Date();
         const trialEnd = new Date();
         trialEnd.setDate(trialEnd.getDate() + 7);
 
-        logStep("📅 Trial dates calculated", { 
+        logStep("📅 Trial dates calculated", {
           trialStart: trialStart.toISOString(),
-          trialEnd: trialEnd.toISOString(),
-          durationDays: 7
+          trialEnd: trialEnd.toISOString()
         });
 
-        // Create user in public.users table
+        // Criar usuário na tabela users
         const { data: newUser, error: userError } = await supabase
-          .from('users')
+          .from("users")
           .insert([{
             user_id: authUser.user.id,
             name: onboardingData.name,
             email: onboardingData.email,
             phone_number: onboardingData.phone,
             plan_type: onboardingData.selected_plan,
-            stripe_session_id: onboardingData.stripe_session_id,
+            stripe_session_id: session.id,
             trial_start: trialStart.toISOString(),
             trial_end: trialEnd.toISOString(),
             completed_onboarding: true
@@ -353,191 +213,60 @@ serve(async (req) => {
         if (userError) {
           logStep("💥 Failed to create user in public.users table", { 
             error: userError.message,
-            errorCode: userError.code,
-            errorDetails: userError.details
+            errorCode: userError.code
           });
           
-          // Clean up auth user
+          // Limpar usuário auth em caso de erro
           try {
             await supabase.auth.admin.deleteUser(authUser.user.id);
             logStep("🧹 Cleaned up auth user after failed user creation");
           } catch (cleanupError) {
             logStep("⚠️ Failed to cleanup auth user", { error: cleanupError });
           }
-          break;
+          
+          return new Response("Failed to create user", { status: 500 });
         }
 
-        logStep("✅ User created successfully in public.users table", { 
+        logStep("✅ User created successfully", {
           userId: newUser.id,
           authUserId: authUser.user.id,
-          email: onboardingData.email,
-          planType: onboardingData.selected_plan
+          email: onboardingData.email
         });
 
-        // Update onboarding status - CRITICAL STEP
-        const { error: updateError } = await supabase
-          .from('onboarding')
+        // Atualizar onboarding com datas do trial
+        const { error: updateTrialError } = await supabase
+          .from("onboarding")
           .update({ 
-            payment_confirmed: true,
             trial_start_date: trialStart.toISOString(),
             trial_end_date: trialEnd.toISOString(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', onboardingData.id);
+          .eq("id", onboardingData.id);
 
-        if (updateError) {
-          logStep("💥 CRITICAL: Failed to update onboarding payment_confirmed", { 
-            error: updateError.message,
-            onboardingId: onboardingData.id
+        if (updateTrialError) {
+          logStep("⚠️ Failed to update trial dates in onboarding (non-critical)", { 
+            error: updateTrialError.message 
           });
         } else {
-          logStep("🎉 CRITICAL SUCCESS: Onboarding updated with payment_confirmed = true", {
-            onboardingId: onboardingData.id,
-            paymentConfirmed: true
-          });
+          logStep("✅ Updated trial dates in onboarding");
         }
 
-        logStep("🎊 === CHECKOUT COMPLETED SUCCESSFULLY ===", {
+        logStep("🎊 === WEBHOOK PROCESSING COMPLETED ===", {
           userId: newUser.id,
           authUserId: authUser.user.id,
           email: onboardingData.email,
-          paymentConfirmed: true,
-          trialStart: trialStart.toISOString(),
-          trialEnd: trialEnd.toISOString()
+          paymentConfirmed: true
         });
-        break;
       }
-
-      case "customer.subscription.created":
-      case "invoice.payment_succeeded": {
-        const subscription = event.type === "customer.subscription.created" 
-          ? event.data.object 
-          : event.data.object.subscription;
-        
-        if (!subscription) {
-          logStep("⚠️ No subscription data found in event");
-          break;
-        }
-
-        logStep("📊 Processing subscription event", { 
-          type: event.type, 
-          subscriptionId: typeof subscription === 'string' ? subscription : subscription.id,
-          status: typeof subscription === 'object' ? subscription.status : 'unknown'
-        });
-
-        // Get full subscription if we only have ID
-        const fullSubscription = typeof subscription === 'string' 
-          ? await stripe.subscriptions.retrieve(subscription)
-          : subscription;
-
-        const customer = await stripe.customers.retrieve(fullSubscription.customer);
-        if (customer.deleted || !customer.email) {
-          logStep("⚠️ Customer deleted or no email", { 
-            customerId: fullSubscription.customer,
-            deleted: customer.deleted
-          });
-          break;
-        }
-
-        logStep("👤 Processing subscription for customer", {
-          customerId: customer.id,
-          email: customer.email,
-          subscriptionStatus: fullSubscription.status
-        });
-
-        // Update user subscription data
-        const { data: userData, error: userDataError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', customer.email)
-          .single();
-
-        if (userDataError || !userData) {
-          logStep("⚠️ User not found for subscription update", { 
-            email: customer.email,
-            error: userDataError?.message
-          });
-          break;
-        }
-
-        // Determine plan type from price
-        const priceId = fullSubscription.items.data[0].price.id;
-        const price = await stripe.prices.retrieve(priceId);
-        const amount = price.unit_amount || 0;
-        
-        let planType = "basic";
-        if (amount === 2990 || amount === 28990) {
-          planType = "premium";
-        }
-
-        logStep("💰 Determined plan type", { 
-          priceId, 
-          amount, 
-          planType,
-          currency: price.currency
-        });
-
-        // Update subscriptions table
-        const { error: subscriptionUpdateError } = await supabase
-          .from("subscriptions")
-          .upsert({
-            user_id: userData.id,
-            plan_type: planType,
-            status: fullSubscription.status,
-            current_period_start: new Date(fullSubscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(fullSubscription.current_period_end * 1000).toISOString(),
-            stripe_customer_id: fullSubscription.customer,
-            stripe_subscription_id: fullSubscription.id,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' });
-
-        if (subscriptionUpdateError) {
-          logStep("❌ Failed to update subscription", { 
-            error: subscriptionUpdateError.message,
-            userId: userData.id
-          });
-        } else {
-          logStep("✅ Subscription updated successfully", { 
-            userId: userData.id, 
-            planType,
-            status: fullSubscription.status
-          });
-        }
-        break;
-      }
-
-      default:
-        logStep("❓ Unhandled event type", { 
-          type: event.type,
-          id: event.id
-        });
     }
 
-    logStep("🏁 === WEBHOOK COMPLETED SUCCESSFULLY ===", {
-      eventType: event.type,
-      eventId: event.id,
-      processingTime: Date.now()
-    });
-    
-    return new Response(JSON.stringify({ received: true }), {
-      headers: corsHeaders,
-      status: 200,
-    });
-
+    return new Response("OK", { status: 200 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("💥 === WEBHOOK ERROR ===", { 
-      message: errorMessage, 
-      stack: error instanceof Error ? error.stack : undefined,
-      errorType: error instanceof Error ? error.constructor.name : typeof error
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined
     });
-    
-    return new Response(JSON.stringify({ 
-      error: "Webhook processing failed",
-      details: errorMessage 
-    }), {
-      headers: corsHeaders,
-      status: 500,
-    });
+    return new Response(`Webhook error: ${errorMessage}`, { status: 500 });
   }
 });
