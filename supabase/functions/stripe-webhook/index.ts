@@ -31,11 +31,13 @@ serve(async (req) => {
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     
     if (!stripeKey || !webhookSecret) {
+      logStep("ERROR: Missing Stripe configuration", { stripeKey: !!stripeKey, webhookSecret: !!webhookSecret });
       throw new Error("Missing Stripe configuration");
     }
 
     const signature = req.headers.get("stripe-signature");
     if (!signature) {
+      logStep("ERROR: Missing Stripe signature");
       throw new Error("Missing Stripe signature");
     }
 
@@ -47,6 +49,7 @@ serve(async (req) => {
     let event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      logStep("Webhook signature verified successfully", { eventType: event.type, eventId: event.id });
     } catch (err) {
       logStep("Webhook signature verification failed", { error: err.message });
       return new Response(`Webhook Error: ${err.message}`, { status: 400 });
@@ -57,9 +60,14 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        logStep("Processing checkout session", { sessionId: session.id });
+        logStep("Processing checkout session", { 
+          sessionId: session.id,
+          customerId: session.customer,
+          subscriptionId: session.subscription,
+          customerEmail: session.customer_details?.email
+        });
 
-        // Get onboarding data
+        // Get onboarding data using session_id
         const { data: onboardingData, error: onboardingError } = await supabase
           .from('onboarding')
           .select('*')
@@ -67,36 +75,75 @@ serve(async (req) => {
           .single();
 
         if (onboardingError || !onboardingData) {
-          logStep("Onboarding data not found", { sessionId: session.id, error: onboardingError });
-          break;
+          logStep("Onboarding data not found", { 
+            sessionId: session.id, 
+            error: onboardingError?.message || 'No data found' 
+          });
+          // Try to find by customer email as fallback
+          if (session.customer_details?.email) {
+            const { data: fallbackData } = await supabase
+              .from('onboarding')
+              .select('*')
+              .eq('email', session.customer_details.email)
+              .is('payment_confirmed', false)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (fallbackData) {
+              logStep("Found onboarding data by email fallback", { email: session.customer_details.email });
+              // Update with session_id
+              await supabase
+                .from('onboarding')
+                .update({ stripe_session_id: session.id })
+                .eq('id', fallbackData.id);
+              // Use fallback data
+              onboardingData = fallbackData;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
         }
 
-        // Check if user already exists
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('id, user_id')
-          .eq('email', onboardingData.email)
-          .single();
-
-        if (existingUser) {
-          logStep("User already exists", { userId: existingUser.id });
-          break;
-        }
-
-        // Create auth user
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        logStep("Found onboarding data", { 
+          onboardingId: onboardingData.id,
           email: onboardingData.email,
-          phone: onboardingData.phone,
-          user_metadata: {
-            name: onboardingData.name,
-            phone_number: onboardingData.phone
-          },
-          email_confirm: true
+          name: onboardingData.name,
+          currentStage: onboardingData.registration_stage,
+          paymentConfirmed: onboardingData.payment_confirmed
         });
 
-        if (authError || !authUser.user) {
-          logStep("Failed to create auth user", { error: authError });
-          break;
+        // Check if user already exists in auth.users
+        const { data: existingAuthUser } = await supabase.auth.admin.listUsers();
+        const userExists = existingAuthUser.users.find(u => u.email === onboardingData.email);
+
+        if (userExists) {
+          logStep("Auth user already exists", { userId: userExists.id, email: onboardingData.email });
+          
+          // Check if user exists in public.users table
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('id, user_id')
+            .eq('email', onboardingData.email)
+            .single();
+
+          if (existingUser) {
+            logStep("User already exists in public.users table", { userId: existingUser.id });
+            
+            // Update payment confirmation
+            await supabase
+              .from('onboarding')
+              .update({ 
+                payment_confirmed: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', onboardingData.id);
+
+            logStep("Updated payment confirmation for existing user");
+            break;
+          }
         }
 
         // Calculate trial dates (7 days from now)
@@ -104,11 +151,38 @@ serve(async (req) => {
         const trialEnd = new Date();
         trialEnd.setDate(trialEnd.getDate() + 7);
 
+        let authUserId = userExists?.id;
+
+        // Create auth user if doesn't exist
+        if (!userExists) {
+          logStep("Creating new auth user", { email: onboardingData.email });
+          
+          const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+            email: onboardingData.email,
+            phone: onboardingData.phone,
+            user_metadata: {
+              name: onboardingData.name,
+              phone_number: onboardingData.phone
+            },
+            email_confirm: true
+          });
+
+          if (authError || !authUser.user) {
+            logStep("Failed to create auth user", { error: authError?.message });
+            break;
+          }
+
+          authUserId = authUser.user.id;
+          logStep("Auth user created successfully", { authUserId });
+        }
+
         // Create user in public.users table
+        logStep("Creating user in public.users table", { authUserId, email: onboardingData.email });
+        
         const { data: newUser, error: userError } = await supabase
           .from('users')
           .insert([{
-            user_id: authUser.user.id,
+            user_id: authUserId,
             name: onboardingData.name,
             email: onboardingData.email,
             phone_number: onboardingData.phone,
@@ -122,26 +196,38 @@ serve(async (req) => {
           .single();
 
         if (userError) {
-          logStep("Failed to create user", { error: userError });
-          // Clean up auth user
-          await supabase.auth.admin.deleteUser(authUser.user.id);
+          logStep("Failed to create user in public.users", { error: userError.message });
+          // If user creation fails and we created the auth user, clean it up
+          if (!userExists && authUserId) {
+            await supabase.auth.admin.deleteUser(authUserId);
+            logStep("Cleaned up auth user after failed public.users creation");
+          }
           break;
         }
 
-        // Update onboarding status
-        await supabase
+        // Update onboarding status to confirmed
+        const { error: updateError } = await supabase
           .from('onboarding')
           .update({ 
             payment_confirmed: true,
             trial_start_date: trialStart.toISOString(),
-            trial_end_date: trialEnd.toISOString()
+            trial_end_date: trialEnd.toISOString(),
+            registration_stage: 'completed',
+            updated_at: new Date().toISOString()
           })
           .eq('id', onboardingData.id);
 
+        if (updateError) {
+          logStep("Failed to update onboarding status", { error: updateError.message });
+        } else {
+          logStep("Onboarding status updated successfully");
+        }
+
         logStep("User created successfully", { 
           userId: newUser.id, 
-          authUserId: authUser.user.id,
-          email: onboardingData.email 
+          authUserId: authUserId,
+          email: onboardingData.email,
+          planType: onboardingData.selected_plan
         });
         break;
       }
@@ -152,7 +238,10 @@ serve(async (req) => {
           ? event.data.object 
           : event.data.object.subscription;
         
-        if (!subscription) break;
+        if (!subscription) {
+          logStep("No subscription found in event");
+          break;
+        }
 
         logStep("Processing subscription event", { 
           type: event.type, 
@@ -165,7 +254,10 @@ serve(async (req) => {
           : subscription;
 
         const customer = await stripe.customers.retrieve(fullSubscription.customer);
-        if (customer.deleted || !customer.email) break;
+        if (customer.deleted || !customer.email) {
+          logStep("Invalid customer data", { customerId: fullSubscription.customer });
+          break;
+        }
 
         // Update user subscription data
         const { data: userData } = await supabase
@@ -186,7 +278,7 @@ serve(async (req) => {
           }
 
           // Update subscriptions table
-          await supabase.from("subscriptions").upsert({
+          const { error: subscriptionError } = await supabase.from("subscriptions").upsert({
             user_id: userData.id,
             plan_type: planType,
             status: fullSubscription.status,
@@ -197,7 +289,13 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' });
 
-          logStep("Subscription updated", { userId: userData.id, planType });
+          if (subscriptionError) {
+            logStep("Failed to update subscription", { error: subscriptionError.message });
+          } else {
+            logStep("Subscription updated successfully", { userId: userData.id, planType });
+          }
+        } else {
+          logStep("User not found for subscription update", { email: customer.email });
         }
         break;
       }
@@ -213,7 +311,7 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in webhook", { message: errorMessage });
+    logStep("ERROR in webhook", { message: errorMessage, stack: error instanceof Error ? error.stack : undefined });
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
