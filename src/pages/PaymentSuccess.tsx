@@ -1,281 +1,217 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, AlertCircle, RefreshCw, User } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { CheckCircle, MessageCircle, ArrowRight, Clock } from 'lucide-react';
 import { ConfettiRain } from '@/components/ConfettiRain';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [userCreated, setUserCreated] = useState(false);
+  const [pollingCount, setPollingCount] = useState(0);
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [accountCreated, setAccountCreated] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [isManualProcessing, setIsManualProcessing] = useState(false);
-
+  
   const sessionId = searchParams.get('session_id');
 
-  const checkAccountCreation = async (sessionId: string) => {
-    try {
-      console.log('[PaymentSuccess] Checking account creation for session:', sessionId);
-
-      // First check if onboarding record exists and is confirmed
-      const { data: onboardingData, error: onboardingError } = await supabase
-        .from('onboarding')
-        .select('*')
-        .eq('stripe_session_id', sessionId)
-        .single();
-
-      if (onboardingError) {
-        console.error('[PaymentSuccess] Onboarding error:', onboardingError);
-        throw new Error('Registro de onboarding não encontrado');
-      }
-
-      console.log('[PaymentSuccess] Onboarding data:', onboardingData);
-
-      if (!onboardingData.payment_confirmed) {
-        console.log('[PaymentSuccess] Payment not yet confirmed, continuing to poll...');
-        return false;
-      }
-
-      // Check if user account was created
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', onboardingData.email)
-        .single();
-
-      if (userError || !userData) {
-        console.log('[PaymentSuccess] User account not found, continuing to poll...');
-        return false;
-      }
-
-      console.log('[PaymentSuccess] Account found successfully:', userData);
-      return true;
-    } catch (error) {
-      console.error('[PaymentSuccess] Error checking account:', error);
-      throw error;
-    }
-  };
-
-  const processPaymentManually = async () => {
-    if (!sessionId) return;
-
-    setIsManualProcessing(true);
-    try {
-      console.log('[PaymentSuccess] Processing payment manually for session:', sessionId);
-      
-      const { data, error } = await supabase.functions.invoke('process-payment-manually', {
-        body: { sessionId }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        setAccountCreated(true);
-        setError(null);
-        toast({
-          title: "Conta criada com sucesso!",
-          description: "Sua conta foi processada manualmente.",
-        });
-      } else {
-        throw new Error(data.error || 'Falha no processamento manual');
-      }
-    } catch (error: any) {
-      console.error('[PaymentSuccess] Manual processing error:', error);
-      setError(`Erro no processamento manual: ${error.message}`);
-    } finally {
-      setIsManualProcessing(false);
-    }
-  };
-
   useEffect(() => {
-    if (!sessionId) {
-      setError('ID da sessão não encontrado na URL');
-      setIsLoading(false);
-      return;
-    }
+    const checkUserCreation = async () => {
+      if (!sessionId) {
+        toast({
+          title: "Erro",
+          description: "ID da sessão não encontrado.",
+          variant: "destructive"
+        });
+        navigate('/register');
+        return;
+      }
 
-    const pollAccountCreation = async () => {
       try {
-        const accountExists = await checkAccountCreation(sessionId);
+        console.log('Checking if user was created by webhook for session:', sessionId);
         
-        if (accountExists) {
-          setAccountCreated(true);
-          setIsLoading(false);
-          return;
+        // Check if onboarding exists and if payment was confirmed by webhook
+        const { data: onboardingData, error: onboardingError } = await supabase
+          .from('onboarding')
+          .select('*')
+          .eq('stripe_session_id', sessionId)
+          .single();
+
+        if (onboardingError) {
+          console.error('Error fetching onboarding data:', onboardingError);
+          if (pollingCount < 10) { // Poll for up to 30 seconds (10 * 3s)
+            setTimeout(() => {
+              setPollingCount(prev => prev + 1);
+              checkUserCreation();
+            }, 3000);
+            return;
+          } else {
+            throw new Error('Onboarding data not found after polling');
+          }
         }
 
-        // Continue polling if account not created yet
-        if (retryCount < 20) { // Poll for up to 2 minutes (20 * 6 seconds)
+        if (onboardingData.payment_confirmed) {
+          console.log('Payment confirmed by webhook, user should be created');
+          setUserCreated(true);
+          
+          toast({
+            title: "Conta criada com sucesso!",
+            description: `Seu trial de 7 dias começou!`,
+          });
+
+          // Store user email for login
+          localStorage.setItem('newUserEmail', onboardingData.email);
+          localStorage.removeItem('registrationData');
+        } else if (pollingCount < 10) {
+          // Keep polling for webhook to process payment
+          console.log(`Polling for payment confirmation... attempt ${pollingCount + 1}`);
           setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, 6000);
+            setPollingCount(prev => prev + 1);
+            checkUserCreation();
+          }, 3000);
+          return;
         } else {
-          setIsLoading(false);
-          setError('Tempo limite excedido. A conta pode ainda estar sendo processada.');
+          throw new Error('Payment not confirmed by webhook after polling');
         }
-      } catch (error: any) {
-        console.error('[PaymentSuccess] Polling error:', error);
-        setError(error.message);
-        setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking user creation:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao verificar criação da conta.",
+          variant: "destructive"
+        });
+        navigate('/register');
+      } finally {
+        setLoading(false);
       }
     };
 
-    pollAccountCreation();
-  }, [sessionId, retryCount]);
+    checkUserCreation();
+  }, [sessionId, navigate, toast, pollingCount]);
 
-  const handleContinue = () => {
-    if (user) {
-      navigate('/dashboard');
-    } else {
-      navigate('/login');
-    }
+  const handleGoToLogin = () => {
+    const email = localStorage.getItem('newUserEmail');
+    navigate('/login', { state: { email } });
   };
 
-  if (!sessionId) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
-              Erro
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 mb-4">
-              ID da sessão de pagamento não encontrado.
-            </p>
-            <Button onClick={() => navigate('/register')} className="w-full">
-              Voltar ao Cadastro
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md border-none shadow-lg bg-white">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#61710C] mx-auto mb-4"></div>
+                <h3 className="text-lg font-semibold text-[#121212] mb-2">
+                  Processando seu pagamento...
+                </h3>
+                <p className="text-[#64748B] text-sm">
+                  Aguarde enquanto confirmamos seu pagamento e criamos sua conta.
+                </p>
+                <div className="mt-4">
+                  <div className="flex justify-center space-x-1">
+                    <div className="w-2 h-2 bg-[#61710C] rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-[#61710C] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-[#61710C] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-[#61710C]">
-              <RefreshCw className="h-5 w-5 animate-spin" />
-              Processando Pagamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 mb-4">
-              Aguarde enquanto processamos seu pagamento e criamos sua conta...
-            </p>
-            <div className="text-sm text-gray-500">
-              Tentativa {retryCount + 1} de 20
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (error && !accountCreated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
-              Erro no Processamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-gray-600">
-              {error}
-            </p>
-            <div className="space-y-2">
-              <Button 
-                onClick={processPaymentManually}
-                disabled={isManualProcessing}
-                className="w-full"
-              >
-                {isManualProcessing ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <User className="h-4 w-4 mr-2" />
-                    Tentar Novamente
-                  </>
-                )}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/register')}
-                className="w-full"
-              >
-                Voltar ao Cadastro
-              </Button>
-            </div>
-            <div className="text-xs text-gray-500 mt-4">
-              Se o problema persistir, entre em contato conosco pelo WhatsApp.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!userCreated) {
+    return null; // Will redirect to register page
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-white relative">
       <ConfettiRain />
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[#61710C]">
-            <CheckCircle className="h-5 w-5" />
-            Pagamento Confirmado!
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <div className="space-y-2">
-            <p className="text-gray-600">
-              Seu pagamento foi processado com sucesso e sua conta foi criada!
-            </p>
-            <p className="text-sm text-gray-500">
-              Você pode agora acessar todas as funcionalidades do Bolsofy.
-            </p>
-          </div>
+      
+      <div className="flex items-center justify-center min-h-screen px-4 py-8">
+        <Card className="w-full max-w-lg border-[#DEDEDE] bg-white shadow-xl">
+          <CardHeader className="text-center pb-6">
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-12 h-12 text-green-600" />
+              </div>
+            </div>
+            
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
+                alt="Bolsofy Logo" 
+                className="h-12 w-auto" 
+              />
+            </div>
+          </CardHeader>
           
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-sm text-green-700 font-medium">
-              ✅ Conta criada com sucesso
-            </p>
-            <p className="text-sm text-green-700">
-              ✅ Pagamento confirmado
-            </p>
-            <p className="text-sm text-green-700">
-              ✅ Período de teste ativado (7 dias)
-            </p>
-          </div>
+          <CardContent className="space-y-6 text-center">
+            <div className="space-y-4">
+              <h1 className="text-3xl font-bold text-[#121212]">
+                🎉 Bem-vindo ao Bolsofy!
+              </h1>
+              
+              <p className="text-lg text-[#64748B]">
+                Sua assinatura foi confirmada com sucesso! Sua conta foi criada e agora você pode começar a controlar suas finanças de forma inteligente.
+              </p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-800">Trial Gratuito Iniciado!</h3>
+                </div>
+                <p className="text-sm text-blue-700">
+                  Você tem <strong>7 dias</strong> de acesso completo gratuito
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Aproveite todos os recursos premium!
+                </p>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800">
+                  ✅ Pagamento processado<br/>
+                  ✅ Conta criada<br/>
+                  ✅ Trial de 7 dias iniciado<br/>
+                  ✅ Acesso liberado
+                </p>
+              </div>
+            </div>
 
-          <Button onClick={handleContinue} className="w-full bg-[#61710C] hover:bg-[#4a5709]">
-            {user ? 'Ir para Dashboard' : 'Fazer Login'}
-          </Button>
+            <div className="space-y-4 pt-6">
+              <Button
+                onClick={handleGoToLogin}
+                className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white text-lg py-3"
+                size="lg"
+              >
+                Fazer Login
+              </Button>
 
-          <div className="text-xs text-gray-500">
-            ID da Sessão: {sessionId}
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                variant="outline"
+                onClick={() => window.open('https://wa.me/5551995915520', '_blank')}
+                className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white"
+                size="lg"
+              >
+                Falar com nosso agente
+              </Button>
+            </div>
+
+            <div className="pt-4 border-t border-[#DEDEDE]">
+              <p className="text-xs text-[#64748B]">
+                Dúvidas? Nossa equipe está pronta para te ajudar via WhatsApp.
+                <br/>Aproveite seus 7 dias de trial gratuito!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
