@@ -20,6 +20,8 @@ async function verifyStripeSignature(
   secret: string
 ): Promise<boolean> {
   try {
+    logStep("Starting signature verification", { signatureLength: signature.length });
+    
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
       "raw",
@@ -33,19 +35,31 @@ async function verifyStripeSignature(
     const timestamp = parts.find(p => p.startsWith('t='))?.split('=')[1];
     const hash = parts.find(p => p.startsWith('v1='))?.split('=')[1];
     
-    if (!timestamp || !hash) return false;
+    if (!timestamp || !hash) {
+      logStep("Missing timestamp or hash in signature", { timestamp: !!timestamp, hash: !!hash });
+      return false;
+    }
     
     const signedPayload = `${timestamp}.${payload}`;
-    const expectedHash = await crypto.subtle.verify(
-      "HMAC",
-      key,
-      new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(signedPayload))),
-      new Uint8Array(Array.from(atob(hash)).map(c => c.charCodeAt(0)))
+    const expectedHashBuffer = await crypto.subtle.importKey(
+      "raw", 
+      Uint8Array.from(atob(hash), c => c.charCodeAt(0)), 
+      { name: "HMAC", hash: "SHA-256" }, 
+      false, 
+      ["verify"]
     );
     
-    return expectedHash;
+    const isValid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      await crypto.subtle.sign("HMAC", key, encoder.encode(signedPayload)),
+      await crypto.subtle.exportKey("raw", expectedHashBuffer)
+    );
+    
+    logStep("Signature verification result", { isValid });
+    return isValid;
   } catch (error) {
-    logStep("Signature verification failed", { error: error.message });
+    logStep("Signature verification error", { error: error.message });
     return false;
   }
 }
@@ -62,10 +76,16 @@ serve(async (req) => {
   );
 
   try {
-    logStep("Webhook received");
+    logStep("=== WEBHOOK STARTED ===");
     
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    
+    logStep("Environment check", { 
+      hasStripeKey: !!stripeKey, 
+      hasWebhookSecret: !!webhookSecret,
+      webhookSecretPrefix: webhookSecret?.substring(0, 10)
+    });
     
     if (!stripeKey || !webhookSecret) {
       throw new Error("Missing Stripe configuration");
@@ -73,27 +93,33 @@ serve(async (req) => {
 
     const signature = req.headers.get("stripe-signature");
     if (!signature) {
+      logStep("Missing Stripe signature header");
       throw new Error("Missing Stripe signature");
     }
 
     const body = await req.text();
-    logStep("Payload received", { bodyLength: body.length });
+    logStep("Received payload", { bodyLength: body.length });
 
     // Verify webhook signature
     const isValid = await verifyStripeSignature(body, signature, webhookSecret);
     if (!isValid) {
+      logStep("Invalid webhook signature - rejecting request");
       throw new Error("Invalid webhook signature");
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     const event = JSON.parse(body);
     
-    logStep("Event received", { type: event.type, id: event.id });
+    logStep("Processing event", { type: event.type, id: event.id });
 
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        logStep("Processing checkout session", { sessionId: session.id });
+        logStep("Processing checkout session", { 
+          sessionId: session.id,
+          paymentStatus: session.payment_status,
+          customerEmail: session.customer_email
+        });
 
         // Get onboarding data
         const { data: onboardingData, error: onboardingError } = await supabase
@@ -104,22 +130,67 @@ serve(async (req) => {
 
         if (onboardingError || !onboardingData) {
           logStep("Onboarding data not found", { sessionId: session.id, error: onboardingError });
-          break;
+          
+          // Fallback: try to find by email if available
+          if (session.customer_email) {
+            logStep("Trying fallback search by email", { email: session.customer_email });
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from('onboarding')
+              .select('*')
+              .eq('email', session.customer_email)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+              
+            if (fallbackError || !fallbackData) {
+              logStep("Fallback search failed", { error: fallbackError });
+              break;
+            }
+            
+            // Update with correct session_id
+            await supabase
+              .from('onboarding')
+              .update({ stripe_session_id: session.id })
+              .eq('id', fallbackData.id);
+              
+            onboardingData = { ...fallbackData, stripe_session_id: session.id };
+            logStep("Found onboarding via email fallback", { onboardingId: fallbackData.id });
+          } else {
+            break;
+          }
         }
+
+        logStep("Found onboarding data", { 
+          onboardingId: onboardingData.id,
+          email: onboardingData.email,
+          name: onboardingData.name
+        });
 
         // Check if user already exists
         const { data: existingUser } = await supabase
           .from('users')
-          .select('id, user_id')
+          .select('id, user_id, email')
           .eq('email', onboardingData.email)
           .single();
 
         if (existingUser) {
-          logStep("User already exists", { userId: existingUser.id });
+          logStep("User already exists", { userId: existingUser.id, email: existingUser.email });
+          
+          // Just update payment confirmation
+          await supabase
+            .from('onboarding')
+            .update({ 
+              payment_confirmed: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', onboardingData.id);
+            
+          logStep("Updated existing user payment confirmation");
           break;
         }
 
         // Create auth user
+        logStep("Creating auth user", { email: onboardingData.email });
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
           email: onboardingData.email,
           phone: onboardingData.phone,
@@ -135,10 +206,17 @@ serve(async (req) => {
           break;
         }
 
+        logStep("Auth user created successfully", { authUserId: authUser.user.id });
+
         // Calculate trial dates (7 days from now)
         const trialStart = new Date();
         const trialEnd = new Date();
         trialEnd.setDate(trialEnd.getDate() + 7);
+
+        logStep("Trial dates calculated", { 
+          trialStart: trialStart.toISOString(),
+          trialEnd: trialEnd.toISOString()
+        });
 
         // Create user in public.users table
         const { data: newUser, error: userError } = await supabase
@@ -164,20 +242,33 @@ serve(async (req) => {
           break;
         }
 
-        // Update onboarding status
-        await supabase
+        logStep("User created successfully", { 
+          userId: newUser.id,
+          authUserId: authUser.user.id,
+          email: onboardingData.email
+        });
+
+        // Update onboarding status - CRITICAL FIX
+        const { error: updateError } = await supabase
           .from('onboarding')
           .update({ 
             payment_confirmed: true,
             trial_start_date: trialStart.toISOString(),
-            trial_end_date: trialEnd.toISOString()
+            trial_end_date: trialEnd.toISOString(),
+            updated_at: new Date().toISOString()
           })
           .eq('id', onboardingData.id);
 
-        logStep("User created successfully", { 
-          userId: newUser.id, 
-          authUserId: authUser.user.id,
-          email: onboardingData.email 
+        if (updateError) {
+          logStep("Failed to update onboarding", { error: updateError });
+        } else {
+          logStep("Onboarding updated successfully with payment_confirmed = true");
+        }
+
+        logStep("=== CHECKOUT COMPLETED SUCCESSFULLY ===", {
+          userId: newUser.id,
+          email: onboardingData.email,
+          paymentConfirmed: true
         });
         break;
       }
@@ -233,7 +324,7 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' });
 
-          logStep("Subscription updated", { userId: userData.id, planType });
+          logStep("Subscription updated successfully", { userId: userData.id, planType });
         }
         break;
       }
@@ -242,6 +333,7 @@ serve(async (req) => {
         logStep("Unhandled event type", { type: event.type });
     }
 
+    logStep("=== WEBHOOK COMPLETED SUCCESSFULLY ===");
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
@@ -249,7 +341,7 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in webhook", { message: errorMessage });
+    logStep("=== WEBHOOK ERROR ===", { message: errorMessage, stack: error.stack });
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

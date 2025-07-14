@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,10 +18,6 @@ interface Plan {
   monthlyPrice: number;
   yearlyPrice: number;
   features: string[];
-  stripeLinks: {
-    monthly: string;
-    yearly: string;
-  };
 }
 
 const plans: Plan[] = [
@@ -34,11 +31,7 @@ const plans: Plan[] = [
       'Relatórios mensais',
       'Até 3 cartões de crédito',
       'Suporte por email'
-    ],
-    stripeLinks: {
-      monthly: 'https://buy.stripe.com/test_bJe28r23b5uk7G3bUafQI00',
-      yearly: 'https://buy.stripe.com/test_fZubJ16jrcWM2lJ8HYfQI01'
-    }
+    ]
   },
   {
     id: 'premium',
@@ -52,11 +45,7 @@ const plans: Plan[] = [
       'Suporte prioritário',
       'Análises avançadas',
       'Integração com bancos'
-    ],
-    stripeLinks: {
-      monthly: 'https://buy.stripe.com/test_8x28wP37f0a00dB3nEfQI02',
-      yearly: 'https://buy.stripe.com/test_3cI4gz5fng8Ye4r1fwfQI03'
-    }
+    ]
   }
 ];
 
@@ -386,31 +375,44 @@ export default function Register() {
     try {
       await saveOrUpdateOnboarding('payment');
 
-      const selectedPlan = plans.find(plan => plan.id === formData.selectedPlan);
-      if (!selectedPlan) {
-        throw new Error('Plano selecionado não encontrado');
-      }
-
-      const stripeLink = formData.billingCycle === 'monthly' 
-        ? selectedPlan.stripeLinks.monthly 
-        : selectedPlan.stripeLinks.yearly;
-
-      console.log('Redirecting to Stripe:', {
-        plan: formData.selectedPlan,
-        cycle: formData.billingCycle,
-        link: stripeLink
+      console.log('Creating checkout session with data:', {
+        planType: formData.selectedPlan,
+        billingCycle: formData.billingCycle,
+        onboardingId: onboardingId
       });
 
+      // Use create-checkout edge function instead of direct Stripe links
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          planType: formData.selectedPlan,
+          billingCycle: formData.billingCycle,
+          onboardingId: onboardingId
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Erro ao criar sessão de pagamento');
+      }
+
+      if (!data.url) {
+        throw new Error('URL de pagamento não recebida');
+      }
+
+      console.log('Checkout session created, redirecting to:', data.url);
+
+      // Store registration data for recovery
       localStorage.setItem('registrationData', JSON.stringify({
         name: formData.name,
         email: formData.email,
         phone: formData.phone.replace(/\D/g, ''),
         plan: formData.selectedPlan,
         billingCycle: formData.billingCycle,
-        onboardingId: onboardingId
+        onboardingId: onboardingId,
+        sessionId: data.sessionId
       }));
 
-      window.location.href = stripeLink;
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
     } catch (error) {
       console.error('Error during registration:', error);
       toast({
