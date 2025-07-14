@@ -1,6 +1,6 @@
 
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   // Check if user has completed onboarding and subscription status
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
@@ -106,6 +107,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           console.log('[ProtectedRoute] Onboarding status updated successfully');
         }
       });
+  }
+
+  // NEW: Check if user is logged in but doesn't have an active plan
+  // Redirect to /plans page if they don't have active subscription and are not already on plans page
+  if (userProfile.completed_onboarding && !hasActivePlan && location.pathname !== '/plans') {
+    console.log('[ProtectedRoute] User has no active plan, redirecting to plans page');
+    return <Navigate to="/plans" replace />;
   }
 
   console.log('[ProtectedRoute] User authenticated and authorized, allowing access');

@@ -5,8 +5,12 @@ import { Check, Crown, Star } from "lucide-react";
 import { useState } from "react";
 import { BillingToggle } from "./BillingToggle";
 import { SubscriptionStatus } from "./SubscriptionStatus";
+import { UserDataModal } from "../UserDataModal";
 import { useCreateCheckout, useCustomerPortal } from "@/hooks/useSubscriptionMutations";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const plans = [
   {
@@ -48,19 +52,64 @@ const plans = [
 
 export function PlansSection() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [showUserDataModal, setShowUserDataModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<{ planId: string; billingCycle: 'monthly' | 'yearly' } | null>(null);
+  
+  const { user } = useAuth();
   const createCheckout = useCreateCheckout();
   const customerPortal = useCustomerPortal();
   const { data: subscription } = useSubscription();
+
+  // Get user profile data to check if we have all required info
+  const { data: userProfile } = useQuery({
+    queryKey: ['userProfile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('name, email, phone_number')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+      
+      return data;
+    },
+    enabled: !!user,
+  });
 
   const handleBillingCycleChange = (checked: boolean) => {
     setBillingCycle(checked ? 'yearly' : 'monthly');
   };
 
   const handleSubscribe = (planId: string) => {
-    createCheckout.mutate({
-      planType: planId,
-      billingCycle: billingCycle
-    });
+    // Check if user has all required data
+    if (!userProfile || !userProfile.name || !userProfile.email || !userProfile.phone_number) {
+      // Show modal to collect missing data
+      setSelectedPlan({ planId, billingCycle });
+      setShowUserDataModal(true);
+    } else {
+      // User has all data, proceed with checkout
+      createCheckout.mutate({
+        planType: planId,
+        billingCycle: billingCycle
+      });
+    }
+  };
+
+  const handleUserDataSubmit = (userData: { name: string; email: string; phone: string }) => {
+    setShowUserDataModal(false);
+    
+    if (selectedPlan) {
+      createCheckout.mutate({
+        planType: selectedPlan.planId,
+        billingCycle: selectedPlan.billingCycle
+      });
+    }
   };
 
   const handleManageSubscription = () => {
@@ -166,6 +215,16 @@ export function PlansSection() {
           })}
         </div>
       </div>
+
+      {selectedPlan && (
+        <UserDataModal
+          isOpen={showUserDataModal}
+          onClose={() => setShowUserDataModal(false)}
+          onSubmit={handleUserDataSubmit}
+          planType={selectedPlan.planId}
+          billingCycle={selectedPlan.billingCycle}
+        />
+      )}
     </div>
   );
 }
