@@ -31,7 +31,6 @@ export default function PaymentSuccess() {
 
   useEffect(() => {
     const checkUserCreation = async () => {
-      // Evitar processamento duplo
       if (hasProcessedRef.current) {
         console.log('[PAYMENT-SUCCESS] Already processing, skipping...');
         return;
@@ -48,7 +47,6 @@ export default function PaymentSuccess() {
         return;
       }
 
-      // Verificar limite de tentativas
       attemptsRef.current += 1;
       console.log(`[PAYMENT-SUCCESS] Attempt ${attemptsRef.current}/${maxAttemptsRef.current} for session:`, sessionId);
 
@@ -63,24 +61,25 @@ export default function PaymentSuccess() {
         hasProcessedRef.current = true;
         console.log('[PAYMENT-SUCCESS] Starting user creation check for session:', sessionId);
         
-        // Verificar se onboarding existe e se payment foi confirmado pelo webhook
+        // Verificar se onboarding existe e se payment foi confirmado
         const { data: onboardingData, error: onboardingError } = await supabase
           .from('onboarding')
           .select('*')
           .eq('stripe_session_id', sessionId)
-          .single();
+          .maybeSingle();
 
         if (onboardingError) {
           console.error('[PAYMENT-SUCCESS] Error fetching onboarding data:', onboardingError);
-          
-          if (onboardingError.code === 'PGRST116') {
-            console.log('[PAYMENT-SUCCESS] No onboarding record found, might need to wait for webhook');
-            hasProcessedRef.current = false;
-            timeoutRef.current = setTimeout(checkUserCreation, 3000);
-            return;
-          }
-          
-          throw new Error(`Erro ao buscar dados de onboarding: ${onboardingError.message}`);
+          hasProcessedRef.current = false;
+          timeoutRef.current = setTimeout(checkUserCreation, 3000);
+          return;
+        }
+
+        if (!onboardingData) {
+          console.log('[PAYMENT-SUCCESS] No onboarding record found, might need to wait for webhook');
+          hasProcessedRef.current = false;
+          timeoutRef.current = setTimeout(checkUserCreation, 3000);
+          return;
         }
 
         console.log('[PAYMENT-SUCCESS] Onboarding data found:', {
@@ -93,12 +92,19 @@ export default function PaymentSuccess() {
         if (onboardingData.payment_confirmed) {
           console.log('[PAYMENT-SUCCESS] Payment confirmed by webhook, checking if user exists in users table');
           
-          // Verificar se usuário foi criado
+          // Verificar se usuário foi criado - usando maybeSingle() para evitar erro 406
           const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, email')
+            .select('id, email, user_id')
             .eq('email', onboardingData.email)
-            .single();
+            .maybeSingle();
+
+          if (userError) {
+            console.error('[PAYMENT-SUCCESS] Error checking user:', userError);
+            hasProcessedRef.current = false;
+            timeoutRef.current = setTimeout(checkUserCreation, 3000);
+            return;
+          }
 
           if (userData) {
             console.log('[PAYMENT-SUCCESS] User found in users table:', userData);
@@ -109,7 +115,6 @@ export default function PaymentSuccess() {
               description: `Seu trial de 7 dias começou!`,
             });
 
-            // Armazenar email do usuário para login
             localStorage.setItem('newUserEmail', onboardingData.email);
             localStorage.removeItem('registrationData');
             setLoading(false);
@@ -120,7 +125,6 @@ export default function PaymentSuccess() {
             timeoutRef.current = setTimeout(checkUserCreation, 3000);
           }
         } else {
-          // Continuar verificando se webhook processou pagamento
           console.log('[PAYMENT-SUCCESS] Payment not confirmed yet, retrying in 3 seconds...');
           hasProcessedRef.current = false;
           timeoutRef.current = setTimeout(checkUserCreation, 3000);
@@ -134,12 +138,10 @@ export default function PaymentSuccess() {
       }
     };
 
-    // Iniciar verificação apenas uma vez
     if (!hasProcessedRef.current) {
       checkUserCreation();
     }
 
-    // Cleanup no unmount
     return () => {
       clearPolling();
     };
@@ -178,7 +180,7 @@ export default function PaymentSuccess() {
     );
   }
 
-  // Estado de timeout - conta em processamento
+  // Estado de timeout - conta em processamento (SEM botão de tentar novamente)
   if (timeoutReached && !userCreated) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">

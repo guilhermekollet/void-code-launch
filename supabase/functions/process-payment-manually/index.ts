@@ -17,7 +17,6 @@ const logStep = (step: string, details?: any) => {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     logStep("⚡ CORS preflight request");
     return new Response(null, { 
@@ -26,7 +25,6 @@ serve(async (req) => {
     });
   }
 
-  // Validate request method
   if (req.method !== "POST") {
     logStep("❌ Invalid request method", { method: req.method });
     return new Response(JSON.stringify({ 
@@ -47,7 +45,6 @@ serve(async (req) => {
   try {
     logStep("🚀 === MANUAL PROCESSING STARTED ===");
     
-    // Validate request body
     let requestBody;
     try {
       const requestText = await req.text();
@@ -67,6 +64,33 @@ serve(async (req) => {
     const { sessionId } = requestBody;
     if (!sessionId || typeof sessionId !== 'string') {
       logStep("❌ No valid session ID provided", { sessionId });
+      
+      // Se não há sessionId, tentar recuperar contas pendentes automaticamente
+      logStep("🔄 Attempting automatic recovery of pending accounts");
+      try {
+        const recoveryResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/recover-pending-accounts`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const recoveryResult = await recoveryResponse.json();
+        logStep("✅ Automatic recovery completed", recoveryResult);
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Automatic account recovery initiated",
+          recoveryResult: recoveryResult
+        }), {
+          headers: corsHeaders,
+          status: 200,
+        });
+      } catch (recoveryError) {
+        logStep("⚠️ Automatic recovery failed", { error: recoveryError.message });
+      }
+      
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Session ID is required and must be a string" 
@@ -92,7 +116,7 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
-    // Verify payment status in Stripe
+    // Verificar status do pagamento no Stripe
     logStep("🔍 Retrieving Stripe session");
     let session;
     try {
@@ -134,45 +158,31 @@ serve(async (req) => {
       });
     }
 
-    // Get onboarding data
+    // Buscar dados do onboarding
     logStep("📋 Fetching onboarding data");
-    const { data: onboardingData, error: onboardingError } = await supabase
+    let { data: onboardingData, error: onboardingError } = await supabase
       .from('onboarding')
       .select('*')
       .eq('stripe_session_id', sessionId)
-      .single();
+      .maybeSingle();
 
-    if (onboardingError || !onboardingData) {
-      logStep("⚠️ Onboarding data not found, trying email fallback", { 
-        error: onboardingError?.message,
+    if (!onboardingData && session.customer_email) {
+      logStep("⚠️ Onboarding data not found by session_id, trying email fallback", { 
         customerEmail: session.customer_email
       });
       
-      // Try to find by email if available
-      if (session.customer_email) {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('onboarding')
-          .select('*')
-          .eq('email', session.customer_email)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (fallbackError || !fallbackData) {
-          logStep("❌ Email fallback failed", { 
-            error: fallbackError?.message,
-            email: session.customer_email
-          });
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "Onboarding data not found for this payment" 
-          }), {
-            headers: corsHeaders,
-            status: 404,
-          });
-        }
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('onboarding')
+        .select('*')
+        .eq('email', session.customer_email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
         
-        // Update with correct session_id
+      if (fallbackData) {
+        onboardingData = fallbackData;
+        
+        // Atualizar com o session_id correto
         const { error: updateError } = await supabase
           .from('onboarding')
           .update({ stripe_session_id: sessionId })
@@ -183,19 +193,21 @@ serve(async (req) => {
         } else {
           logStep("✅ Updated onboarding with session_id");
         }
-          
-        Object.assign(fallbackData, { stripe_session_id: sessionId });
-        logStep("✅ Found onboarding via email fallback", { onboardingId: fallbackData.id });
-      } else {
-        logStep("❌ No customer email for fallback");
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: "No onboarding data found" 
-        }), {
-          headers: corsHeaders,
-          status: 404,
-        });
       }
+    }
+
+    if (!onboardingData) {
+      logStep("❌ No onboarding data found", { 
+        sessionId,
+        customerEmail: session.customer_email 
+      });
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "No onboarding data found" 
+      }), {
+        headers: corsHeaders,
+        status: 404,
+      });
     }
 
     logStep("📋 Onboarding data found", {
@@ -205,14 +217,14 @@ serve(async (req) => {
       paymentConfirmed: onboardingData.payment_confirmed
     });
 
-    // Check if user already exists
+    // Verificar se usuário já existe
     const { data: existingUser, error: existingUserError } = await supabase
       .from('users')
       .select('id, user_id, email')
       .eq('email', onboardingData.email)
-      .single();
+      .maybeSingle();
 
-    if (existingUserError && existingUserError.code !== 'PGRST116') {
+    if (existingUserError) {
       logStep("❌ Error checking existing user", { error: existingUserError.message });
     }
 
@@ -247,7 +259,23 @@ serve(async (req) => {
       });
     }
 
-    // Create auth user
+    // Atualizar payment_confirmed primeiro
+    logStep("💰 Updating payment_confirmed status");
+    const { error: confirmError } = await supabase
+      .from('onboarding')
+      .update({ 
+        payment_confirmed: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', onboardingData.id);
+
+    if (confirmError) {
+      logStep("❌ Failed to update payment_confirmed", { error: confirmError.message });
+    } else {
+      logStep("✅ Payment_confirmed updated successfully");
+    }
+
+    // Criar usuário auth
     logStep("👨‍💼 Creating auth user", {
       email: onboardingData.email,
       phone: onboardingData.phone,
@@ -284,7 +312,7 @@ serve(async (req) => {
       email: authUser.user.email
     });
 
-    // Calculate trial dates
+    // Calcular datas do trial
     const trialStart = new Date();
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 7);
@@ -294,7 +322,7 @@ serve(async (req) => {
       trialEnd: trialEnd.toISOString()
     });
 
-    // Create user in public.users table
+    // Criar usuário na tabela public.users
     const { data: newUser, error: userError } = await supabase
       .from('users')
       .insert([{
@@ -317,7 +345,7 @@ serve(async (req) => {
         errorCode: userError.code
       });
       
-      // Clean up auth user
+      // Limpar usuário auth
       try {
         await supabase.auth.admin.deleteUser(authUser.user.id);
         logStep("🧹 Cleaned up auth user after failed user creation");
@@ -341,11 +369,10 @@ serve(async (req) => {
       email: onboardingData.email
     });
 
-    // Update onboarding status
+    // Atualizar onboarding com datas do trial
     const { error: updateError } = await supabase
       .from('onboarding')
       .update({ 
-        payment_confirmed: true,
         trial_start_date: trialStart.toISOString(),
         trial_end_date: trialEnd.toISOString(),
         updated_at: new Date().toISOString()
@@ -355,7 +382,7 @@ serve(async (req) => {
     if (updateError) {
       logStep("⚠️ Failed to update onboarding (non-critical)", { error: updateError.message });
     } else {
-      logStep("✅ Onboarding updated with payment_confirmed = true");
+      logStep("✅ Onboarding updated with trial dates");
     }
 
     logStep("🎊 === MANUAL PROCESSING COMPLETED ===", {
