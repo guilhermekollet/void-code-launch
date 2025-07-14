@@ -63,11 +63,22 @@ serve(async (req) => {
 
     const { sessionId } = requestBody;
     if (!sessionId || typeof sessionId !== 'string') {
-      logStep("❌ No valid session ID provided", { sessionId });
+      logStep("❌ No valid session ID provided, attempting auto-recovery", { sessionId });
       
-      // Se não há sessionId, tentar recuperar contas pendentes automaticamente
-      logStep("🔄 Attempting automatic recovery of pending accounts");
+      // Tentar recuperar contas órfãs automaticamente
       try {
+        const fixOrphanedResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/fix-orphaned-accounts`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const fixOrphanedResult = await fixOrphanedResponse.json();
+        logStep("✅ Orphaned accounts fix attempted", fixOrphanedResult);
+        
+        // Tentar recuperar contas pendentes também
         const recoveryResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/recover-pending-accounts`, {
           method: 'POST',
           headers: {
@@ -77,11 +88,12 @@ serve(async (req) => {
         });
         
         const recoveryResult = await recoveryResponse.json();
-        logStep("✅ Automatic recovery completed", recoveryResult);
+        logStep("✅ Pending accounts recovery attempted", recoveryResult);
         
         return new Response(JSON.stringify({ 
           success: true, 
-          message: "Automatic account recovery initiated",
+          message: "Automatic recovery initiated",
+          fixOrphanedResult: fixOrphanedResult,
           recoveryResult: recoveryResult
         }), {
           headers: corsHeaders,
@@ -217,7 +229,7 @@ serve(async (req) => {
       paymentConfirmed: onboardingData.payment_confirmed
     });
 
-    // Verificar se usuário já existe
+    // Verificar se usuário já existe na tabela public.users
     const { data: existingUser, error: existingUserError } = await supabase
       .from('users')
       .select('id, user_id, email')
@@ -253,6 +265,99 @@ serve(async (req) => {
         message: "User already exists, payment confirmed",
         userId: existingUser.id,
         email: existingUser.email
+      }), {
+        headers: corsHeaders,
+        status: 200,
+      });
+    }
+
+    // Verificar se existe usuário auth órfão
+    logStep("🔍 Checking for orphaned auth user");
+    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
+    
+    if (authUsersError) {
+      logStep("⚠️ Error listing auth users", { error: authUsersError.message });
+    }
+
+    const orphanedAuthUser = authUsers?.users?.find(user => user.email === onboardingData.email);
+    
+    if (orphanedAuthUser) {
+      logStep("🔧 Found orphaned auth user, will adopt it", { 
+        authUserId: orphanedAuthUser.id,
+        email: orphanedAuthUser.email
+      });
+
+      // Atualizar payment_confirmed primeiro
+      const { error: confirmError } = await supabase
+        .from('onboarding')
+        .update({ 
+          payment_confirmed: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', onboardingData.id);
+
+      if (confirmError) {
+        logStep("❌ Failed to update payment_confirmed", { error: confirmError.message });
+      }
+
+      // Calcular datas do trial
+      const trialStart = new Date();
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + 7);
+
+      // Criar registro na tabela public.users para o usuário órfão
+      const { data: newUser, error: userError } = await supabase
+        .from('users')
+        .insert([{
+          user_id: orphanedAuthUser.id,
+          name: onboardingData.name,
+          email: onboardingData.email,
+          phone_number: onboardingData.phone,
+          plan_type: onboardingData.selected_plan,
+          stripe_session_id: sessionId,
+          trial_start: trialStart.toISOString(),
+          trial_end: trialEnd.toISOString(),
+          completed_onboarding: true
+        }])
+        .select()
+        .single();
+
+      if (userError) {
+        logStep("💥 Failed to create public.users record for orphaned user", { 
+          error: userError.message,
+          authUserId: orphanedAuthUser.id
+        });
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Failed to create user account",
+          details: userError.message
+        }), {
+          headers: corsHeaders,
+          status: 500,
+        });
+      }
+
+      // Atualizar onboarding com datas do trial
+      await supabase
+        .from('onboarding')
+        .update({ 
+          trial_start_date: trialStart.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', onboardingData.id);
+
+      logStep("✅ Successfully adopted orphaned auth user", {
+        userId: newUser.id,
+        authUserId: orphanedAuthUser.id,
+        email: onboardingData.email
+      });
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: "Orphaned account adopted successfully",
+        userId: newUser.id,
+        email: onboardingData.email
       }), {
         headers: corsHeaders,
         status: 200,
@@ -297,6 +402,36 @@ serve(async (req) => {
         error: authError?.message,
         errorCode: authError?.status
       });
+      
+      // Se o erro é 422 (usuário já existe), tentar executar fix-orphaned-accounts
+      if (authError?.status === 422 || authError?.message?.includes("already been registered")) {
+        logStep("🔧 Auth user already exists (422), attempting orphaned account fix");
+        
+        try {
+          const fixOrphanedResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/fix-orphaned-accounts`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const fixOrphanedResult = await fixOrphanedResponse.json();
+          logStep("✅ Orphaned accounts fix completed after 422 error", fixOrphanedResult);
+          
+          return new Response(JSON.stringify({ 
+            success: true, 
+            message: "Orphaned account fixed after 422 error",
+            fixResult: fixOrphanedResult
+          }), {
+            headers: corsHeaders,
+            status: 200,
+          });
+        } catch (fixError) {
+          logStep("❌ Failed to fix orphaned account after 422", { error: fixError.message });
+        }
+      }
+      
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Failed to create user account",

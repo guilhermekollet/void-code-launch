@@ -187,8 +187,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
 
   logStep("✅ CONFIRMED: Updated payment_confirmed to true", { onboardingId: onboardingData.id });
 
-  // Verificar se usuário já existe
-  logStep("👤 Checking if user already exists");
+  // Verificar se usuário já existe na tabela public.users
+  logStep("👤 Checking if user already exists in public.users");
   const { data: existingUser, error: existingUserError } = await supabase
     .from("users")
     .select("id, email, user_id")
@@ -200,7 +200,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
   }
 
   if (existingUser) {
-    logStep("👤 User already exists", { 
+    logStep("👤 User already exists in public.users", { 
       userId: existingUser.id, 
       email: existingUser.email,
       authUserId: existingUser.user_id 
@@ -208,8 +208,96 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     return;
   }
 
-  // Criar usuário auth
-  logStep("👨‍💼 Creating auth user", {
+  // Verificar se existe usuário auth órfão (no auth.users mas não no public.users)
+  logStep("🔍 Checking for orphaned auth user");
+  const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
+  
+  if (authUsersError) {
+    logStep("⚠️ Error listing auth users", { error: authUsersError.message });
+  }
+
+  const orphanedAuthUser = authUsers?.users?.find(user => user.email === onboardingData.email);
+  
+  if (orphanedAuthUser) {
+    logStep("🔧 Found orphaned auth user, adopting it", { 
+      authUserId: orphanedAuthUser.id,
+      email: orphanedAuthUser.email
+    });
+
+    // Atualizar metadados do usuário auth existente
+    const { error: updateAuthError } = await supabase.auth.admin.updateUserById(orphanedAuthUser.id, {
+      user_metadata: {
+        name: onboardingData.name,
+        phone_number: onboardingData.phone
+      }
+    });
+
+    if (updateAuthError) {
+      logStep("⚠️ Failed to update auth user metadata", { error: updateAuthError.message });
+    }
+
+    // Calcular datas do trial
+    const trialStart = new Date();
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 7);
+
+    // Criar registro na tabela public.users para o usuário órfão
+    const { data: newUser, error: userError } = await supabase
+      .from("users")
+      .insert([{
+        user_id: orphanedAuthUser.id,
+        name: onboardingData.name,
+        email: onboardingData.email,
+        phone_number: onboardingData.phone,
+        plan_type: onboardingData.selected_plan,
+        stripe_session_id: session.id,
+        trial_start: trialStart.toISOString(),
+        trial_end: trialEnd.toISOString(),
+        completed_onboarding: true
+      }])
+      .select()
+      .single();
+
+    if (userError) {
+      logStep("💥 Failed to create public.users record for orphaned user", { 
+        error: userError.message,
+        authUserId: orphanedAuthUser.id
+      });
+      throw new Error(`Failed to create user record: ${userError.message}`);
+    }
+
+    logStep("✅ Successfully adopted orphaned auth user", {
+      userId: newUser.id,
+      authUserId: orphanedAuthUser.id,
+      email: onboardingData.email
+    });
+
+    // Atualizar onboarding com datas do trial
+    const { error: updateTrialError } = await supabase
+      .from("onboarding")
+      .update({ 
+        trial_start_date: trialStart.toISOString(),
+        trial_end_date: trialEnd.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", onboardingData.id);
+
+    if (updateTrialError) {
+      logStep("⚠️ Failed to update trial dates in onboarding", { error: updateTrialError.message });
+    }
+
+    logStep("🎊 === ORPHANED USER ADOPTION COMPLETED ===", {
+      userId: newUser.id,
+      authUserId: orphanedAuthUser.id,
+      email: onboardingData.email,
+      paymentConfirmed: true
+    });
+
+    return;
+  }
+
+  // Se não há usuário órfão, criar novo usuário normalmente
+  logStep("👨‍💼 Creating new auth user", {
     email: onboardingData.email,
     phone: onboardingData.phone,
     name: onboardingData.name
