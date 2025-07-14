@@ -43,7 +43,7 @@ serve(async (req) => {
     // Get user's internal ID
     const { data: internalUser } = await supabaseClient
       .from('users')
-      .select('id')
+      .select('id, plan_type, completed_onboarding')
       .eq('user_id', user.id)
       .single();
 
@@ -68,7 +68,7 @@ serve(async (req) => {
       // Update both users and subscriptions tables
       await supabaseClient.from("users").update({
         plan_type: "free",
-        completed_onboarding: true,
+        completed_onboarding: true, // Mark as completed if they have user record
       }).eq("id", internalUser.id);
 
       await supabaseClient.from("subscriptions").upsert({
@@ -144,7 +144,7 @@ serve(async (req) => {
     // Update both users and subscriptions tables with complete data synchronization
     const updateData = {
       plan_type: planType,
-      completed_onboarding: true,
+      completed_onboarding: true, // Always mark as completed for users with valid accounts
     };
 
     await supabaseClient.from("users").update(updateData).eq("id", internalUser.id);

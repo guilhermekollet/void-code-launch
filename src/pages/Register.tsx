@@ -17,6 +17,10 @@ interface Plan {
   monthlyPrice: number;
   yearlyPrice: number;
   features: string[];
+  stripeLinks: {
+    monthly: string;
+    yearly: string;
+  };
 }
 
 const plans: Plan[] = [
@@ -30,7 +34,11 @@ const plans: Plan[] = [
       'Relatórios mensais',
       'Até 3 cartões de crédito',
       'Suporte por email'
-    ]
+    ],
+    stripeLinks: {
+      monthly: 'https://buy.stripe.com/test_bJe28r23b5uk7G3bUafQI00',
+      yearly: 'https://buy.stripe.com/test_fZubJ16jrcWM2lJ8HYfQI01'
+    }
   },
   {
     id: 'premium',
@@ -44,7 +52,11 @@ const plans: Plan[] = [
       'Suporte prioritário',
       'Análises avançadas',
       'Integração com bancos'
-    ]
+    ],
+    stripeLinks: {
+      monthly: 'https://buy.stripe.com/test_8x28wP37f0a00dB3nEfQI02',
+      yearly: 'https://buy.stripe.com/test_3cI4gz5fng8Ye4r1fwfQI03'
+    }
   }
 ];
 
@@ -143,7 +155,6 @@ export default function Register() {
       };
 
       if (onboardingId) {
-        // Update existing record
         const { error } = await supabase
           .from('onboarding')
           .update(dataToSave)
@@ -152,7 +163,6 @@ export default function Register() {
         if (error) throw error;
         console.log('Updated onboarding record:', onboardingId);
       } else {
-        // Create new record or update existing by email
         const { data: existingRecord } = await supabase
           .from('onboarding')
           .select('id')
@@ -160,7 +170,6 @@ export default function Register() {
           .single();
 
         if (existingRecord) {
-          // Update existing record
           const { error } = await supabase
             .from('onboarding')
             .update(dataToSave)
@@ -170,7 +179,6 @@ export default function Register() {
           setOnboardingId(existingRecord.id);
           console.log('Updated existing onboarding record:', existingRecord.id);
         } else {
-          // Create new record
           const { data, error } = await supabase
             .from('onboarding')
             .insert([dataToSave])
@@ -183,7 +191,6 @@ export default function Register() {
         }
       }
 
-      // Show success feedback
       toast({
         title: "Progresso salvo",
         description: "Seus dados foram salvos com segurança.",
@@ -209,12 +216,10 @@ export default function Register() {
       billingCycle: existingData.billingCycle || 'monthly'
     });
 
-    // Set onboarding ID if available
     if (existingData.onboardingId) {
       setOnboardingId(existingData.onboardingId);
     }
 
-    // Determine current step based on registration stage
     const stage = existingData.registrationStage;
     if (stage === 'phone') {
       setCurrentStep('plan');
@@ -271,7 +276,6 @@ export default function Register() {
       return;
     }
 
-    // Handle name step - save immediately
     if (currentStep === 'name') {
       await saveOrUpdateOnboarding('name');
       const nextIndex = currentStepIndex + 1;
@@ -281,7 +285,6 @@ export default function Register() {
       return;
     }
 
-    // Handle email step
     if (currentStep === 'email') {
       setCheckingEmail(true);
       const emailCheckResult = await checkEmailExists(formData.email);
@@ -289,12 +292,10 @@ export default function Register() {
 
       if (emailCheckResult.exists && emailCheckResult.completed) {
         if (emailCheckResult.shouldCreateUser) {
-          // User completed payment but needs to be migrated to users table
           toast({
             title: "Cadastro concluído",
             description: "Redirecionando para o dashboard...",
           });
-          // Here you would handle the user creation and login
           return;
         }
         
@@ -315,7 +316,6 @@ export default function Register() {
         return;
       }
 
-      // Save new registration after email step
       await saveOrUpdateOnboarding('email');
       const nextIndex = currentStepIndex + 1;
       if (nextIndex < stepKeys.length) {
@@ -324,7 +324,6 @@ export default function Register() {
       return;
     }
 
-    // Handle phone step - check for duplicates
     if (currentStep === 'phone') {
       setCheckingPhone(true);
       const phoneCheckResult = await checkPhoneExists(formData.phone);
@@ -347,7 +346,6 @@ export default function Register() {
       return;
     }
 
-    // Handle plan step
     if (currentStep === 'plan') {
       await saveOrUpdateOnboarding('plan');
     }
@@ -374,10 +372,10 @@ export default function Register() {
   };
 
   const handleFinishRegistration = async () => {
-    if (!formData.selectedPlan || !onboardingId) {
+    if (!formData.selectedPlan) {
       toast({
         title: "Erro",
-        description: "Dados incompletos para finalizar o cadastro.",
+        description: "Por favor, selecione um plano.",
         variant: "destructive"
       });
       return;
@@ -386,45 +384,33 @@ export default function Register() {
     setProcessingPayment(true);
 
     try {
-      console.log('Creating checkout session with:', {
-        planType: formData.selectedPlan,
-        billingCycle: formData.billingCycle,
-        onboardingId
-      });
+      await saveOrUpdateOnboarding('payment');
 
-      // Chamar a edge function para criar checkout session
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          planType: formData.selectedPlan,
-          billingCycle: formData.billingCycle,
-          onboardingId: onboardingId
-        }
-      });
-
-      if (error) {
-        console.error('Error creating checkout:', error);
-        throw new Error(error.message || 'Erro ao criar sessão de pagamento');
+      const selectedPlan = plans.find(plan => plan.id === formData.selectedPlan);
+      if (!selectedPlan) {
+        throw new Error('Plano selecionado não encontrado');
       }
 
-      if (!data?.url) {
-        throw new Error('URL de checkout não recebida');
-      }
+      const stripeLink = formData.billingCycle === 'monthly' 
+        ? selectedPlan.stripeLinks.monthly 
+        : selectedPlan.stripeLinks.yearly;
 
-      console.log('Checkout session created:', data);
+      console.log('Redirecting to Stripe:', {
+        plan: formData.selectedPlan,
+        cycle: formData.billingCycle,
+        link: stripeLink
+      });
 
-      // Salvar dados no localStorage como backup
       localStorage.setItem('registrationData', JSON.stringify({
         name: formData.name,
         email: formData.email,
         phone: formData.phone.replace(/\D/g, ''),
         plan: formData.selectedPlan,
         billingCycle: formData.billingCycle,
-        onboardingId: onboardingId,
-        sessionId: data.sessionId
+        onboardingId: onboardingId
       }));
 
-      // Redirecionar para o Stripe Checkout
-      window.location.href = data.url;
+      window.location.href = stripeLink;
     } catch (error) {
       console.error('Error during registration:', error);
       toast({
@@ -445,17 +431,15 @@ export default function Register() {
   };
 
   const getDiscountPercentage = (): number => {
-    return 20; // Fixed 20% discount as requested
+    return 20; // 20% de desconto para planos anuais
   };
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Progress Bar */}
       <div className="sticky top-0 z-50">
         <ProgressBar steps={steps} currentStep={currentStepIndex} />
       </div>
 
-      {/* Main Content */}
       <div className="flex items-center justify-center min-h-[calc(100vh-73px)] px-4 py-8">
         <div className="w-full max-w-lg">
           <div className="text-center pb-6">
@@ -476,7 +460,6 @@ export default function Register() {
           </div>
           
           <div className="space-y-6">
-            {/* Step 1: Name */}
             {currentStep === 'name' && (
               <div className="space-y-4">
                 <div className="text-center mb-6">
@@ -501,7 +484,6 @@ export default function Register() {
               </div>
             )}
 
-            {/* Step 2: Email */}
             {currentStep === 'email' && (
               <div className="space-y-4">
                 <div className="text-center mb-6">
@@ -543,7 +525,6 @@ export default function Register() {
               </div>
             )}
 
-            {/* Step 3: Phone */}
             {currentStep === 'phone' && (
               <div className="space-y-4">
                 <div className="text-center mb-6">
@@ -565,7 +546,6 @@ export default function Register() {
               </div>
             )}
 
-            {/* Step 4: Plan Selection */}
             {currentStep === 'plan' && (
               <div className="space-y-4">
                 <div className="text-center mb-6">
@@ -573,7 +553,6 @@ export default function Register() {
                   <p className="text-sm text-[#64748B]">Selecione o plano ideal para você</p>
                 </div>
 
-                {/* Billing Toggle */}
                 <div className="flex items-center justify-center gap-4 mb-6">
                   <span className={`text-sm ${formData.billingCycle === 'monthly' ? 'text-[#121212] font-medium' : 'text-[#64748B]'}`}>
                     Mensal
@@ -592,7 +571,6 @@ export default function Register() {
                   )}
                 </div>
 
-                {/* Plan Cards */}
                 <div className="space-y-3">
                   {plans.map((plan) => (
                     <div
@@ -668,7 +646,6 @@ export default function Register() {
               </div>
             )}
 
-            {/* Navigation Buttons */}
             <div className="flex gap-1.5 pt-6">
               <Button
                 variant="outline"
@@ -701,7 +678,6 @@ export default function Register() {
               )}
             </div>
 
-            {/* Support Button */}
             <div className="text-center pt-4">
               <Button
                 variant="outline"
@@ -712,7 +688,6 @@ export default function Register() {
               </Button>
             </div>
 
-            {/* Login Link */}
             <div className="text-center border-t border-[#DEDEDE] pt-4">
               <p className="text-sm text-[#64748B]">
                 Já tem uma conta?{' '}
