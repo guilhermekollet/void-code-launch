@@ -1,13 +1,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlanCard } from "./PlanCard";
-import { Crown, Star, CheckCircle } from "lucide-react";
+import { CheckCircle, Star, Crown } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useCreateCheckout } from "@/hooks/useSubscriptionMutations";
+import { useCustomerPortal } from "@/hooks/useSubscriptionMutations";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { SubscriptionStatus } from "./SubscriptionStatus";
+import { PlanCard } from "./PlanCard";
+import { BillingToggle } from "./BillingToggle";
+import { useState } from "react";
 
 const plans = [
   {
@@ -45,80 +47,80 @@ const plans = [
 export function PlansSection() {
   const { data: subscription } = useSubscription();
   const createCheckout = useCreateCheckout();
+  const customerPortal = useCustomerPortal();
   const { toast } = useToast();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleSubscribe = async (planType: string) => {
     try {
       createCheckout.mutate({
         planType,
-        billingCycle: 'monthly'
+        billingCycle
       });
     } catch (error) {
       console.error('Error creating checkout:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível processar o pagamento. Tente novamente.",
-        variant: "destructive"
+        description: "Não foi possível processar a assinatura. Tente novamente.",
+        variant: "destructive",
       });
     }
   };
 
-  const handleManageSubscription = () => {
-    window.open('https://billing.stripe.com/p/login/test_28o8yEavvbnG4XCcMM', '_blank');
+  const handleManageSubscription = async () => {
+    try {
+      customerPortal.mutate();
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir o portal de gerenciamento. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const getCurrentPlanTier = () => {
-    if (!subscription || subscription.plan_type === 'free') return 0;
-    if (subscription.plan_type === 'basic') return 1;
-    if (subscription.plan_type === 'premium') return 2;
-    return 0;
+  const handleBillingCycleChange = (checked: boolean) => {
+    setBillingCycle(checked ? 'yearly' : 'monthly');
   };
-
-  const getPlanTier = (planType: string) => {
-    if (planType === 'basic') return 1;
-    if (planType === 'premium') return 2;
-    return 0;
-  };
-
-  const currentTier = getCurrentPlanTier();
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5 text-[#61710C]" />
-            <CardTitle>Planos e Assinaturas</CardTitle>
-          </div>
-          <CardDescription>
-            Escolha o plano ideal para suas necessidades
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SubscriptionStatus subscription={subscription} />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            {plans.map((plan) => {
-              const planTier = getPlanTier(plan.planType);
-              const isCurrentPlan = subscription?.plan_type === plan.planType;
-              const isDowngrade = currentTier > planTier;
-              const isUpgrade = currentTier < planTier;
+    <Card>
+      <CardHeader>
+        <CardTitle>Planos e Assinatura</CardTitle>
+        <CardDescription>
+          Gerencie sua assinatura e veja os planos disponíveis
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <SubscriptionStatus subscription={subscription} />
+        
+        <div className="mt-6">
+          <BillingToggle 
+            billingCycle={billingCycle} 
+            onBillingCycleChange={handleBillingCycleChange}
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {plans.map((plan) => {
+            const isCurrentPlan = subscription?.plan_type === plan.planType;
+            const isDowngrade = subscription?.plan_type === 'premium' && plan.planType === 'basic';
 
-              return (
-                <PlanCard
-                  key={plan.id}
-                  plan={plan}
-                  billingCycle="monthly"
-                  onSubscribe={() => handleSubscribe(plan.planType)}
-                  onManage={handleManageSubscription}
-                  isCurrentPlan={isCurrentPlan}
-                  isLoading={createCheckout.isPending}
-                />
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            return (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                billingCycle={billingCycle}
+                onSubscribe={() => handleSubscribe(plan.planType)}
+                onManage={handleManageSubscription}
+                isCurrentPlan={isCurrentPlan}
+                isLoading={createCheckout.isPending}
+              />
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

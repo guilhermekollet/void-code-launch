@@ -15,7 +15,7 @@ export function AIAgentSection() {
   const updateAISettings = useUpdateAIAgentSettings();
   const updateUserProfile = useUpdateUserProfile();
   
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(true); // Padrão ativo
   const [phoneNumber, setPhoneNumber] = useState("");
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function AIAgentSection() {
     } else if (userProfile?.phone_number) {
       // Auto-preencher com o telefone da tabela users
       setPhoneNumber(userProfile.phone_number);
-      setIsEnabled(aiSettings?.is_enabled || false);
+      setIsEnabled(aiSettings?.is_enabled ?? true); // Padrão ativo se não existir
     }
     
     if (aiSettings) {

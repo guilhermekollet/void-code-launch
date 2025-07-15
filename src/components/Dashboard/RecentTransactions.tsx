@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, ArrowDown, Receipt, Edit, Trash2, MoreVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUp, ArrowDown, Receipt, Edit, Trash2, MoreVertical, CreditCard } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -12,7 +13,10 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
+import { InstallmentDetailsModal } from "@/components/CreditCards/InstallmentDetailsModal";
 import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
+import { useInstallmentTransactions } from "@/hooks/useInstallmentTransactions";
+import { useCreditCards } from "@/hooks/useCreditCards";
 
 interface Transaction {
   id: number;
@@ -21,6 +25,10 @@ interface Transaction {
   type: string | null;
   category: string;
   tx_date: string;
+  credit_card_id?: number;
+  is_credit_card_expense?: boolean;
+  installment_number?: number;
+  total_installments?: number;
 }
 
 interface RecentTransactionsProps {
@@ -35,9 +43,16 @@ export function RecentTransactions({
   const isMobile = useIsMobile();
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<{ id: number; description: string } | null>(null);
+  const [installmentModalOpen, setInstallmentModalOpen] = useState(false);
+  const [selectedInstallment, setSelectedInstallment] = useState<Transaction | null>(null);
   
   const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
+  const { data: creditCards = [] } = useCreditCards();
+  const { data: installmentTransactions = [] } = useInstallmentTransactions(
+    selectedInstallment?.description || '',
+    selectedInstallment?.total_installments || 0
+  );
 
   const handleEdit = (transaction: Transaction) => {
     setEditTransaction(transaction);
@@ -45,6 +60,11 @@ export function RecentTransactions({
 
   const handleDelete = (transactionId: number, description: string) => {
     setDeleteTransaction({ id: transactionId, description });
+  };
+
+  const handleInstallmentDetails = (transaction: Transaction) => {
+    setSelectedInstallment(transaction);
+    setInstallmentModalOpen(true);
   };
 
   const handleSaveEdit = (id: number, data: Partial<Transaction>) => {
@@ -55,6 +75,18 @@ export function RecentTransactions({
   const handleConfirmDelete = (id: number) => {
     deleteTransactionMutation.mutate(id);
     setDeleteTransaction(null);
+  };
+
+  const getCreditCardInfo = (creditCardId?: number) => {
+    if (!creditCardId) return null;
+    return creditCards.find(card => card.id === creditCardId);
+  };
+
+  const getContrastColor = (backgroundColor: string) => {
+    if (!backgroundColor || backgroundColor === '#ffffff' || backgroundColor === 'white') {
+      return '#000000';
+    }
+    return '#ffffff';
   };
 
   if (transactions.length === 0) {
@@ -88,6 +120,8 @@ export function RecentTransactions({
             {transactions.map((transacao, index) => {
               const isReceita = transacao.type === 'receita';
               const isLast = index === transactions.length - 1;
+              const creditCardInfo = getCreditCardInfo(transacao.credit_card_id);
+              const isInstallment = transacao.total_installments && transacao.total_installments > 1;
               
               if (isMobile) {
                 return (
@@ -106,9 +140,35 @@ export function RecentTransactions({
                           <p className="font-medium text-gray-900 text-sm truncate">
                             {transacao.description}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            {transacao.category} • {new Date(transacao.tx_date).toLocaleDateString('pt-BR')}
-                          </p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{transacao.category}</span>
+                            <span>•</span>
+                            <span>{new Date(transacao.tx_date).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {creditCardInfo && (
+                              <Badge
+                                className="text-xs px-2 py-0.5"
+                                style={{
+                                  backgroundColor: creditCardInfo.color,
+                                  color: getContrastColor(creditCardInfo.color),
+                                  border: `1px solid ${creditCardInfo.color}`
+                                }}
+                              >
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                {creditCardInfo.card_name || creditCardInfo.bank_name}
+                              </Badge>
+                            )}
+                            {isInstallment && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs cursor-pointer hover:bg-gray-50"
+                                onClick={() => handleInstallmentDetails(transacao)}
+                              >
+                                {transacao.installment_number}/{transacao.total_installments}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
@@ -160,9 +220,35 @@ export function RecentTransactions({
                       <p className="font-medium text-gray-900 truncate">
                         {transacao.description}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {transacao.category} • {new Date(transacao.tx_date).toLocaleDateString('pt-BR')}
-                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>{transacao.category}</span>
+                        <span>•</span>
+                        <span>{new Date(transacao.tx_date).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {creditCardInfo && (
+                          <Badge
+                            className="text-xs px-2 py-0.5"
+                            style={{
+                              backgroundColor: creditCardInfo.color,
+                              color: getContrastColor(creditCardInfo.color),
+                              border: `1px solid ${creditCardInfo.color}`
+                            }}
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            {creditCardInfo.card_name || creditCardInfo.bank_name}
+                          </Badge>
+                        )}
+                        {isInstallment && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs cursor-pointer hover:bg-gray-50"
+                            onClick={() => handleInstallmentDetails(transacao)}
+                          >
+                            {transacao.installment_number}/{transacao.total_installments}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -215,6 +301,16 @@ export function RecentTransactions({
         onClose={() => setDeleteTransaction(null)}
         onDelete={handleConfirmDelete}
       />
+
+      {selectedInstallment && (
+        <InstallmentDetailsModal
+          open={installmentModalOpen}
+          onOpenChange={setInstallmentModalOpen}
+          transactions={installmentTransactions}
+          creditCardName={getCreditCardInfo(selectedInstallment.credit_card_id)?.card_name || getCreditCardInfo(selectedInstallment.credit_card_id)?.bank_name || 'Cartão'}
+          creditCardColor={getCreditCardInfo(selectedInstallment.credit_card_id)?.color || '#e5e7eb'}
+        />
+      )}
     </>
   );
 }
