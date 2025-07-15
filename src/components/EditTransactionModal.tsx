@@ -33,7 +33,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
   const [category, setCategory] = useState('');
   const [type, setType] = useState<'receita' | 'despesa'>('despesa');
   const [date, setDate] = useState<Date>(new Date());
-  const [creditCardId, setCreditCardId] = useState<number | null>(null);
+  const [creditCardId, setCreditCardId] = useState<string>('');
 
   const updateTransaction = useUpdateTransaction();
   const { data: categories = [] } = useCategoriesByType(type);
@@ -46,7 +46,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
       setCategory(transaction.category);
       setType(transaction.type as 'receita' | 'despesa');
       setDate(new Date(transaction.tx_date));
-      setCreditCardId(transaction.credit_card_id || null);
+      setCreditCardId(transaction.credit_card_id ? transaction.credit_card_id.toString() : '');
     }
   }, [transaction]);
 
@@ -65,7 +65,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
         value: processedAmount,
         category,
         tx_date: date.toISOString(),
-        credit_card_id: creditCardId,
+        credit_card_id: creditCardId ? parseInt(creditCardId) : null,
         type
       });
       
@@ -137,8 +137,8 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
             <div>
               <Label htmlFor="creditCard">Cartão de Crédito (Opcional)</Label>
               <Select 
-                value={creditCardId?.toString() || ''} 
-                onValueChange={(value) => setCreditCardId(value ? parseInt(value) : null)}
+                value={creditCardId} 
+                onValueChange={(value) => setCreditCardId(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um cartão" />
