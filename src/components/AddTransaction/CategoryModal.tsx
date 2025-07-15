@@ -24,9 +24,9 @@ const CATEGORY_ICONS = [
 ];
 
 const CATEGORY_COLORS = [
-  '#EF4444', '#DC2626', '#B91C1C', '#F59E0B', '#D97706', '#B45309',
-  '#F97316', '#EA580C', '#C2410C', '#84CC16', '#65A30D', '#4D7C0F',
-  '#06B6D4', '#0891B2', '#0E7490', '#3B82F6', '#2563EB', '#1D4ED8'
+  '#61710C', '#E11D48', '#DC2626', '#EA580C', '#D97706', '#CA8A04',
+  '#65A30D', '#16A34A', '#059669', '#0891B2', '#0284C7', '#2563EB',
+  '#4F46E5', '#7C3AED', '#9333EA', '#C026D3', '#DB2777', '#BE185D'
 ];
 
 export function CategoryModal({ 
@@ -37,7 +37,7 @@ export function CategoryModal({
 }: CategoryModalProps) {
   const [name, setName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState("tag");
-  const [selectedColor, setSelectedColor] = useState("#EF4444");
+  const [selectedColor, setSelectedColor] = useState("#61710C");
 
   const { mutate: addCategory, isPending } = useAddCategory();
 
@@ -45,7 +45,7 @@ export function CategoryModal({
     if (!open) {
       setName("");
       setSelectedIcon("tag");
-      setSelectedColor("#EF4444");
+      setSelectedColor("#61710C");
     }
   }, [open]);
 
@@ -81,6 +81,8 @@ export function CategoryModal({
     });
   };
 
+  const IconPreview = getIconComponent(selectedIcon);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white max-w-md">
@@ -108,10 +110,7 @@ export function CategoryModal({
               <SelectTrigger>
                 <SelectValue>
                   <div className="flex items-center gap-2">
-                    {(() => {
-                      const IconComponent = getIconComponent(selectedIcon);
-                      return <IconComponent className="w-4 h-4" style={{ color: selectedColor }} />;
-                    })()}
+                    <IconPreview className="w-4 h-4" style={{ color: selectedColor }} />
                     <span className="capitalize">{selectedIcon.replace('-', ' ')}</span>
                   </div>
                 </SelectValue>
@@ -139,13 +138,34 @@ export function CategoryModal({
                 <button
                   key={color}
                   type="button"
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                  className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
                     selectedColor === color ? 'border-gray-400 scale-110' : 'border-gray-200'
                   }`}
                   style={{ backgroundColor: color }}
                   onClick={() => setSelectedColor(color)}
                 />
               ))}
+            </div>
+          </div>
+
+          {/* Preview da categoria com cor selecionada */}
+          <div className="space-y-2">
+            <Label>Prévia</Label>
+            <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: selectedColor }}
+              >
+                <IconPreview className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">
+                  {name || 'Nome da categoria'}
+                </p>
+                <p className="text-sm text-gray-500 capitalize">
+                  {categoryType === 'despesa' ? 'Despesa' : 'Receita'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -159,7 +179,7 @@ export function CategoryModal({
             </Button>
             <Button 
               type="submit" 
-              className="bg-[#61710C] hover:bg-[#4a5709]"
+              className="bg-[#61710C] hover:bg-[#4a5709] text-white"
               disabled={isPending || !name.trim()}
             >
               {isPending ? 'Adicionando...' : 'Adicionar'}

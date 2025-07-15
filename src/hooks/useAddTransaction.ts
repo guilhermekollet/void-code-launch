@@ -75,6 +75,7 @@ export function useAddTransaction() {
               total_installments: transactionData.installments,
               is_installment: true,
               installment_start_date: transactionData.tx_date,
+              is_agent: false, // Manual transaction
             })
             .select()
             .single();
@@ -105,6 +106,7 @@ export function useAddTransaction() {
             credit_card_id: transactionData.credit_card_id,
             installments: 1,
             installment_value: transactionData.amount,
+            is_agent: false, // Manual transaction
           })
           .select()
           .single();
@@ -139,6 +141,7 @@ export function useAddTransaction() {
               installment_number: i,
               total_installments: transactionData.total_installments,
               installment_start_date: transactionData.installment_start_date,
+              is_agent: false, // Manual transaction
             })
             .select()
             .single();
@@ -166,6 +169,7 @@ export function useAddTransaction() {
             registered_at: new Date().toISOString(),
             is_recurring: transactionData.is_recurring || false,
             recurring_date: transactionData.recurring_date,
+            is_agent: false, // Manual transaction
           })
           .select()
           .single();

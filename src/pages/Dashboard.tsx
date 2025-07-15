@@ -51,6 +51,9 @@ export default function Dashboard() {
     is_installment: transaction.is_installment,
     installment_number: transaction.installment_number,
     total_installments: transaction.total_installments,
+    credit_card_id: transaction.credit_card_id,
+    is_credit_card_expense: transaction.is_credit_card_expense,
+    is_agent: transaction.is_agent,
     registered_at: transaction.registered_at
   }));
 

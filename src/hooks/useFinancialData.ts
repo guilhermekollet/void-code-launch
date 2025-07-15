@@ -149,7 +149,7 @@ export function useTransactions() {
       const internalUserId = userData.id;
       console.log('[useTransactions] Using internal user ID:', internalUserId);
 
-      // Fetch recent transactions with all required fields
+      // Fetch recent transactions with all required fields including is_agent
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select(`
@@ -167,6 +167,7 @@ export function useTransactions() {
           installment_value,
           credit_card_id,
           is_credit_card_expense,
+          is_agent,
           registered_at
         `)
         .eq('user_id', internalUserId)
@@ -188,6 +189,7 @@ export function useTransactions() {
         installment_value: transaction.installment_value || null,
         credit_card_id: transaction.credit_card_id || null,
         is_credit_card_expense: transaction.is_credit_card_expense || false,
+        is_agent: transaction.is_agent || false,
       })) || [];
     },
     enabled: !!user?.id,

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, Receipt, Edit, Trash2, MoreVertical, CreditCard } from "lucide-react";
+import { ArrowUp, ArrowDown, Receipt, Edit, Trash2, MoreVertical, CreditCard, Bot } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -29,6 +29,7 @@ interface Transaction {
   is_credit_card_expense?: boolean;
   installment_number?: number;
   total_installments?: number;
+  is_agent?: boolean;
 }
 
 interface RecentTransactionsProps {
@@ -129,6 +130,7 @@ export function RecentTransactions({
               const isLast = index === transactions.length - 1;
               const creditCardInfo = getCreditCardInfo(transacao.credit_card_id);
               const isInstallment = transacao.total_installments && transacao.total_installments > 1;
+              const isAITransaction = transacao.is_agent === true;
               
               if (isMobile) {
                 return (
@@ -153,6 +155,14 @@ export function RecentTransactions({
                             <span>{new Date(transacao.tx_date).toLocaleDateString('pt-BR')}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
+                            {isAITransaction && (
+                              <Badge
+                                className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200"
+                              >
+                                <Bot className="h-3 w-3 mr-1" />
+                                Bolsofy AI
+                              </Badge>
+                            )}
                             {creditCardInfo && (
                               <Badge
                                 className="text-xs px-2 py-0.5"
@@ -233,6 +243,14 @@ export function RecentTransactions({
                         <span>{new Date(transacao.tx_date).toLocaleDateString('pt-BR')}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
+                        {isAITransaction && (
+                          <Badge
+                            className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200"
+                          >
+                            <Bot className="h-3 w-3 mr-1" />
+                            Bolsofy AI
+                          </Badge>
+                        )}
                         {creditCardInfo && (
                           <Badge
                             className="text-xs px-2 py-0.5"
