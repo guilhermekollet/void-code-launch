@@ -59,7 +59,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
       // Process amount based on type
       const processedAmount = type === 'despesa' ? -Math.abs(amount) : Math.abs(amount);
       
-      // Convert creditCardId to number or null
+      // Convert creditCardId to number or null for the database
       const creditCardIdValue: number | null = creditCardId ? parseInt(creditCardId, 10) : null;
       
       await updateTransaction.mutateAsync({
