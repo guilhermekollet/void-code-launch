@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useTransactions } from "@/hooks/useFinancialData";
 import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
@@ -158,7 +159,14 @@ export default function Transacoes() {
   };
 
   const handleSaveTransaction = (id: number, data: Partial<Transaction>) => {
-    updateTransactionMutation.mutate({ id, data });
+    updateTransactionMutation.mutate({ 
+      id, 
+      description: data.description,
+      value: data.amount,
+      category: data.category,
+      tx_date: data.tx_date,
+      type: data.type
+    });
   };
 
   const handleDeleteTransaction = (id: number, description: string) => {

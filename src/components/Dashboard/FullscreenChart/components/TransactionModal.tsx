@@ -71,7 +71,14 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
 
   const handleSaveEdit = async (id: number, data: any) => {
     try {
-      await updateTransaction.mutateAsync({ id, data });
+      await updateTransaction.mutateAsync({ 
+        id, 
+        description: data.description,
+        value: data.amount || data.value,
+        category: data.category,
+        tx_date: data.tx_date,
+        type: data.type
+      });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
       setEditingTransaction(null);

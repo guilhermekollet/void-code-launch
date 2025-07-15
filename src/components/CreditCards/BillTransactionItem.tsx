@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Calendar, Tag } from "lucide-react";
@@ -58,7 +59,14 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
 
   const handleSave = async (id: number, updates: Partial<Transaction>) => {
     try {
-      await updateTransaction.mutateAsync({ id, data: updates });
+      await updateTransaction.mutateAsync({ 
+        id, 
+        description: updates.description,
+        value: updates.amount,
+        category: updates.category,
+        tx_date: updates.tx_date,
+        type: updates.type
+      });
       // Invalidar caches relevantes
       queryClient.invalidateQueries({ queryKey: ['credit-card-bill-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });

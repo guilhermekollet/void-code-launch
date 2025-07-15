@@ -68,7 +68,14 @@ export function RecentTransactions({
   };
 
   const handleSaveEdit = (id: number, data: Partial<Transaction>) => {
-    updateTransactionMutation.mutate({ id, data });
+    updateTransactionMutation.mutate({ 
+      id, 
+      description: data.description,
+      value: data.amount,
+      category: data.category,
+      tx_date: data.tx_date,
+      type: data.type
+    });
     setEditTransaction(null);
   };
 
