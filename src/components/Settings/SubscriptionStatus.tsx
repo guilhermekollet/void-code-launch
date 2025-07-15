@@ -4,6 +4,7 @@ import React from 'react';
 interface SubscriptionData {
   status: string;
   plan_type: string;
+  billing_cycle?: string;
 }
 
 interface SubscriptionStatusProps {
@@ -15,16 +16,29 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
     return null;
   }
 
-  const getPlanDisplayName = (planType: string) => {
+  const getPlanDisplayName = (planType: string, billingCycle?: string) => {
+    let planName = '';
+    
     switch (planType) {
       case 'basic':
-        return 'Básico';
+        planName = 'Básico';
+        break;
       case 'premium':
-        return 'Premium';
+        planName = 'Premium';
+        break;
       case 'free':
       default:
-        return 'Gratuito';
+        planName = 'Gratuito';
+        break;
     }
+
+    // Adicionar período de faturamento se não for plano gratuito
+    if (planType !== 'free' && billingCycle) {
+      const cycleText = billingCycle === 'yearly' ? 'Anual' : 'Mensal';
+      return `${planName} ${cycleText}`;
+    }
+
+    return planName;
   };
 
   const isFreePlan = subscription.plan_type === 'free';
@@ -57,7 +71,7 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
           ? 'text-gray-700' 
           : 'text-green-700'
       }`}>
-        Plano atual: {getPlanDisplayName(subscription.plan_type)}
+        Plano atual: {getPlanDisplayName(subscription.plan_type, subscription.billing_cycle)}
       </p>
     </div>
   );

@@ -193,7 +193,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
   logStep("👤 Checking if user already exists in public.users");
   const { data: existingUser, error: existingUserError } = await supabase
     .from("users")
-    .select("id, email, user_id, completed_onboarding, plan_type")
+    .select("id, email, user_id, completed_onboarding, plan_type, billing_cycle")
     .eq("email", onboardingData.email)
     .maybeSingle();
 
@@ -207,30 +207,70 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       email: existingUser.email,
       authUserId: existingUser.user_id,
       completedOnboarding: existingUser.completed_onboarding,
-      planType: existingUser.plan_type
+      planType: existingUser.plan_type,
+      billingCycle: existingUser.billing_cycle
     });
 
-    // Se o usuário existe mas não tem onboarding completo, vamos atualizar
-    if (!existingUser.completed_onboarding || !existingUser.plan_type) {
-      logStep("🔄 Updating existing user with onboarding completion");
-      
-      const { error: updateUserError } = await supabase
-        .from("users")
-        .update({
-          completed_onboarding: true,
-          plan_type: onboardingData.selected_plan,
-          billing_cycle: onboardingData.billing_cycle,
-          stripe_session_id: session.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", existingUser.id);
+    // CRITICAL: Sempre atualizar o plan_type e billing_cycle, mesmo se usuário já existe
+    logStep("🔄 Updating existing user with correct plan data");
+    
+    // Calcular datas do trial - 3 DIAS
+    const trialStart = new Date();
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 3);
 
-      if (updateUserError) {
-        logStep("❌ Failed to update existing user", { error: updateUserError.message });
-      } else {
-        logStep("✅ Updated existing user with onboarding completion");
-      }
+    const { error: updateUserError } = await supabase
+      .from("users")
+      .update({
+        completed_onboarding: true,
+        plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja atualizado
+        billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja atualizado
+        stripe_session_id: session.id,
+        trial_start: trialStart.toISOString(),
+        trial_end: trialEnd.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", existingUser.id);
+
+    if (updateUserError) {
+      logStep("❌ CRITICAL: Failed to update existing user with plan data", { 
+        error: updateUserError.message,
+        selectedPlan: onboardingData.selected_plan,
+        billingCycle: onboardingData.billing_cycle
+      });
+      throw new Error("Failed to update user plan data");
+    } else {
+      logStep("✅ SUCCESSFULLY updated existing user with plan data", {
+        userId: existingUser.id,
+        planType: onboardingData.selected_plan,
+        billingCycle: onboardingData.billing_cycle,
+        trialDays: 3
+      });
     }
+
+    // Atualizar onboarding com datas do trial
+    const { error: updateTrialError } = await supabase
+      .from("onboarding")
+      .update({ 
+        trial_start_date: trialStart.toISOString(),
+        trial_end_date: trialEnd.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", onboardingData.id);
+
+    if (updateTrialError) {
+      logStep("⚠️ Failed to update trial dates in onboarding", { error: updateTrialError.message });
+    }
+
+    logStep("🎊 === EXISTING USER PLAN UPDATE COMPLETED ===", {
+      userId: existingUser.id,
+      email: onboardingData.email,
+      paymentConfirmed: true,
+      planType: onboardingData.selected_plan,
+      billingCycle: onboardingData.billing_cycle,
+      completedOnboarding: true,
+      trialDays: 3
+    });
     
     return;
   }
@@ -276,8 +316,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         name: onboardingData.name,
         email: onboardingData.email,
         phone_number: onboardingData.phone,
-        plan_type: onboardingData.selected_plan,
-        billing_cycle: onboardingData.billing_cycle,
+        plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja definido
+        billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja definido
         stripe_session_id: session.id,
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),
@@ -289,7 +329,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     if (userError) {
       logStep("💥 Failed to create public.users record for orphaned user", { 
         error: userError.message,
-        authUserId: orphanedAuthUser.id
+        authUserId: orphanedAuthUser.id,
+        selectedPlan: onboardingData.selected_plan,
+        billingCycle: onboardingData.billing_cycle
       });
       throw new Error(`Failed to create user record: ${userError.message}`);
     }
@@ -324,6 +366,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       email: onboardingData.email,
       paymentConfirmed: true,
       planType: onboardingData.selected_plan,
+      billingCycle: onboardingData.billing_cycle,
       completedOnboarding: true,
       trialDays: 3
     });
@@ -382,8 +425,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       name: onboardingData.name,
       email: onboardingData.email,
       phone_number: onboardingData.phone,
-      plan_type: onboardingData.selected_plan,
-      billing_cycle: onboardingData.billing_cycle,
+      plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja definido
+      billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja definido
       stripe_session_id: session.id,
       trial_start: trialStart.toISOString(),
       trial_end: trialEnd.toISOString(),
@@ -396,7 +439,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     logStep("💥 Failed to create user in public.users table", { 
       error: userError.message,
       errorCode: userError.code,
-      authUserId: authUser.user.id
+      authUserId: authUser.user.id,
+      selectedPlan: onboardingData.selected_plan,
+      billingCycle: onboardingData.billing_cycle
     });
     
     // Limpar usuário auth em caso de erro

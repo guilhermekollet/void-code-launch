@@ -31,15 +31,28 @@ export function ActivePlanCard() {
     );
   }
 
-  const getPlanDisplayName = (planType: string) => {
+  const getPlanDisplayName = (planType: string, billingCycle?: string) => {
+    let planName = '';
+    
     switch (planType) {
       case 'basic':
-        return 'Básico';
+        planName = 'Básico';
+        break;
       case 'premium':
-        return 'Premium';
+        planName = 'Premium';
+        break;
       default:
-        return 'Gratuito';
+        planName = 'Gratuito';
+        break;
     }
+
+    // Adicionar período de faturamento
+    if (planType !== 'free' && billingCycle) {
+      const cycleText = billingCycle === 'yearly' ? 'Anual' : 'Mensal';
+      return `${planName} ${cycleText}`;
+    }
+
+    return planName;
   };
 
   const getPlanIcon = (planType: string) => {
@@ -50,6 +63,17 @@ export function ActivePlanCard() {
         return <Crown className="h-5 w-5 text-white" />;
       default:
         return <Star className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getPlanDescription = (planType: string) => {
+    switch (planType) {
+      case 'basic':
+        return 'Controle essencial';
+      case 'premium':
+        return 'Controle total';
+      default:
+        return 'Recursos básicos';
     }
   };
 
@@ -67,10 +91,10 @@ export function ActivePlanCard() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className={`text-lg font-semibold ${isPremium ? 'text-white' : 'text-gray-900'}`}>
-              {getPlanDisplayName(subscription.plan_type)}
+              {getPlanDisplayName(subscription.plan_type, subscription.billing_cycle)}
             </h3>
             <p className={`text-sm ${isPremium ? 'text-gray-200' : 'text-gray-600'}`}>
-              {subscription.plan_type === 'basic' ? 'Controle essencial' : 'Controle total'}
+              {getPlanDescription(subscription.plan_type)}
             </p>
           </div>
           <Badge 

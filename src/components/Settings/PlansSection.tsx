@@ -120,9 +120,25 @@ export function PlansSection() {
     setBillingCycle(checked ? 'yearly' : 'monthly');
   };
 
+  // CORRECTED: Verificar plan_type E billing_cycle para determinar plano atual
   const isCurrentPlan = (planType: string, planBillingCycle: 'monthly' | 'yearly') => {
-    return subscription?.plan_type === planType && 
-           subscription?.billing_cycle === planBillingCycle;
+    const hasSubscription = subscription && subscription.plan_type && subscription.billing_cycle;
+    if (!hasSubscription) return false;
+    
+    const planMatch = subscription.plan_type === planType;
+    const cycleMatch = subscription.billing_cycle === planBillingCycle;
+    
+    console.log('Checking isCurrentPlan:', {
+      planType,
+      planBillingCycle,
+      subscriptionPlanType: subscription.plan_type,
+      subscriptionBillingCycle: subscription.billing_cycle,
+      planMatch,
+      cycleMatch,
+      result: planMatch && cycleMatch
+    });
+    
+    return planMatch && cycleMatch;
   };
 
   const getFilteredPlans = () => {
