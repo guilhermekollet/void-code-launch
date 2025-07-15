@@ -10,17 +10,18 @@ interface Country {
   name: string
   flag: string
   placeholder: string
+  maxLength: number
 }
 
 const countries: Country[] = [
-  { code: "+55", country: "BR", name: "Brasil", flag: "🇧🇷", placeholder: "(11) 99999-9999" },
-  { code: "+54", country: "AR", name: "Argentina", flag: "🇦🇷", placeholder: "(11) 1234-5678" },
-  { code: "+56", country: "CL", name: "Chile", flag: "🇨🇱", placeholder: "(2) 1234 5678" },
-  { code: "+57", country: "CO", name: "Colômbia", flag: "🇨🇴", placeholder: "(1) 234 5678" },
-  { code: "+34", country: "ES", name: "Espanha", flag: "🇪🇸", placeholder: "612 34 56 78" },
-  { code: "+1", country: "US", name: "Estados Unidos", flag: "🇺🇸", placeholder: "(555) 123-4567" },
-  { code: "+52", country: "MX", name: "México", flag: "🇲🇽", placeholder: "55 1234 5678" },
-  { code: "+351", country: "PT", name: "Portugal", flag: "🇵🇹", placeholder: "912 345 678" },
+  { code: "+55", country: "BR", name: "Brasil", flag: "🇧🇷", placeholder: "(11) 99999-9999", maxLength: 11 },
+  { code: "+54", country: "AR", name: "Argentina", flag: "🇦🇷", placeholder: "(11) 1234-5678", maxLength: 10 },
+  { code: "+56", country: "CL", name: "Chile", flag: "🇨🇱", placeholder: "(2) 1234 5678", maxLength: 9 },
+  { code: "+57", country: "CO", name: "Colômbia", flag: "🇨🇴", placeholder: "(1) 234 5678", maxLength: 10 },
+  { code: "+34", country: "ES", name: "Espanha", flag: "🇪🇸", placeholder: "612 34 56 78", maxLength: 9 },
+  { code: "+1", country: "US", name: "Estados Unidos", flag: "🇺🇸", placeholder: "(555) 123-4567", maxLength: 10 },
+  { code: "+52", country: "MX", name: "México", flag: "🇲🇽", placeholder: "55 1234 5678", maxLength: 10 },
+  { code: "+351", country: "PT", name: "Portugal", flag: "🇵🇹", placeholder: "912 345 678", maxLength: 9 },
 ]
 
 interface PhoneInputProps extends Omit<React.ComponentProps<typeof Input>, 'onChange'> {
@@ -33,10 +34,11 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
   ({ className, value = "", onChange, ...props }, ref) => {
     const [countryCode, setCountryCode] = React.useState("+55")
     const [phoneNumber, setPhoneNumber] = React.useState("")
+    const [validationError, setValidationError] = React.useState("")
 
     // Parse initial value if provided
     React.useEffect(() => {
-      if (value && value !== `${countryCode.replace('+', '')}${phoneNumber}`) {
+      if (value && value !== `${countryCode.replace('+', '')}${phoneNumber.replace(/\D/g, '')}`) {
         const country = countries.find(c => value.startsWith(c.code.replace('+', '')))
         if (country) {
           setCountryCode(country.code)
@@ -56,13 +58,42 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
 
     const selectedCountry = countries.find(c => c.code === countryCode) || countries[0]
 
+    const validatePhoneNumber = (phone: string, country: Country): string => {
+      const numericPhone = phone.replace(/\D/g, '')
+      
+      if (country.code === '+55') { // Brasil
+        if (numericPhone.length > 11) {
+          return "Número muito longo para o Brasil"
+        }
+        if (numericPhone.length === 11 && !numericPhone.startsWith('9', 2)) {
+          return "Celular deve começar com 9 após o DDD"
+        }
+      } else if (country.code === '+1') { // EUA/Canada
+        if (numericPhone.length > 10) {
+          return "Número muito longo para os EUA"
+        }
+      } else {
+        if (numericPhone.length > country.maxLength) {
+          return `Número muito longo para ${country.name}`
+        }
+      }
+      
+      return ""
+    }
+
     const handleCountryChange = (newCountryCode: string) => {
+      const newCountry = countries.find(c => c.code === newCountryCode)
+      if (!newCountry) return
+
       setCountryCode(newCountryCode)
+      setValidationError("")
+      
+      // Clear phone number if changing country to avoid invalid formats
+      setPhoneNumber("")
+      
       // Send only numbers (DDI + phone number) to database
       const numericCountryCode = newCountryCode.replace('+', '')
-      const numericPhone = phoneNumber.replace(/\D/g, '')
-      const fullNumber = `${numericCountryCode}${numericPhone}`
-      onChange?.(fullNumber)
+      onChange?.(numericCountryCode)
     }
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,8 +101,13 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
       // Allow only numbers, spaces, parentheses, and hyphens for display
       const cleanedValue = inputValue.replace(/[^\d\s()-]/g, '')
       
-      // Extract only numbers for storage
+      // Extract only numbers for validation and storage
       const numericValue = cleanedValue.replace(/\D/g, '')
+      
+      // Validate based on country
+      const error = validatePhoneNumber(cleanedValue, selectedCountry)
+      setValidationError(error)
+      
       setPhoneNumber(cleanedValue)
       
       // Send only numbers (DDI + phone number) to database
@@ -89,38 +125,43 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
     }
 
     return (
-      <div className={cn("flex gap-2", className)}>
-        <Select value={countryCode} onValueChange={handleCountryChange}>
-          <SelectTrigger className="w-[120px] border-[#DEDEDE] focus:border-[#61710C]">
-            <SelectValue>
-              <div className="flex items-center gap-2">
-                <span>{selectedCountry.flag}</span>
-                <span className="text-sm">{selectedCountry.code}</span>
-              </div>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {countries.map((country) => (
-              <SelectItem key={country.code} value={country.code}>
+      <div className={cn("space-y-2", className)}>
+        <div className="flex gap-2">
+          <Select value={countryCode} onValueChange={handleCountryChange}>
+            <SelectTrigger className="w-[120px] border-[#DEDEDE] focus:border-[#61710C]">
+              <SelectValue>
                 <div className="flex items-center gap-2">
-                  <span>{country.flag}</span>
-                  <span>{country.code}</span>
-                  <span className="text-sm text-[#64748B]">{country.name}</span>
+                  <span>{selectedCountry.flag}</span>
+                  <span className="text-sm">{selectedCountry.code}</span>
                 </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input
-          {...props}
-          ref={ref}
-          type="tel"
-          value={phoneNumber}
-          onChange={handlePhoneChange}
-          onKeyPress={handleKeyPress}
-          placeholder={selectedCountry.placeholder}
-          className="flex-1 border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50"
-        />
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {countries.map((country) => (
+                <SelectItem key={country.code} value={country.code}>
+                  <div className="flex items-center gap-2">
+                    <span>{country.flag}</span>
+                    <span>{country.code}</span>
+                    <span className="text-sm text-[#64748B]">{country.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            {...props}
+            ref={ref}
+            type="tel"
+            value={phoneNumber}
+            onChange={handlePhoneChange}
+            onKeyPress={handleKeyPress}
+            placeholder={selectedCountry.placeholder}
+            className="flex-1 border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-30"
+          />
+        </div>
+        {validationError && (
+          <p className="text-sm text-red-500">{validationError}</p>
+        )}
       </div>
     )
   }

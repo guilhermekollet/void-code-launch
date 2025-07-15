@@ -62,7 +62,7 @@ serve(async (req) => {
       }
     }
 
-    // Criar sessão do Stripe
+    // Criar sessão do Stripe com período de teste de 3 dias
     const sessionConfig: any = {
       line_items: [
         {
@@ -70,7 +70,7 @@ serve(async (req) => {
             currency: 'brl',
             product_data: {
               name: `Plano ${planType === 'basic' ? 'Básico' : 'Premium'}`,
-              description: `Assinatura ${billingCycle === 'monthly' ? 'mensal' : 'anual'}`
+              description: `Assinatura ${billingCycle === 'monthly' ? 'mensal' : 'anual'} - 3 dias grátis para experimentar!`
             },
             unit_amount: price,
             recurring: {
@@ -81,12 +81,16 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
+      subscription_data: {
+        trial_period_days: 3, // 3 dias de trial gratuito
+      },
       success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/register`,
       metadata: {
         planType,
         billingCycle,
-        onboardingId: onboardingId || ''
+        onboardingId: onboardingId || '',
+        trialDays: '3'
       }
     };
 
@@ -100,7 +104,7 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
-    logStep("Stripe session created", { sessionId: session.id, url: session.url });
+    logStep("Stripe session created", { sessionId: session.id, url: session.url, trialDays: 3 });
 
     // Atualizar onboarding com session_id real
     if (onboardingId) {

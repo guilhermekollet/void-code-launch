@@ -437,6 +437,19 @@ export default function Register() {
     return 20; // 20% de desconto para planos anuais
   };
 
+  const getDisplayPrice = (plan: Plan): { monthly: number; yearly: number } => {
+    if (formData.billingCycle === 'yearly') {
+      return {
+        monthly: plan.yearlyPrice / 12,
+        yearly: plan.yearlyPrice
+      };
+    }
+    return {
+      monthly: plan.monthlyPrice,
+      yearly: plan.yearlyPrice
+    };
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="sticky top-0 z-50">
@@ -478,7 +491,7 @@ export default function Register() {
                     placeholder="Nome Sobrenome" 
                     value={formData.name} 
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
+                    className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-30" 
                   />
                   {formData.name && !validateName(formData.name) && (
                     <p className="text-sm text-red-500">Digite nome e sobrenome</p>
@@ -503,7 +516,7 @@ export default function Register() {
                       placeholder="seu@email.com" 
                       value={formData.email} 
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
+                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-30" 
                     />
                     {formData.email && !validateEmail(formData.email) && (
                       <p className="text-sm text-red-500">Email inválido</p>
@@ -518,7 +531,7 @@ export default function Register() {
                       placeholder="seu@email.com" 
                       value={formData.confirmEmail} 
                       onChange={(e) => handleInputChange('confirmEmail', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
+                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-30" 
                     />
                     {formData.confirmEmail && formData.email !== formData.confirmEmail && (
                       <p className="text-sm text-red-500">Emails não coincidem</p>
@@ -554,6 +567,7 @@ export default function Register() {
                 <div className="text-center mb-6">
                   <h2 className="text-xl font-semibold text-[#121212]">Escolha seu plano</h2>
                   <p className="text-sm text-[#64748B]">Selecione o plano ideal para você</p>
+                  <p className="text-sm text-green-600 mt-2">🎉 3 dias grátis para experimentar!</p>
                 </div>
 
                 <div className="flex items-center justify-center gap-4 mb-6">
@@ -575,61 +589,64 @@ export default function Register() {
                 </div>
 
                 <div className="space-y-3">
-                  {plans.map((plan) => (
-                    <div
-                      key={plan.id}
-                      className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                        formData.selectedPlan === plan.id
-                          ? 'border-[#61710C] bg-green-50'
-                          : 'border-[#DEDEDE] hover:border-[#61710C]'
-                      }`}
-                      onClick={() => handlePlanSelect(plan.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                formData.selectedPlan === plan.id
-                                  ? 'border-[#61710C] bg-[#61710C]'
-                                  : 'border-gray-300'
-                              }`}
-                            >
-                              {formData.selectedPlan === plan.id && (
-                                <Check className="w-3 h-3 text-white" />
-                              )}
-                            </div>
-                            <h3 className="font-semibold text-[#121212]">{plan.name}</h3>
-                          </div>
-                          
-                          <div className="mt-2 ml-8">
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-2xl font-bold text-[#121212]">
-                                {formatPrice(formData.billingCycle === 'monthly' ? plan.monthlyPrice : plan.monthlyPrice)}
-                              </span>
-                              <span className="text-sm text-[#64748B]">/mês</span>
+                  {plans.map((plan) => {
+                    const displayPrice = getDisplayPrice(plan);
+                    
+                    return (
+                      <div
+                        key={plan.id}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                          formData.selectedPlan === plan.id
+                            ? 'border-[#61710C] bg-green-50'
+                            : 'border-[#DEDEDE] hover:border-[#61710C]'
+                        }`}
+                        onClick={() => handlePlanSelect(plan.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  formData.selectedPlan === plan.id
+                                    ? 'border-[#61710C] bg-[#61710C]'
+                                    : 'border-gray-300'
+                                }`}
+                              >
+                                {formData.selectedPlan === plan.id && (
+                                  <Check className="w-3 h-3 text-white" />
+                                )}
+                              </div>
+                              <h3 className="font-semibold text-[#121212]">{plan.name}</h3>
                             </div>
                             
-                            {formData.billingCycle === 'yearly' && (
-                              <div className="text-sm text-green-600">
-                                {formatPrice(plan.yearlyPrice)} cobrado anualmente
+                            <div className="mt-2 ml-8">
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-bold text-[#121212]">
+                                  {formatPrice(displayPrice.monthly)}
+                                </span>
+                                <span className="text-sm text-[#64748B]">/mês</span>
                               </div>
-                            )}
+                              
+                              {formData.billingCycle === 'yearly' && (
+                                <div className="text-sm text-green-600">
+                                  {formatPrice(displayPrice.yearly)} cobrado anualmente
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        
+                        <div className="mt-4 ml-8 space-y-2">
+                          {plan.features.map((feature, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-green-500" />
+                              <span className="text-sm text-[#64748B]">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      
-                      {/* Sempre mostrar detalhes por padrão */}
-                      <div className="mt-4 ml-8 space-y-2">
-                        {plan.features.map((feature, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-green-500" />
-                            <span className="text-sm text-[#64748B]">{feature}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

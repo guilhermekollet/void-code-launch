@@ -11,7 +11,6 @@ const PaymentSuccess = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [userCreated, setUserCreated] = useState(false);
-  const [attempts, setAttempts] = useState(0);
   const navigate = useNavigate();
 
   const sessionId = searchParams.get('session_id');
@@ -25,12 +24,12 @@ const PaymentSuccess = () => {
 
     const checkPaymentAndUser = async () => {
       try {
-        console.log('Checking payment and user creation, attempt:', attempts + 1);
+        console.log('Verificando pagamento e criação de usuário...');
         
-        // Primeiro verificar se o usuário já foi criado na tabela users
+        // Verificar se o usuário já foi criado na tabela users
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('id, email, completed_onboarding, plan_type')
+          .select('id, email, completed_onboarding, plan_type, billing_cycle')
           .eq('stripe_session_id', sessionId)
           .maybeSingle();
 
@@ -39,15 +38,10 @@ const PaymentSuccess = () => {
           throw new Error('Erro ao verificar status do usuário');
         }
 
-        if (userData && userData.completed_onboarding) {
+        if (userData && userData.completed_onboarding && userData.plan_type) {
           console.log('Usuário encontrado e onboarding completo:', userData);
           setUserCreated(true);
           setStatus('success');
-          
-          // Redirecionar para dashboard após 3 segundos
-          setTimeout(() => {
-            navigate('/', { replace: true });
-          }, 3000);
           return;
         }
 
@@ -68,19 +62,31 @@ const PaymentSuccess = () => {
         }
 
         if (!onboardingData.payment_confirmed) {
-          // Se o pagamento ainda não foi confirmado, aguardar mais um pouco
-          if (attempts < 10) { // Máximo 10 tentativas (20 segundos)
-            setAttempts(prev => prev + 1);
-            setTimeout(checkPaymentAndUser, 2000);
-            return;
-          } else {
-            throw new Error('Pagamento não foi confirmado após o tempo limite');
-          }
+          // Aguardar confirmação do pagamento via webhook
+          console.log('Aguardando confirmação do pagamento...');
+          setTimeout(checkPaymentAndUser, 3000); // Tentar novamente em 3 segundos
+          return;
         }
 
-        // Se chegou aqui, o pagamento foi confirmado mas o usuário ainda não foi criado
-        // Vamos tentar criar o usuário usando a edge function
-        console.log('Pagamento confirmado, criando usuário...');
+        // Se chegou aqui, o pagamento foi confirmado
+        console.log('Pagamento confirmado, verificando criação do usuário...');
+        
+        // Verificar novamente se o usuário foi criado após o webhook
+        const { data: updatedUserData, error: updatedUserError } = await supabase
+          .from('users')
+          .select('id, email, completed_onboarding, plan_type, billing_cycle')
+          .eq('stripe_session_id', sessionId)
+          .maybeSingle();
+
+        if (!updatedUserError && updatedUserData && updatedUserData.completed_onboarding) {
+          console.log('Usuário criado com sucesso:', updatedUserData);
+          setUserCreated(true);
+          setStatus('success');
+          return;
+        }
+
+        // Se ainda não foi criado, tentar criar via edge function
+        console.log('Tentando criar usuário via edge function...');
         const { data: createUserResult, error: createUserError } = await supabase.functions.invoke('create-user-from-onboarding', {
           body: { onboardingId: onboardingData.id }
         });
@@ -91,14 +97,9 @@ const PaymentSuccess = () => {
         }
 
         if (createUserResult?.success) {
-          console.log('Usuário criado com sucesso:', createUserResult);
+          console.log('Usuário criado com sucesso via edge function:', createUserResult);
           setUserCreated(true);
           setStatus('success');
-          
-          // Redirecionar para dashboard após 3 segundos
-          setTimeout(() => {
-            navigate('/', { replace: true });
-          }, 3000);
         } else {
           throw new Error('Falha na criação do usuário');
         }
@@ -110,13 +111,13 @@ const PaymentSuccess = () => {
       }
     };
 
-    // Aguardar um pouco antes de começar a verificação
+    // Iniciar verificação após um breve delay
     const timer = setTimeout(checkPaymentAndUser, 1000);
     
     return () => {
       clearTimeout(timer);
     };
-  }, [sessionId, navigate, attempts]);
+  }, [sessionId]);
 
   const handleContactSupport = () => {
     window.open('https://wa.me/5551995915520', '_blank');
@@ -170,8 +171,9 @@ const PaymentSuccess = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center text-sm text-muted-foreground">
-                <p>Redirecionando para o dashboard em alguns segundos...</p>
+              <div className="text-center text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+                <p className="font-medium">🎁 Período de teste ativo!</p>
+                <p>Aproveite 3 dias grátis para conhecer todos os recursos do Bolsofy.</p>
               </div>
               
               <div className="flex flex-col space-y-3">
@@ -229,7 +231,7 @@ const PaymentSuccess = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4" />
-                    <span>WhatsApp: (11) 99999-9999</span>
+                    <span>WhatsApp: (51) 99591-5520</span>
                   </div>
                 </div>
               </div>
