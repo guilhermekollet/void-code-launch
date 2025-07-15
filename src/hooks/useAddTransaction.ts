@@ -39,11 +39,6 @@ export function useAddTransaction() {
 
       if (!userData) throw new Error('User not found');
 
-      // Converter valor para negativo se for despesa
-      const processedAmount = transactionData.type === 'despesa' 
-        ? -Math.abs(transactionData.amount) 
-        : Math.abs(transactionData.amount);
-
       // Se for despesa de cartão de crédito com parcelamento, criar múltiplas transações
       if (transactionData.is_credit_card_expense && transactionData.credit_card_id && transactionData.installments && transactionData.installments > 1) {
         // Get credit card info to calculate billing dates
@@ -55,7 +50,7 @@ export function useAddTransaction() {
 
         if (!creditCard) throw new Error('Credit card not found');
 
-        const installmentAmount = processedAmount / transactionData.installments;
+        const installmentAmount = transactionData.amount / transactionData.installments;
         const transactions = [];
         
         for (let i = 1; i <= transactionData.installments; i++) {
@@ -80,7 +75,6 @@ export function useAddTransaction() {
               total_installments: transactionData.installments,
               is_installment: true,
               installment_start_date: transactionData.tx_date,
-              is_agent: false, // Manual transaction
             })
             .select()
             .single();
@@ -101,7 +95,7 @@ export function useAddTransaction() {
           .from('transactions')
           .insert({
             user_id: userData.id,
-            value: processedAmount,
+            value: transactionData.amount,
             type: transactionData.type,
             category: transactionData.category,
             description: transactionData.description,
@@ -110,8 +104,7 @@ export function useAddTransaction() {
             is_credit_card_expense: true,
             credit_card_id: transactionData.credit_card_id,
             installments: 1,
-            installment_value: processedAmount,
-            is_agent: false, // Manual transaction
+            installment_value: transactionData.amount,
           })
           .select()
           .single();
@@ -125,7 +118,7 @@ export function useAddTransaction() {
       }
       // Se for despesa parcelada (não cartão), criar múltiplas transações
       else if (transactionData.is_installment && transactionData.total_installments && transactionData.installment_start_date && !transactionData.is_credit_card_expense) {
-        const installmentAmount = processedAmount / transactionData.total_installments;
+        const installmentAmount = transactionData.amount / transactionData.total_installments;
         const transactions = [];
         
         for (let i = 1; i <= transactionData.total_installments; i++) {
@@ -146,7 +139,6 @@ export function useAddTransaction() {
               installment_number: i,
               total_installments: transactionData.total_installments,
               installment_start_date: transactionData.installment_start_date,
-              is_agent: false, // Manual transaction
             })
             .select()
             .single();
@@ -166,7 +158,7 @@ export function useAddTransaction() {
           .from('transactions')
           .insert({
             user_id: userData.id,
-            value: processedAmount,
+            value: transactionData.amount,
             type: transactionData.type,
             category: transactionData.category,
             description: transactionData.description,
@@ -174,7 +166,6 @@ export function useAddTransaction() {
             registered_at: new Date().toISOString(),
             is_recurring: transactionData.is_recurring || false,
             recurring_date: transactionData.recurring_date,
-            is_agent: false, // Manual transaction
           })
           .select()
           .single();

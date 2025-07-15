@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,176 +6,122 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { useUpdateTransaction } from "@/hooks/useTransactionMutations";
-import { useCategoriesByType } from "@/hooks/useCategoriesByType";
-import { useCreditCards } from "@/hooks/useCreditCards";
-
+import { useCategories } from "@/hooks/useCategories";
 interface Transaction {
   id: number;
   description: string;
-  value: number;
+  amount: number;
+  type: string | null;
   category: string;
   tx_date: string;
-  credit_card_id?: number | null;
-  type: string;
 }
-
 interface EditTransactionModalProps {
+  transaction: Transaction | null;
   isOpen: boolean;
   onClose: () => void;
-  transaction: Transaction | null;
+  onSave: (id: number, updates: Partial<Transaction>) => void;
 }
-
-export function EditTransactionModal({ isOpen, onClose, transaction }: EditTransactionModalProps) {
+export function EditTransactionModal({
+  transaction,
+  isOpen,
+  onClose,
+  onSave
+}: EditTransactionModalProps) {
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState(0);
   const [category, setCategory] = useState('');
-  const [type, setType] = useState<'receita' | 'despesa'>('despesa');
+  const [amount, setAmount] = useState('');
+  const [type, setType] = useState('');
   const [date, setDate] = useState<Date>(new Date());
-  const [creditCardId, setCreditCardId] = useState<string>('');
-
-  const updateTransaction = useUpdateTransaction();
-  const { data: categories = [] } = useCategoriesByType(type);
-  const { data: creditCards = [] } = useCreditCards();
-
+  const {
+    data: categories = []
+  } = useCategories();
   useEffect(() => {
     if (transaction) {
-      setDescription(transaction.description || '');
-      setAmount(Math.abs(transaction.value)); // Always show positive value for editing
+      setDescription(transaction.description);
       setCategory(transaction.category);
-      setType(transaction.type as 'receita' | 'despesa');
+      setAmount(transaction.amount.toFixed(2));
+      setType(transaction.type || 'despesa');
       setDate(new Date(transaction.tx_date));
-      // Convert number to string for the select component
-      setCreditCardId(transaction.credit_card_id ? transaction.credit_card_id.toString() : '');
     }
   }, [transaction]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!transaction) return;
-
-    try {
-      // Process amount based on type
-      const processedAmount = type === 'despesa' ? -Math.abs(amount) : Math.abs(amount);
-      
-      // Convert creditCardId string to number or null for the database
-      const creditCardIdValue = creditCardId && creditCardId !== '' ? parseInt(creditCardId, 10) : null;
-      
-      await updateTransaction.mutateAsync({
-        id: transaction.id,
-        description,
-        value: processedAmount,
-        category,
-        tx_date: date.toISOString(),
-        credit_card_id: creditCardIdValue,
-        type
-      });
-      
-      onClose();
-    } catch (error) {
-      console.error('Error updating transaction:', error);
-    }
+    const updates = {
+      description,
+      category,
+      amount: parseFloat(amount),
+      type,
+      tx_date: date.toISOString()
+    };
+    onSave(transaction.id, updates);
+    onClose();
   };
-
-  if (!transaction) return null;
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+  const handleClose = () => {
+    onClose();
+    setDescription('');
+    setCategory('');
+    setAmount('');
+    setType('');
+    setDate(new Date());
+  };
+  return <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[425px] bg-white border-[#DEDEDE] rounded-xl">
         <DialogHeader>
           <DialogTitle>Editar Transação</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição da transação"
-              required
-            />
+            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição da transação" required className="h-10" />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="type">Tipo</Label>
-            <Select value={type} onValueChange={(value: 'receita' | 'despesa') => setType(value)}>
-              <SelectTrigger>
-                <SelectValue />
+            <Select value={type} onValueChange={setType} required>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white border border-[#DEDEDE] shadow-lg z-50">
                 <SelectItem value="receita">Receita</SelectItem>
                 <SelectItem value="despesa">Despesa</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="amount">Valor</Label>
-            <CurrencyInput
-              value={amount.toString()}
-              onChange={(value) => setAmount(parseFloat(value) || 0)}
-              placeholder="R$ 0,00"
-            />
-          </div>
-
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
+            <Select value={category} onValueChange={setCategory} required>
+              <SelectTrigger className="h-10">
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
+              <SelectContent className="bg-white border border-[#DEDEDE] shadow-lg z-50">
+                {categories.map(cat => <SelectItem key={cat.id} value={cat.name}>
                     {cat.name}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {type === 'despesa' && (
-            <div>
-              <Label htmlFor="creditCard">Cartão de Crédito (Opcional)</Label>
-              <Select 
-                value={creditCardId} 
-                onValueChange={setCreditCardId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cartão" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhum cartão</SelectItem>
-                  {creditCards.map((card) => (
-                    <SelectItem key={card.id} value={card.id.toString()}>
-                      {card.bank_name} - {card.card_name || 'Cartão'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div>
-            <Label htmlFor="date">Data</Label>
-            <DatePicker
-              date={date}
-              onDateChange={(newDate) => newDate && setDate(newDate)}
-            />
+          <div className="space-y-2">
+            <Label htmlFor="amount">Valor</Label>
+            <CurrencyInput id="amount" value={amount} onChange={setAmount} required className="h-10" />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium block">Data da transação</Label>
+            <DatePicker date={date} onDateChange={newDate => setDate(newDate || new Date())} placeholder="Selecionar data" className="h-10 w-full" />
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={handleClose} className="w-full sm:w-auto h-10">
               Cancelar
             </Button>
-            <Button type="submit" disabled={updateTransaction.isPending}>
-              {updateTransaction.isPending ? 'Salvando...' : 'Salvar'}
+            <Button type="submit" className="w-full sm:w-auto h-10 border-gray-100 ">
+              Salvar
             </Button>
           </div>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 }
