@@ -88,6 +88,7 @@ export function useFinancialData() {
         if (transaction.type === 'receita') {
           monthlyIncome += value;
         } else if (transaction.type === 'despesa') {
+          // value já está negativo, então usamos o valor absoluto para os cálculos
           monthlyExpenses += Math.abs(value);
           
           if (transaction.is_recurring) {
