@@ -238,12 +238,12 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       logStep("⚠️ Failed to update auth user metadata", { error: updateAuthError.message });
     }
 
-    // Calcular datas do trial
+    // Calcular datas do trial - 3 DIAS
     const trialStart = new Date();
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 7);
+    trialEnd.setDate(trialEnd.getDate() + 3);
 
-    // Criar registro na tabela public.users para o usuário órfão com billing_cycle
+    // Criar registro na tabela public.users para o usuário órfão com todos os dados necessários
     const { data: newUser, error: userError } = await supabase
       .from("users")
       .insert([{
@@ -274,7 +274,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       authUserId: orphanedAuthUser.id,
       email: onboardingData.email,
       planType: onboardingData.selected_plan,
-      billingCycle: onboardingData.billing_cycle
+      billingCycle: onboardingData.billing_cycle,
+      completedOnboarding: true,
+      trialDays: 3
     });
 
     // Atualizar onboarding com datas do trial
@@ -295,7 +297,10 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       userId: newUser.id,
       authUserId: orphanedAuthUser.id,
       email: onboardingData.email,
-      paymentConfirmed: true
+      paymentConfirmed: true,
+      planType: onboardingData.selected_plan,
+      completedOnboarding: true,
+      trialDays: 3
     });
 
     return;
@@ -332,17 +337,18 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     email: authUser.user.email
   });
 
-  // Calcular datas do trial
+  // Calcular datas do trial - 3 DIAS
   const trialStart = new Date();
   const trialEnd = new Date();
-  trialEnd.setDate(trialEnd.getDate() + 7);
+  trialEnd.setDate(trialEnd.getDate() + 3);
 
   logStep("📅 Trial dates calculated", {
     trialStart: trialStart.toISOString(),
-    trialEnd: trialEnd.toISOString()
+    trialEnd: trialEnd.toISOString(),
+    trialDays: 3
   });
 
-  // Criar usuário na tabela users com billing_cycle
+  // Criar usuário na tabela users com todos os dados necessários
   logStep("🏗️ Creating user in public.users table");
   const { data: newUser, error: userError } = await supabase
     .from("users")
@@ -384,7 +390,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     authUserId: authUser.user.id,
     email: onboardingData.email,
     planType: onboardingData.selected_plan,
-    billingCycle: onboardingData.billing_cycle
+    billingCycle: onboardingData.billing_cycle,
+    completedOnboarding: true,
+    trialDays: 3
   });
 
   // Atualizar onboarding com datas do trial
@@ -412,7 +420,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     paymentConfirmed: true,
     planType: onboardingData.selected_plan,
     billingCycle: onboardingData.billing_cycle,
+    completedOnboarding: true,
     trialStart: trialStart.toISOString(),
-    trialEnd: trialEnd.toISOString()
+    trialEnd: trialEnd.toISOString(),
+    trialDays: 3
   });
 }

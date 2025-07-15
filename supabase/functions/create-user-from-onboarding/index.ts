@@ -69,12 +69,12 @@ serve(async (req) => {
       throw new Error(`Failed to create auth user: ${authError?.message}`);
     }
 
-    // Calculate trial dates (7 days from now)
+    // Calculate trial dates (3 days from now)
     const trialStart = new Date();
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 7);
+    trialEnd.setDate(trialEnd.getDate() + 3);
 
-    // Create user in public.users table with billing_cycle
+    // Create user in public.users table with all necessary data
     const { data: newUser, error: userError } = await supabase
       .from('users')
       .insert([{
@@ -115,6 +115,9 @@ serve(async (req) => {
         authUserId: authUser.user.id,
         trialStart: trialStart.toISOString(),
         trialEnd: trialEnd.toISOString(),
+        trialDays: 3,
+        planType: onboardingData.selected_plan,
+        completedOnboarding: true,
         message: "User created successfully"
       }),
       { 

@@ -111,6 +111,7 @@ serve(async (req) => {
           name: onboarding.name,
           phone_number: onboarding.phone,
           plan_type: onboarding.selected_plan,
+          billing_cycle: onboarding.billing_cycle,
           trial_start: trialStart,
           trial_end: trialEnd,
           stripe_session_id: sessionId,
@@ -160,7 +161,9 @@ serve(async (req) => {
             end: trialEnd,
             daysRemaining: 3
           },
-          message: "Pagamento confirmado e trial iniciado!"
+          planType: onboarding.selected_plan,
+          completedOnboarding: true,
+          message: "Pagamento confirmado e trial de 3 dias iniciado!"
         }),
         { 
           status: 200, 
