@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -67,9 +68,8 @@ export default function Register() {
     confirmEmail: '',
     phone: '55',
     selectedPlan: '',
-    billingCycle: 'monthly'
+    billingCycle: 'yearly' // Padrão anual
   });
-  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [isContinuation, setIsContinuation] = useState(false);
@@ -201,7 +201,7 @@ export default function Register() {
       confirmEmail: existingData.email || '',
       phone: existingData.phone || '55',
       selectedPlan: existingData.selectedPlan || '',
-      billingCycle: existingData.billingCycle || 'monthly'
+      billingCycle: existingData.billingCycle || 'yearly'
     });
 
     if (existingData.onboardingId) {
@@ -478,7 +478,7 @@ export default function Register() {
                     placeholder="Nome Sobrenome" 
                     value={formData.name} 
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="border-[#DEDEDE] focus:border-[#61710C]" 
+                    className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
                   />
                   {formData.name && !validateName(formData.name) && (
                     <p className="text-sm text-red-500">Digite nome e sobrenome</p>
@@ -503,7 +503,7 @@ export default function Register() {
                       placeholder="seu@email.com" 
                       value={formData.email} 
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C]" 
+                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
                     />
                     {formData.email && !validateEmail(formData.email) && (
                       <p className="text-sm text-red-500">Email inválido</p>
@@ -518,7 +518,7 @@ export default function Register() {
                       placeholder="seu@email.com" 
                       value={formData.confirmEmail} 
                       onChange={(e) => handleInputChange('confirmEmail', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C]" 
+                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-50" 
                     />
                     {formData.confirmEmail && formData.email !== formData.confirmEmail && (
                       <p className="text-sm text-red-500">Emails não coincidem</p>
@@ -605,44 +605,29 @@ export default function Register() {
                           <div className="mt-2 ml-8">
                             <div className="flex items-baseline gap-1">
                               <span className="text-2xl font-bold text-[#121212]">
-                                {formatPrice(formData.billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)}
+                                {formatPrice(formData.billingCycle === 'monthly' ? plan.monthlyPrice : plan.monthlyPrice)}
                               </span>
-                              <span className="text-sm text-[#64748B]">
-                                /{formData.billingCycle === 'monthly' ? 'mês' : 'ano'}
-                              </span>
+                              <span className="text-sm text-[#64748B]">/mês</span>
                             </div>
                             
                             {formData.billingCycle === 'yearly' && (
                               <div className="text-sm text-green-600">
-                                {getDiscountPercentage()}% de desconto
+                                {formatPrice(plan.yearlyPrice)} cobrado anualmente
                               </div>
                             )}
                           </div>
                         </div>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedPlan(expandedPlan === plan.id ? null : plan.id);
-                          }}
-                          className="text-[#61710C]"
-                        >
-                          {expandedPlan === plan.id ? 'Ocultar' : 'Detalhes'}
-                        </Button>
                       </div>
                       
-                      {expandedPlan === plan.id && (
-                        <div className="mt-4 ml-8 space-y-2">
-                          {plan.features.map((feature, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <Check className="w-4 h-4 text-green-500" />
-                              <span className="text-sm text-[#64748B]">{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {/* Sempre mostrar detalhes por padrão */}
+                      <div className="mt-4 ml-8 space-y-2">
+                        {plan.features.map((feature, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Check className="w-4 h-4 text-green-500" />
+                            <span className="text-sm text-[#64748B]">{feature}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>

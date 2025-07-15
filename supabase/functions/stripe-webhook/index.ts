@@ -193,7 +193,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
   logStep("👤 Checking if user already exists in public.users");
   const { data: existingUser, error: existingUserError } = await supabase
     .from("users")
-    .select("id, email, user_id")
+    .select("id, email, user_id, completed_onboarding, plan_type")
     .eq("email", onboardingData.email)
     .maybeSingle();
 
@@ -205,8 +205,33 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     logStep("👤 User already exists in public.users", { 
       userId: existingUser.id, 
       email: existingUser.email,
-      authUserId: existingUser.user_id 
+      authUserId: existingUser.user_id,
+      completedOnboarding: existingUser.completed_onboarding,
+      planType: existingUser.plan_type
     });
+
+    // Se o usuário existe mas não tem onboarding completo, vamos atualizar
+    if (!existingUser.completed_onboarding || !existingUser.plan_type) {
+      logStep("🔄 Updating existing user with onboarding completion");
+      
+      const { error: updateUserError } = await supabase
+        .from("users")
+        .update({
+          completed_onboarding: true,
+          plan_type: onboardingData.selected_plan,
+          billing_cycle: onboardingData.billing_cycle,
+          stripe_session_id: session.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", existingUser.id);
+
+      if (updateUserError) {
+        logStep("❌ Failed to update existing user", { error: updateUserError.message });
+      } else {
+        logStep("✅ Updated existing user with onboarding completion");
+      }
+    }
+    
     return;
   }
 
