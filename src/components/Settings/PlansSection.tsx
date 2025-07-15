@@ -11,23 +11,24 @@ import { SubscriptionStatus } from "./SubscriptionStatus";
 
 const plans = [
   {
+    id: "basic",
     name: "Básico",
-    price: "R$ 5,00",
-    description: "Ideal para quem está começando",
+    monthlyPrice: 19.90,
+    yearlyPrice: 199.90,
     features: [
       "Controle básico de gastos",
       "Até 3 cartões de crédito",
       "Relatórios simples",
       "Suporte por email"
     ],
-    icon: Star,
-    planType: "basic" as const,
-    priceId: "price_1QxXpXD9OWTJbzJYrIiNnkwF"
+    icon: <Star className="h-5 w-5" />,
+    planType: "basic" as const
   },
   {
+    id: "premium",
     name: "Premium",
-    price: "R$ 15,00",
-    description: "Controle total das suas finanças",
+    monthlyPrice: 29.90,
+    yearlyPrice: 289.90,
     features: [
       "Todos os recursos do Básico",
       "Cartões de crédito ilimitados",
@@ -35,9 +36,8 @@ const plans = [
       "Relatórios avançados",
       "Suporte prioritário"
     ],
-    icon: Crown,
+    icon: <Crown className="h-5 w-5" />,
     planType: "premium" as const,
-    priceId: "price_1QxXpXD9OWTJbzJYrIiNnkwF",
     popular: true
   }
 ];
@@ -47,13 +47,11 @@ export function PlansSection() {
   const createCheckout = useCreateCheckout();
   const { toast } = useToast();
 
-  const handleSubscribe = async (priceId: string, planType: string) => {
+  const handleSubscribe = async (planType: string) => {
     try {
       createCheckout.mutate({
-        priceId,
         planType,
-        successUrl: `${window.location.origin}/payment-success`,
-        cancelUrl: `${window.location.origin}/configuracoes`
+        billingCycle: 'monthly'
       });
     } catch (error) {
       console.error('Error creating checkout:', error);
@@ -97,7 +95,7 @@ export function PlansSection() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SubscriptionStatus />
+          <SubscriptionStatus subscription={subscription} />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             {plans.map((plan) => {
@@ -108,41 +106,13 @@ export function PlansSection() {
 
               return (
                 <PlanCard
-                  key={plan.planType}
-                  name={plan.name}
-                  price={plan.price}
-                  description={plan.description}
-                  features={plan.features}
-                  icon={plan.icon}
-                  planType={plan.planType}
-                  popular={plan.popular}
-                  action={
-                    isCurrentPlan ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-center gap-2 text-green-600 text-sm font-medium">
-                          <CheckCircle className="h-4 w-4" />
-                          Plano Atual
-                        </div>
-                        <Button
-                          onClick={handleManageSubscription}
-                          variant="outline"
-                          size="sm"
-                          className="w-full bg-white hover:bg-gray-50 text-black border border-black"
-                        >
-                          Gerenciar Assinatura
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={() => handleSubscribe(plan.priceId, plan.planType)}
-                        disabled={createCheckout.isPending}
-                        className="w-full bg-[#61710C] hover:bg-[#4a5a0a] text-white"
-                      >
-                        {createCheckout.isPending ? 'Processando...' : 
-                         isDowngrade ? 'Downgrade' : 'Assinar Agora'}
-                      </Button>
-                    )
-                  }
+                  key={plan.id}
+                  plan={plan}
+                  billingCycle="monthly"
+                  onSubscribe={() => handleSubscribe(plan.planType)}
+                  onManage={handleManageSubscription}
+                  isCurrentPlan={isCurrentPlan}
+                  isLoading={createCheckout.isPending}
                 />
               );
             })}
