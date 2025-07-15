@@ -46,7 +46,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
       setCategory(transaction.category);
       setType(transaction.type as 'receita' | 'despesa');
       setDate(new Date(transaction.tx_date));
-      setCreditCardId(transaction.credit_card_id ? transaction.credit_card_id.toString() : '');
+      setCreditCardId(transaction.credit_card_id?.toString() || '');
     }
   }, [transaction]);
 
@@ -138,7 +138,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
               <Label htmlFor="creditCard">Cartão de Crédito (Opcional)</Label>
               <Select 
                 value={creditCardId} 
-                onValueChange={(value) => setCreditCardId(value)}
+                onValueChange={setCreditCardId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um cartão" />
