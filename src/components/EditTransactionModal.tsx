@@ -65,7 +65,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
         value: processedAmount,
         category,
         tx_date: date.toISOString(),
-        credit_card_id: creditCardId ? parseInt(creditCardId) : null,
+        credit_card_id: creditCardId ? parseInt(creditCardId, 10) : null,
         type
       });
       
