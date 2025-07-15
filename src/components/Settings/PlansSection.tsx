@@ -87,7 +87,7 @@ export function PlansSection() {
   const { toast } = useToast();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
-  const handleSubscribe = async (planType: string, targetBillingCycle: string) => {
+  const handleSubscribe = async (planType: string, targetBillingCycle: 'monthly' | 'yearly') => {
     try {
       createCheckout.mutate({
         planType,
@@ -120,7 +120,7 @@ export function PlansSection() {
     setBillingCycle(checked ? 'yearly' : 'monthly');
   };
 
-  const isCurrentPlan = (planType: string, planBillingCycle: string) => {
+  const isCurrentPlan = (planType: string, planBillingCycle: 'monthly' | 'yearly') => {
     return subscription?.plan_type === planType && 
            subscription?.billing_cycle === planBillingCycle;
   };
