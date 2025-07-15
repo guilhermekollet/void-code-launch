@@ -27,12 +27,6 @@ export function ModernQuickStats({
 
   const cards = [
     {
-      title: "Saldo Total",
-      value: totalBalance,
-      color: totalBalance >= 0 ? 'text-[#121212]' : 'text-red-600',
-      borderColor: totalBalance >= 0 ? 'border-[#DFDFDF]' : 'border-red-300'
-    },
-    {
       title: "Receitas do Mês",
       value: monthlyIncome,
       color: 'text-green-600',
@@ -76,9 +70,9 @@ export function ModernQuickStats({
 
   return (
     <div className="space-y-4">
-      {/* Desktop - 3 cards em linha */}
-      <div className="hidden lg:grid lg:grid-cols-3 gap-6">
-        {getVisibleCards().map((card, index) => (
+      {/* Desktop - 4 cards em linha com 100% width */}
+      <div className="hidden lg:grid lg:grid-cols-4 gap-6 w-full">
+        {cards.map((card, index) => (
           <Card key={index} className={`bg-[#FDFDFD] ${card.borderColor} shadow-sm hover:shadow-md transition-shadow`}>
             <CardHeader className="space-y-0 pb-3">
               <CardTitle className="text-sm font-medium text-[#64748B]">{card.title}</CardTitle>
@@ -140,43 +134,6 @@ export function ModernQuickStats({
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-      </div>
-
-      {/* Controles de navegação desktop */}
-      <div className="hidden lg:flex justify-center items-center space-x-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={prevCards}
-          disabled={cards.length <= 3}
-          className="h-8"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Anterior
-        </Button>
-
-        <div className="flex space-x-2">
-          {Array.from({ length: Math.ceil(cards.length / 3) }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentIndex(index * 3)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                Math.floor(currentIndex / 3) === index ? 'bg-[#61710C]' : 'bg-gray-300'
-              }`}
-            />
-          ))}
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={nextCards}
-          disabled={cards.length <= 3}
-          className="h-8"
-        >
-          Próximo
-          <ChevronRight className="h-4 w-4 ml-1" />
-        </Button>
       </div>
     </div>
   );

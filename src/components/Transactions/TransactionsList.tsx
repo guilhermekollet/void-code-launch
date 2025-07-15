@@ -15,6 +15,7 @@ interface Transaction {
   is_installment?: boolean;
   installment_number?: number;
   total_installments?: number;
+  is_agent?: boolean;
 }
 
 interface TransactionsListProps {

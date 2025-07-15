@@ -77,7 +77,7 @@ export function useFinancialData() {
 
       console.log('[useFinancialData] Found transactions:', transactions?.length || 0);
 
-      // Calculate financial data
+      // Calculate financial data - despesas já são negativas no banco
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
       let monthlyRecurringExpenses = 0;
@@ -88,6 +88,7 @@ export function useFinancialData() {
         if (transaction.type === 'receita') {
           monthlyIncome += value;
         } else if (transaction.type === 'despesa') {
+          // Value já é negativo no banco, então usamos Math.abs para mostrar positivo nas despesas
           monthlyExpenses += Math.abs(value);
           
           if (transaction.is_recurring) {
@@ -97,7 +98,6 @@ export function useFinancialData() {
       });
 
       // Calculate total balance (this is a simplified calculation)
-      // In a real scenario, you might want to calculate this based on all transactions up to date
       const totalBalance = monthlyIncome - monthlyExpenses;
 
       const result = {
@@ -149,7 +149,7 @@ export function useTransactions() {
       const internalUserId = userData.id;
       console.log('[useTransactions] Using internal user ID:', internalUserId);
 
-      // Fetch recent transactions with all required fields
+      // Fetch recent transactions with all required fields, ordered by creation date
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select(`
@@ -167,10 +167,11 @@ export function useTransactions() {
           installment_value,
           credit_card_id,
           is_credit_card_expense,
+          is_agent,
           registered_at
         `)
         .eq('user_id', internalUserId)
-        .order('tx_date', { ascending: false })
+        .order('registered_at', { ascending: false })
         .limit(50);
 
       if (transactionsError) {
@@ -188,6 +189,7 @@ export function useTransactions() {
         installment_value: transaction.installment_value || null,
         credit_card_id: transaction.credit_card_id || null,
         is_credit_card_expense: transaction.is_credit_card_expense || false,
+        is_agent: transaction.is_agent || false,
       })) || [];
     },
     enabled: !!user?.id,

@@ -29,6 +29,7 @@ interface Transaction {
   is_credit_card_expense?: boolean;
   installment_number?: number;
   total_installments?: number;
+  is_agent?: boolean;
 }
 
 interface RecentTransactionsProps {
@@ -144,9 +145,16 @@ export function RecentTransactions({
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm truncate">
-                            {transacao.description}
-                          </p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-gray-900 text-sm truncate">
+                              {transacao.description}
+                            </p>
+                            {transacao.is_agent && (
+                              <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200">
+                                Bolsofy AI
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <span>{transacao.category}</span>
                             <span>•</span>
@@ -183,7 +191,7 @@ export function RecentTransactions({
                         <p className={`font-semibold text-sm ${
                           isReceita ? 'text-green-600' : 'text-gray-900'
                         }`}>
-                          {formatCurrency(Number(transacao.amount))}
+                          {formatCurrency(Math.abs(Number(transacao.amount)))}
                         </p>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -224,9 +232,16 @@ export function RecentTransactions({
                       }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
-                        {transacao.description}
-                      </p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-gray-900 truncate">
+                          {transacao.description}
+                        </p>
+                        {transacao.is_agent && (
+                          <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200">
+                            Bolsofy AI
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <span>{transacao.category}</span>
                         <span>•</span>
@@ -263,7 +278,7 @@ export function RecentTransactions({
                     <p className={`font-semibold ${
                       isReceita ? 'text-green-600' : 'text-gray-900'
                     }`}>
-                      {formatCurrency(Number(transacao.amount))}
+                      {formatCurrency(Math.abs(Number(transacao.amount)))}
                     </p>
                     
                     <div className="flex items-center gap-1">
