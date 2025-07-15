@@ -116,7 +116,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
             <Label htmlFor="amount">Valor</Label>
             <CurrencyInput
               value={amount.toString()}
-              onValueChange={(value) => setAmount(parseFloat(value) || 0)}
+              onChange={(value) => setAmount(parseFloat(value) || 0)}
               placeholder="R$ 0,00"
             />
           </div>
