@@ -15,6 +15,7 @@ interface Transaction {
   id: number;
   description: string;
   amount: number;
+  value: number;
   type: string | null;
   category: string;
   tx_date: string;
@@ -155,17 +156,9 @@ export default function Transacoes() {
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-  };
-
-  const handleSaveTransaction = (id: number, data: Partial<Transaction>) => {
-    updateTransactionMutation.mutate({ 
-      id, 
-      description: data.description,
-      value: data.amount,
-      category: data.category,
-      tx_date: data.tx_date,
-      type: data.type
+    setEditingTransaction({
+      ...transaction,
+      value: transaction.amount || transaction.value
     });
   };
 
@@ -267,7 +260,6 @@ export default function Transacoes() {
         transaction={editingTransaction}
         isOpen={!!editingTransaction}
         onClose={() => setEditingTransaction(null)}
-        onSave={handleSaveTransaction}
       />
 
       <DeleteTransactionDialog

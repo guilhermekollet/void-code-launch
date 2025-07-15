@@ -150,11 +150,11 @@ export function BillTransactionItem({ transaction, onUpdate }: BillTransactionIt
       <EditTransactionModal
         transaction={{
           ...transaction,
+          value: transaction.amount,
           type: transaction.type || 'despesa'
         }}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSave}
       />
 
       <DeleteTransactionDialog

@@ -69,24 +69,6 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
     setDeletingTransactionId(transactionId);
   };
 
-  const handleSaveEdit = async (id: number, data: any) => {
-    try {
-      await updateTransaction.mutateAsync({ 
-        id, 
-        description: data.description,
-        value: data.amount || data.value,
-        category: data.category,
-        tx_date: data.tx_date,
-        type: data.type
-      });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
-      setEditingTransaction(null);
-    } catch (error) {
-      console.error('Error updating transaction:', error);
-    }
-  };
-
   const handleConfirmDelete = async (id: number) => {
     try {
       await deleteTransaction.mutateAsync(id);
@@ -248,7 +230,6 @@ export function TransactionModal({ isOpen, onClose, period, timeRange }: Transac
           transaction={editingTransaction}
           isOpen={!!editingTransaction}
           onClose={() => setEditingTransaction(null)}
-          onSave={handleSaveEdit}
         />
       )}
 
