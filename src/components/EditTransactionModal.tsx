@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
       const processedAmount = type === 'despesa' ? -Math.abs(amount) : Math.abs(amount);
       
       // Convert creditCardId string to number or null for the database
-      const creditCardIdValue = creditCardId ? parseInt(creditCardId, 10) : null;
+      const creditCardIdValue = creditCardId && creditCardId !== '' ? parseInt(creditCardId, 10) : null;
       
       await updateTransaction.mutateAsync({
         id: transaction.id,
@@ -114,8 +115,8 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
           <div>
             <Label htmlFor="amount">Valor</Label>
             <CurrencyInput
-              value={amount}
-              onValueChange={setAmount}
+              value={amount.toString()}
+              onValueChange={(value) => setAmount(parseFloat(value) || 0)}
               placeholder="R$ 0,00"
             />
           </div>
