@@ -1,11 +1,14 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinancialData, useTransactions } from "@/hooks/useFinancialData";
+import { useCreditCardBills } from "@/hooks/useCreditCardBillsNew";
+import { useCreditCards } from "@/hooks/useCreditCards";
 import { ModernQuickStats } from "@/components/Dashboard/ModernQuickStats";
 import { TransactionChart } from "@/components/Dashboard/TransactionChart";
 import { CategoryChart } from "@/components/Dashboard/CategoryChart";
 import { RecentTransactions } from "@/components/Dashboard/RecentTransactions";
 import { CreditCardBillsSection } from "@/components/Dashboard/CreditCardBillsSection";
+import { ActivePlanCard } from "@/components/Dashboard/ActivePlanCard";
 import { AddTransactionFAB } from "@/components/AddTransaction/AddTransactionFAB";
 import { WelcomeModal } from "@/components/WelcomeModal";
 
@@ -13,6 +16,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const financialDataQuery = useFinancialData();
   const transactionsQuery = useTransactions();
+  const { data: bills = [] } = useCreditCardBills();
+  const { data: creditCards = [] } = useCreditCards();
 
   // Access data through query result with fallbacks
   const {
@@ -50,6 +55,9 @@ export default function Dashboard() {
     registered_at: transaction.registered_at
   }));
 
+  // Check if there are credit card bills to show
+  const hasCreditCardBills = creditCards.length > 0 && bills.length > 0;
+
   return (
     <div className="space-y-8 p-6">
       <ModernQuickStats
@@ -65,12 +73,14 @@ export default function Dashboard() {
         <CategoryChart />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <ActivePlanCard />
+
+      <div className={`grid grid-cols-1 ${hasCreditCardBills ? 'lg:grid-cols-2' : ''} gap-6`}>
         <RecentTransactions 
           transactions={recentTransactions}
           formatCurrency={formatCurrency}
         />
-        <CreditCardBillsSection />
+        {hasCreditCardBills && <CreditCardBillsSection />}
       </div>
 
       <AddTransactionFAB />

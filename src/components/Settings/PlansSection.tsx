@@ -22,8 +22,7 @@ const plans = [
       'Relatórios básicos',
       'Suporte por email'
     ],
-    color: 'bg-[#CFF500] text-black',
-    borderColor: 'border-[#CFF500]'
+    hierarchy: 1
   },
   {
     id: 'premium',
@@ -40,9 +39,8 @@ const plans = [
       'Suporte prioritário',
       'Exportação de dados'
     ],
-    color: 'bg-[#61710C] text-white',
-    borderColor: 'border-[#61710C]',
-    popular: true
+    popular: true,
+    hierarchy: 2
   }
 ];
 
@@ -71,6 +69,20 @@ export function PlansSection() {
     return subscription?.status === 'active' && subscription?.plan_type === planId;
   };
 
+  const getCurrentPlanHierarchy = () => {
+    const currentPlan = plans.find(p => p.id === subscription?.plan_type);
+    return currentPlan?.hierarchy || 0;
+  };
+
+  const getButtonText = (plan: any) => {
+    if (isActivePlan(plan.id)) return 'Gerenciar Assinatura';
+    
+    const currentHierarchy = getCurrentPlanHierarchy();
+    if (plan.hierarchy < currentHierarchy) return 'Downgrade';
+    
+    return 'Assinar Agora';
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,14 +106,21 @@ export function PlansSection() {
             const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
             const savings = billingCycle === 'yearly' ? Math.round(((plan.monthlyPrice * 12) - plan.yearlyPrice) / (plan.monthlyPrice * 12) * 100) : 0;
             const isPlanActive = isActivePlan(plan.id);
+            const isPremium = plan.id === 'premium';
 
             return (
               <Card 
                 key={plan.id} 
-                className={`relative ${plan.popular ? `${plan.borderColor} border-2` : 'border-gray-200'} ${isPlanActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
+                className={`relative ${
+                  plan.popular ? 'border-2 border-gray-300' : 'border-gray-200'
+                } ${
+                  isPlanActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''
+                } ${
+                  isPremium ? 'bg-[#61710C] text-white' : 'bg-white'
+                }`}
               >
                 {plan.popular && (
-                  <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 ${plan.color} px-3 py-1 rounded-full text-xs font-medium`}>
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-1 rounded-full text-xs font-medium">
                     Mais Popular
                   </div>
                 )}
@@ -114,24 +133,32 @@ export function PlansSection() {
                 
                 <CardHeader className="text-center pb-4">
                   <div className="flex justify-center mb-2">
-                    <div className={`p-3 rounded-full ${plan.color}`}>
+                    <div className={`p-3 rounded-full ${
+                      isPremium ? 'bg-white text-[#61710C]' : 'bg-[#CFF500] text-black'
+                    }`}>
                       <Icon className="h-6 w-6" />
                     </div>
                   </div>
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
+                  <CardTitle className={`text-xl ${isPremium ? 'text-white' : 'text-gray-900'}`}>
+                    {plan.name}
+                  </CardTitle>
+                  <CardDescription className={isPremium ? 'text-gray-200' : 'text-gray-600'}>
+                    {plan.description}
+                  </CardDescription>
                   
                   <div className="mt-4">
                     <div className="flex items-baseline justify-center">
-                      <span className="text-3xl font-bold text-gray-900">
+                      <span className={`text-3xl font-bold ${isPremium ? 'text-white' : 'text-gray-900'}`}>
                         R$ {price.toFixed(2).replace('.', ',')}
                       </span>
-                      <span className="text-gray-500 ml-1">
+                      <span className={`ml-1 ${isPremium ? 'text-gray-200' : 'text-gray-500'}`}>
                         /{billingCycle === 'yearly' ? 'ano' : 'mês'}
                       </span>
                     </div>
                     {billingCycle === 'yearly' && savings > 0 && (
-                      <div className="text-sm text-green-600 font-medium mt-1">
+                      <div className={`text-sm font-medium mt-1 ${
+                        isPremium ? 'text-green-200' : 'text-green-600'
+                      }`}>
                         Economize {savings}%
                       </div>
                     )}
@@ -142,22 +169,31 @@ export function PlansSection() {
                   <ul className="space-y-2">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-center text-sm">
-                        <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                        <span>{feature}</span>
+                        <Check className={`h-4 w-4 mr-2 flex-shrink-0 ${
+                          isPremium ? 'text-green-200' : 'text-green-500'
+                        }`} />
+                        <span className={isPremium ? 'text-white' : 'text-gray-700'}>
+                          {feature}
+                        </span>
                       </li>
                     ))}
                   </ul>
 
                   <Button 
-                    className={`w-full ${isPlanActive ? 'bg-gray-600 hover:bg-gray-700' : plan.color + ' hover:opacity-90'}`}
+                    className={`w-full ${
+                      isPlanActive 
+                        ? 'bg-white text-black border border-black hover:bg-gray-50' 
+                        : isPremium 
+                          ? 'bg-white text-[#61710C] hover:bg-gray-50' 
+                          : 'bg-[#CFF500] text-black hover:bg-[#CFF500]/90'
+                    }`}
+                    variant={isPlanActive ? 'outline' : 'default'}
                     onClick={isPlanActive ? handleManageSubscription : () => handleSubscribe(plan.id)}
                     disabled={createCheckout.isPending || customerPortal.isPending}
                   >
                     {createCheckout.isPending || customerPortal.isPending 
                       ? 'Processando...' 
-                      : isPlanActive 
-                        ? 'Gerenciar Assinatura' 
-                        : 'Assinar Agora'
+                      : getButtonText(plan)
                     }
                   </Button>
                 </CardContent>

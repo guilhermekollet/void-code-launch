@@ -17,27 +17,27 @@ export function DeleteAccountSection() {
 
   return (
     <>
-      <Card className="border-red-200 bg-red-50">
+      <Card className="border-gray-200 bg-gray-50">
         <CardHeader>
-          <CardTitle className="text-red-800">Excluir Conta Permanentemente</CardTitle>
-          <CardDescription className="text-red-700">
-            Remove permanentemente sua conta e todos os dados associados. Esta ação não pode ser desfeita.
+          <CardTitle className="text-gray-800">Excluir Conta</CardTitle>
+          <CardDescription className="text-gray-600">
+            Remove permanentemente sua conta e dados associados
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="bg-white p-4 rounded-lg border border-red-200">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-600 mb-4">
               Seus dados serão arquivados para fins estatísticos, mas não estarão mais acessíveis.
               Você perderá acesso a todas as suas transações, cartões e configurações.
             </p>
             <Button
-              variant="destructive"
+              variant="outline"
               onClick={() => setIsModalOpen(true)}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               disabled={deleteAccount.isPending}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              {deleteAccount.isPending ? 'Processando...' : 'Excluir Minha Conta'}
+              {deleteAccount.isPending ? 'Processando...' : 'Excluir Conta'}
             </Button>
           </div>
         </CardContent>

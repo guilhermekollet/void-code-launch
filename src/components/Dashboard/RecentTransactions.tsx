@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, ArrowUp, ArrowDown, Receipt, Edit, Trash2, MoreVertical } from "lucide-react";
+import { ArrowUp, ArrowDown, Receipt, Edit, Trash2, MoreVertical } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -59,17 +59,16 @@ export function RecentTransactions({
 
   if (transactions.length === 0) {
     return (
-      <Card className="bg-white border-[#E2E8F0]">
+      <Card className="bg-white border-gray-200">
         <CardHeader>
-          <CardTitle className="text-[#121212] text-2xl font-semibold">
+          <CardTitle className="text-gray-900 text-xl font-medium">
             Transações Recentes
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <Receipt className="h-12 w-12 text-[#64748B] mx-auto mb-4" />
-            <p className="text-[#64748B]">Nenhuma transação encontrada</p>
-            <p className="text-sm text-[#64748B] mt-2">Suas transações aparecerão aqui</p>
+          <div className="text-center py-12">
+            <Receipt className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">Nenhuma transação encontrada</p>
           </div>
         </CardContent>
       </Card>
@@ -78,67 +77,67 @@ export function RecentTransactions({
 
   return (
     <>
-      <Card className="bg-white border-[#E2E8F0]">
-        <CardHeader>
-          <CardTitle className="text-[#121212] text-2xl font-semibold">
+      <Card className="bg-white border-gray-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-gray-900 text-xl font-medium">
             Transações Recentes
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {transactions.map(transacao => {
+        <CardContent className="p-0">
+          <div className="space-y-0">
+            {transactions.map((transacao, index) => {
               const isReceita = transacao.type === 'receita';
+              const isLast = index === transactions.length - 1;
               
               if (isMobile) {
                 return (
-                  <div key={transacao.id} className="p-4 bg-white rounded-lg border border-[#E2E8F0] space-y-3">
-                    {/* Header com valor e ações */}
+                  <div key={transacao.id} className={`p-4 ${!isLast ? 'border-b border-gray-100' : ''}`}>
                     <div className="flex items-center justify-between">
-                      <div className={`p-2 rounded-full ${isReceita ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                        {isReceita ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          isReceita ? 'bg-green-50' : 'bg-gray-50'
+                        }`}>
+                          {isReceita ? 
+                            <ArrowUp className="h-4 w-4 text-green-600" /> : 
+                            <ArrowDown className="h-4 w-4 text-gray-600" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">
+                            {transacao.description}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {transacao.category} • {new Date(transacao.tx_date).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
                       </div>
+                      
                       <div className="flex items-center gap-2">
-                        <p className={`font-bold text-lg ${isReceita ? 'text-green-600' : 'text-red-600'}`}>
+                        <p className={`font-semibold text-sm ${
+                          isReceita ? 'text-green-600' : 'text-gray-900'
+                        }`}>
                           {formatCurrency(Number(transacao.amount))}
                         </p>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="h-3 w-3" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleEdit(transacao)}>
-                              <Edit className="h-4 w-4 mr-2" />
+                              <Edit className="h-3 w-3 mr-2" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleDelete(transacao.id, transacao.description)}
                               className="text-red-600"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
+                              <Trash2 className="h-3 w-3 mr-2" />
                               Remover
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                    </div>
-                    
-                    {/* Descrição */}
-                    <div>
-                      <p className="font-medium text-[#121212] text-base">{transacao.description}</p>
-                    </div>
-                    
-                    {/* Meta informações */}
-                    <div className="flex items-center justify-between text-sm text-[#64748B]">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(transacao.tx_date).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>{transacao.category}</span>
-                        <span>•</span>
-                        <span>{isReceita ? 'Entrada' : 'Saída'}</span>
                       </div>
                     </div>
                   </div>
@@ -147,51 +146,51 @@ export function RecentTransactions({
 
               // Layout desktop
               return (
-                <div key={transacao.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-[#E2E8F0] hover:shadow-sm transition-shadow">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isReceita ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                      {isReceita ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                <div key={transacao.id} className={`flex items-center justify-between p-4 hover:bg-gray-25 transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      isReceita ? 'bg-green-50' : 'bg-gray-50'
+                    }`}>
+                      {isReceita ? 
+                        <ArrowUp className="h-4 w-4 text-green-600" /> : 
+                        <ArrowDown className="h-4 w-4 text-gray-600" />
+                      }
                     </div>
-                    <div>
-                      <p className="font-medium text-[#121212]">{transacao.description}</p>
-                      <p className="text-sm text-[#64748B] flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {transacao.description}
+                      </p>
+                      <p className="text-sm text-gray-500">
                         {transacao.category} • {new Date(transacao.tx_date).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className={`font-bold text-lg ${isReceita ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(Number(transacao.amount))}
-                      </p>
-                      <div className="flex items-center gap-1 justify-end">
-                        <DollarSign className="h-3 w-3 text-[#64748B]" />
-                        <span className="text-xs text-[#64748B]">
-                          {isReceita ? 'Entrada' : 'Saída'}
-                        </span>
-                      </div>
-                    </div>
+                    <p className={`font-semibold ${
+                      isReceita ? 'text-green-600' : 'text-gray-900'
+                    }`}>
+                      {formatCurrency(Number(transacao.amount))}
+                    </p>
                     
                     <div className="flex items-center gap-1">
                       <Button 
                         variant="ghost" 
                         size="sm" 
                         onClick={() => handleEdit(transacao)}
-                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                        className="h-7 w-7 p-0 hover:bg-gray-100"
                         disabled={updateTransactionMutation.isPending}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
                         onClick={() => handleDelete(transacao.id, transacao.description)}
-                        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                        className="h-7 w-7 p-0 hover:bg-gray-100 hover:text-red-600"
                         disabled={deleteTransactionMutation.isPending}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
