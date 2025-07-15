@@ -74,7 +74,7 @@ serve(async (req) => {
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 7);
 
-    // Create user in public.users table
+    // Create user in public.users table with billing_cycle
     const { data: newUser, error: userError } = await supabase
       .from('users')
       .insert([{
@@ -83,6 +83,7 @@ serve(async (req) => {
         email: onboardingData.email,
         phone_number: onboardingData.phone,
         plan_type: onboardingData.selected_plan,
+        billing_cycle: onboardingData.billing_cycle,
         stripe_session_id: onboardingData.stripe_session_id,
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),

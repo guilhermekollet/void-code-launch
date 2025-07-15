@@ -21,8 +21,8 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const { planType, billingCycle, onboardingId } = await req.json();
-    logStep("Request received", { planType, billingCycle, onboardingId });
+    const { planType, billingCycle, onboardingId, email } = await req.json();
+    logStep("Request received", { planType, billingCycle, onboardingId, email });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
@@ -52,9 +52,18 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
     
+    // Verificar se já existe customer para este email
+    let customerId;
+    if (email) {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+        logStep("Found existing customer", { customerId, email });
+      }
+    }
+
     // Criar sessão do Stripe
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+    const sessionConfig: any = {
       line_items: [
         {
           price_data: {
@@ -79,7 +88,17 @@ serve(async (req) => {
         billingCycle,
         onboardingId: onboardingId || ''
       }
-    });
+    };
+
+    // Se temos customer existente, usar ele; senão, pré-preencher email
+    if (customerId) {
+      sessionConfig.customer = customerId;
+    } else if (email) {
+      sessionConfig.customer_email = email;
+      logStep("Using email for checkout", { email });
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     logStep("Stripe session created", { sessionId: session.id, url: session.url });
 

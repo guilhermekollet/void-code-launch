@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -378,15 +377,17 @@ export default function Register() {
       console.log('Creating checkout session with data:', {
         planType: formData.selectedPlan,
         billingCycle: formData.billingCycle,
-        onboardingId: onboardingId
+        onboardingId: onboardingId,
+        email: formData.email
       });
 
-      // Use create-checkout edge function instead of direct Stripe links
+      // Use create-checkout edge function with email
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
           planType: formData.selectedPlan,
           billingCycle: formData.billingCycle,
-          onboardingId: onboardingId
+          onboardingId: onboardingId,
+          email: formData.email
         }
       });
 

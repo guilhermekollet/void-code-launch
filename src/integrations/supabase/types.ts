@@ -463,6 +463,7 @@ export type Database = {
           installment_start_date: string | null
           installment_value: number | null
           installments: number | null
+          is_agent: boolean | null
           is_credit_card_expense: boolean | null
           is_installment: boolean | null
           is_recurring: boolean | null
@@ -485,6 +486,7 @@ export type Database = {
           installment_start_date?: string | null
           installment_value?: number | null
           installments?: number | null
+          is_agent?: boolean | null
           is_credit_card_expense?: boolean | null
           is_installment?: boolean | null
           is_recurring?: boolean | null
@@ -507,6 +509,7 @@ export type Database = {
           installment_start_date?: string | null
           installment_value?: number | null
           installments?: number | null
+          is_agent?: boolean | null
           is_credit_card_expense?: boolean | null
           is_installment?: boolean | null
           is_recurring?: boolean | null
@@ -595,6 +598,7 @@ export type Database = {
       }
       users: {
         Row: {
+          billing_cycle: string | null
           completed_onboarding: boolean | null
           created_at: string
           email: string | null
@@ -609,6 +613,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          billing_cycle?: string | null
           completed_onboarding?: boolean | null
           created_at?: string
           email?: string | null
@@ -623,6 +628,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          billing_cycle?: string | null
           completed_onboarding?: boolean | null
           created_at?: string
           email?: string | null

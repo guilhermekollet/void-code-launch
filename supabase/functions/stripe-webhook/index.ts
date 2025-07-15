@@ -167,6 +167,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     onboardingId: onboardingData.id,
     email: onboardingData.email,
     name: onboardingData.name,
+    selectedPlan: onboardingData.selected_plan,
+    billingCycle: onboardingData.billing_cycle,
     paymentConfirmed: onboardingData.payment_confirmed
   });
 
@@ -241,7 +243,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 7);
 
-    // Criar registro na tabela public.users para o usuário órfão
+    // Criar registro na tabela public.users para o usuário órfão com billing_cycle
     const { data: newUser, error: userError } = await supabase
       .from("users")
       .insert([{
@@ -250,6 +252,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         email: onboardingData.email,
         phone_number: onboardingData.phone,
         plan_type: onboardingData.selected_plan,
+        billing_cycle: onboardingData.billing_cycle,
         stripe_session_id: session.id,
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),
@@ -269,7 +272,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     logStep("✅ Successfully adopted orphaned auth user", {
       userId: newUser.id,
       authUserId: orphanedAuthUser.id,
-      email: onboardingData.email
+      email: onboardingData.email,
+      planType: onboardingData.selected_plan,
+      billingCycle: onboardingData.billing_cycle
     });
 
     // Atualizar onboarding com datas do trial
@@ -337,7 +342,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     trialEnd: trialEnd.toISOString()
   });
 
-  // Criar usuário na tabela users
+  // Criar usuário na tabela users com billing_cycle
   logStep("🏗️ Creating user in public.users table");
   const { data: newUser, error: userError } = await supabase
     .from("users")
@@ -347,6 +352,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       email: onboardingData.email,
       phone_number: onboardingData.phone,
       plan_type: onboardingData.selected_plan,
+      billing_cycle: onboardingData.billing_cycle,
       stripe_session_id: session.id,
       trial_start: trialStart.toISOString(),
       trial_end: trialEnd.toISOString(),
@@ -376,7 +382,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
   logStep("✅ User created successfully in public.users", {
     userId: newUser.id,
     authUserId: authUser.user.id,
-    email: onboardingData.email
+    email: onboardingData.email,
+    planType: onboardingData.selected_plan,
+    billingCycle: onboardingData.billing_cycle
   });
 
   // Atualizar onboarding com datas do trial
@@ -402,6 +410,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     authUserId: authUser.user.id,
     email: onboardingData.email,
     paymentConfirmed: true,
+    planType: onboardingData.selected_plan,
+    billingCycle: onboardingData.billing_cycle,
     trialStart: trialStart.toISOString(),
     trialEnd: trialEnd.toISOString()
   });
