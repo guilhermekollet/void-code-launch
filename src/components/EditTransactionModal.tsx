@@ -46,7 +46,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
       setCategory(transaction.category);
       setType(transaction.type as 'receita' | 'despesa');
       setDate(new Date(transaction.tx_date));
-      setCreditCardId(transaction.credit_card_id?.toString() || '');
+      setCreditCardId(transaction.credit_card_id ? transaction.credit_card_id.toString() : '');
     }
   }, [transaction]);
 
