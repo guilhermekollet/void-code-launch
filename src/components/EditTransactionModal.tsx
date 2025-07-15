@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -46,6 +45,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction }: EditTrans
       setCategory(transaction.category);
       setType(transaction.type as 'receita' | 'despesa');
       setDate(new Date(transaction.tx_date));
+      // Convert number to string for the select component
       setCreditCardId(transaction.credit_card_id ? transaction.credit_card_id.toString() : '');
     }
   }, [transaction]);
