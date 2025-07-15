@@ -93,7 +93,6 @@ export function AppSidebar() {
   const getPlanInfo = () => {
     if (!subscription || subscription.plan_type === 'free') {
       return { 
-        icon: Circle, 
         name: 'Gratuito', 
         color: 'text-gray-600 bg-gray-100',
         status: 'Plano gratuito'
@@ -103,21 +102,18 @@ export function AppSidebar() {
     switch (subscription.plan_type) {
       case 'premium':
         return { 
-          icon: Crown, 
           name: 'Premium', 
           color: 'text-white bg-[#61710C]',
           status: subscription.status === 'active' ? 'Ativo' : 'Inativo'
         };
       case 'basic':
         return { 
-          icon: Star, 
           name: 'Básico', 
           color: 'text-black bg-[#CFF500]',
           status: subscription.status === 'active' ? 'Ativo' : 'Inativo'
         };
       default:
         return { 
-          icon: Circle, 
           name: 'Gratuito', 
           color: 'text-gray-600 bg-gray-100',
           status: 'Plano gratuito'
@@ -126,7 +122,6 @@ export function AppSidebar() {
   };
 
   const planInfo = getPlanInfo();
-  const PlanIcon = planInfo.icon;
 
   const handlePlanCardClick = () => {
     navigate('/configuracoes');
@@ -188,21 +183,16 @@ export function AppSidebar() {
           onClick={handlePlanCardClick}
         >
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <PlanIcon className="h-5 w-5" />
-              </div>
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-sm font-semibold truncate">Plano {planInfo.name}</span>
-                <span className="text-xs opacity-80 truncate">
-                  {planInfo.status}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-semibold">Plano {planInfo.name}</span>
+              <span className="text-xs opacity-80">
+                {planInfo.status}
+              </span>
+              {subscription?.status === 'active' && subscription.plan_type !== 'free' && (
+                <span className="text-xs opacity-70">
+                  Clique para gerenciar
                 </span>
-                {subscription?.status === 'active' && subscription.plan_type !== 'free' && (
-                  <span className="text-xs opacity-70 truncate">
-                    Clique para gerenciar
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>

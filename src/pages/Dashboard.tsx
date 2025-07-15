@@ -8,7 +8,6 @@ import { TransactionChart } from "@/components/Dashboard/TransactionChart";
 import { CategoryChart } from "@/components/Dashboard/CategoryChart";
 import { RecentTransactions } from "@/components/Dashboard/RecentTransactions";
 import { CreditCardBillsSection } from "@/components/Dashboard/CreditCardBillsSection";
-import { ActivePlanCard } from "@/components/Dashboard/ActivePlanCard";
 import { AddTransactionFAB } from "@/components/AddTransaction/AddTransactionFAB";
 import { WelcomeModal } from "@/components/WelcomeModal";
 
@@ -72,8 +71,6 @@ export default function Dashboard() {
         <TransactionChart />
         <CategoryChart />
       </div>
-
-      <ActivePlanCard />
 
       <div className={`grid grid-cols-1 ${hasCreditCardBills ? 'lg:grid-cols-2' : ''} gap-6`}>
         <RecentTransactions 

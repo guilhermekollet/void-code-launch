@@ -60,7 +60,7 @@ export function useCategoryChartData() {
           return {
             name: categoryName,
             value: total,
-            color: categoryInfo?.color || '#61710C',
+            color: categoryInfo?.color || '#EF4444',
             icon: categoryInfo?.icon || 'tag'
           };
         })

@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { MessageCircle, Save } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useAIAgentSettings, useUpdateAIAgentSettings } from "@/hooks/useAIAgentSettings";
 import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
 import { useState, useEffect } from "react";
@@ -117,9 +117,8 @@ export function AIAgentSection() {
         <Button 
           onClick={handleSave}
           disabled={isPending}
-          className="w-full bg-[#61710C] hover:bg-[#4a5a0a] text-white"
+          className="w-full bg-white hover:bg-gray-50 text-black border border-[#E2E8F0]"
         >
-          <Save className="h-4 w-4 mr-2" />
           {isPending ? 'Salvando...' : 'Salvar Configurações'}
         </Button>
       </CardContent>

@@ -24,9 +24,9 @@ const CATEGORY_ICONS = [
 ];
 
 const CATEGORY_COLORS = [
-  '#61710C', '#E11D48', '#DC2626', '#EA580C', '#D97706', '#CA8A04',
-  '#65A30D', '#16A34A', '#059669', '#0891B2', '#0284C7', '#2563EB',
-  '#4F46E5', '#7C3AED', '#9333EA', '#C026D3', '#DB2777', '#BE185D'
+  '#EF4444', '#DC2626', '#B91C1C', '#F59E0B', '#D97706', '#B45309',
+  '#F97316', '#EA580C', '#C2410C', '#84CC16', '#65A30D', '#4D7C0F',
+  '#06B6D4', '#0891B2', '#0E7490', '#3B82F6', '#2563EB', '#1D4ED8'
 ];
 
 export function CategoryModal({ 
@@ -37,7 +37,7 @@ export function CategoryModal({
 }: CategoryModalProps) {
   const [name, setName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState("tag");
-  const [selectedColor, setSelectedColor] = useState("#61710C");
+  const [selectedColor, setSelectedColor] = useState("#EF4444");
 
   const { mutate: addCategory, isPending } = useAddCategory();
 
@@ -45,7 +45,7 @@ export function CategoryModal({
     if (!open) {
       setName("");
       setSelectedIcon("tag");
-      setSelectedColor("#61710C");
+      setSelectedColor("#EF4444");
     }
   }, [open]);
 
