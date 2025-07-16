@@ -1,7 +1,9 @@
 
-import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, RotateCcw } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useBillExpenses } from "@/hooks/useCreditCardBillsNew";
 
 interface ModernQuickStatsProps {
   totalBalance: number;
@@ -9,7 +11,6 @@ interface ModernQuickStatsProps {
   monthlyExpenses: number;
   monthlyRecurringExpenses: number;
   formatCurrency: (value: number) => string;
-  isLoading?: boolean;
 }
 
 export function ModernQuickStats({
@@ -17,79 +18,166 @@ export function ModernQuickStats({
   monthlyIncome,
   monthlyExpenses,
   monthlyRecurringExpenses,
-  formatCurrency,
-  isLoading = false
+  formatCurrency
 }: ModernQuickStatsProps) {
-  const stats = [
+  const { data: billExpensesData } = useBillExpenses();
+  const totalBillExpenses = billExpensesData?.totalBillExpenses || 0;
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const cards = [
     {
       title: "Saldo Total",
       value: totalBalance,
-      icon: DollarSign,
-      color: totalBalance >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: totalBalance >= 0 ? "bg-green-50" : "bg-red-50",
+      color: totalBalance >= 0 ? 'text-[#121212]' : 'text-red-600',
+      borderColor: totalBalance >= 0 ? 'border-[#DFDFDF]' : 'border-red-300'
     },
     {
       title: "Receitas do Mês",
       value: monthlyIncome,
-      icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: 'text-green-600',
+      borderColor: 'border-[#DFDFDF]'
     },
     {
       title: "Despesas do Mês",
       value: monthlyExpenses,
-      icon: TrendingDown,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
+      color: 'text-red-600',
+      borderColor: 'border-[#DFDFDF]'
     },
     {
       title: "Gastos Recorrentes",
       value: monthlyRecurringExpenses,
-      icon: RotateCcw,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      color: 'text-red-600',
+      borderColor: 'border-[#DFDFDF]'
     },
+    {
+      title: "Despesas em Fatura",
+      value: totalBillExpenses,
+      color: 'text-orange-600',
+      borderColor: 'border-[#DFDFDF]'
+    }
   ];
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, index) => (
-          <Card key={index} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4 rounded" />
+  const nextCards = () => {
+    setCurrentIndex((prev) => (prev + 3) % cards.length);
+  };
+
+  const prevCards = () => {
+    setCurrentIndex((prev) => (prev - 3 + cards.length) % cards.length);
+  };
+
+  const getVisibleCards = () => {
+    const visible = [];
+    for (let i = 0; i < 3; i++) {
+      visible.push(cards[(currentIndex + i) % cards.length]);
+    }
+    return visible;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Desktop - 3 cards em linha */}
+      <div className="hidden lg:grid lg:grid-cols-3 gap-6">
+        {getVisibleCards().map((card, index) => (
+          <Card key={index} className={`bg-[#FDFDFD] ${card.borderColor} shadow-sm hover:shadow-md transition-shadow`}>
+            <CardHeader className="space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-[#64748B]">{card.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${card.color}`}>
+                {formatCurrency(card.value)}
               </div>
-              <Skeleton className="h-8 w-32" />
             </CardContent>
           </Card>
         ))}
       </div>
-    );
-  }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
-        <Card 
-          key={stat.title} 
-          className="hover:shadow-md transition-all duration-300 animate-fade-in border-gray-200"
-          style={{ animationDelay: `${index * 100}ms` }}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between space-y-0 pb-2">
-              <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+      {/* Mobile - 1 card com navegação */}
+      <div className="lg:hidden">
+        <div className="relative">
+          <Card className={`bg-[#FDFDFD] ${cards[currentIndex].borderColor} shadow-sm`}>
+            <CardHeader className="space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-[#64748B]">{cards[currentIndex].title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${cards[currentIndex].color}`}>
+                {formatCurrency(cards[currentIndex].value)}
               </div>
-            </div>
-            <p className={`text-2xl font-bold ${stat.color} transition-colors duration-300`}>
-              {formatCurrency(stat.value)}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Controles de navegação mobile */}
+        <div className="flex justify-between items-center mt-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length)}
+            className="h-8 w-8"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          {/* Indicadores */}
+          <div className="flex space-x-2">
+            {cards.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-[#61710C]' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentIndex((prev) => (prev + 1) % cards.length)}
+            className="h-8 w-8"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Controles de navegação desktop */}
+      <div className="hidden lg:flex justify-center items-center space-x-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={prevCards}
+          disabled={cards.length <= 3}
+          className="h-8"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Anterior
+        </Button>
+
+        <div className="flex space-x-2">
+          {Array.from({ length: Math.ceil(cards.length / 3) }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index * 3)}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                Math.floor(currentIndex / 3) === index ? 'bg-[#61710C]' : 'bg-gray-300'
+              }`}
+            />
+          ))}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={nextCards}
+          disabled={cards.length <= 3}
+          className="h-8"
+        >
+          Próximo
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 }

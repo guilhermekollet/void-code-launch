@@ -1,16 +1,22 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Receipt } from "lucide-react";
-import { TransactionItem } from "@/components/Transactions/TransactionItem";
+import { ArrowUp, ArrowDown, Receipt, Edit, Trash2, MoreVertical, CreditCard } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { EditTransactionModal } from "@/components/EditTransactionModal";
 import { DeleteTransactionDialog } from "@/components/DeleteTransactionDialog";
 import { InstallmentDetailsModal } from "@/components/CreditCards/InstallmentDetailsModal";
 import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactionMutations";
 import { useInstallmentTransactions } from "@/hooks/useInstallmentTransactions";
 import { useCreditCards } from "@/hooks/useCreditCards";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface Transaction {
   id: number;
@@ -24,8 +30,6 @@ interface Transaction {
   installment_number?: number;
   total_installments?: number;
   is_agent?: boolean;
-  is_recurring?: boolean;
-  is_installment?: boolean;
 }
 
 interface RecentTransactionsProps {
@@ -37,12 +41,12 @@ export function RecentTransactions({
   transactions,
   formatCurrency
 }: RecentTransactionsProps) {
+  const isMobile = useIsMobile();
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<{ id: number; description: string } | null>(null);
   const [installmentModalOpen, setInstallmentModalOpen] = useState(false);
   const [selectedInstallment, setSelectedInstallment] = useState<Transaction | null>(null);
   
-  const queryClient = useQueryClient();
   const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
   const { data: creditCards = [] } = useCreditCards();
@@ -72,25 +76,13 @@ export function RecentTransactions({
       category: data.category,
       tx_date: data.tx_date,
       type: data.type
-    }, {
-      onSuccess: () => {
-        // Invalidate dashboard queries to refresh data
-        queryClient.invalidateQueries({ queryKey: ['financial-data'] });
-        queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        setEditTransaction(null);
-      }
     });
+    setEditTransaction(null);
   };
 
   const handleConfirmDelete = (id: number) => {
-    deleteTransactionMutation.mutate(id, {
-      onSuccess: () => {
-        // Invalidate dashboard queries to refresh data
-        queryClient.invalidateQueries({ queryKey: ['financial-data'] });
-        queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        setDeleteTransaction(null);
-      }
-    });
+    deleteTransactionMutation.mutate(id);
+    setDeleteTransaction(null);
   };
 
   const getCreditCardInfo = (creditCardId?: number) => {
@@ -98,9 +90,16 @@ export function RecentTransactions({
     return creditCards.find(card => card.id === creditCardId);
   };
 
+  const getContrastColor = (backgroundColor: string) => {
+    if (!backgroundColor || backgroundColor === '#ffffff' || backgroundColor === 'white') {
+      return '#000000';
+    }
+    return '#ffffff';
+  };
+
   if (transactions.length === 0) {
     return (
-      <Card className="bg-white border-gray-200 animate-fade-in">
+      <Card className="bg-white border-gray-200">
         <CardHeader>
           <CardTitle className="text-gray-900 text-xl font-medium">
             Transações Recentes
@@ -118,23 +117,194 @@ export function RecentTransactions({
 
   return (
     <>
-      <Card className="bg-white border-gray-200 animate-fade-in">
+      <Card className="bg-white border-gray-200">
         <CardHeader className="pb-3">
           <CardTitle className="text-gray-900 text-xl font-medium">
             Transações Recentes
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="space-y-3 p-6">
-            {transactions.map((transaction) => (
-              <TransactionItem
-                key={transaction.id}
-                transaction={transaction}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                formatCurrency={formatCurrency}
-              />
-            ))}
+          <div className="space-y-0">
+            {transactions.map((transacao, index) => {
+              const isReceita = transacao.type === 'receita';
+              const isLast = index === transactions.length - 1;
+              const creditCardInfo = getCreditCardInfo(transacao.credit_card_id);
+              const isInstallment = transacao.total_installments && transacao.total_installments > 1;
+              
+              if (isMobile) {
+                return (
+                  <div key={transacao.id} className={`p-4 ${!isLast ? 'border-b border-gray-100' : ''}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          isReceita ? 'bg-green-50' : 'bg-gray-50'
+                        }`}>
+                          {isReceita ? 
+                            <ArrowUp className="h-4 w-4 text-green-600" /> : 
+                            <ArrowDown className="h-4 w-4 text-gray-600" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-gray-900 text-sm truncate">
+                              {transacao.description}
+                            </p>
+                            {transacao.is_agent && (
+                              <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200">
+                                Bolsofy AI
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{transacao.category}</span>
+                            <span>•</span>
+                            <span>{new Date(transacao.tx_date).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {creditCardInfo && (
+                              <Badge
+                                className="text-xs px-2 py-0.5"
+                                style={{
+                                  backgroundColor: creditCardInfo.color,
+                                  color: getContrastColor(creditCardInfo.color),
+                                  border: `1px solid ${creditCardInfo.color}`
+                                }}
+                              >
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                {creditCardInfo.card_name || creditCardInfo.bank_name}
+                              </Badge>
+                            )}
+                            {isInstallment && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs cursor-pointer hover:bg-gray-50"
+                                onClick={() => handleInstallmentDetails(transacao)}
+                              >
+                                {transacao.installment_number}/{transacao.total_installments}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <p className={`font-semibold text-sm ${
+                          isReceita ? 'text-green-600' : 'text-gray-900'
+                        }`}>
+                          {formatCurrency(Number(transacao.amount))}
+                        </p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(transacao)}>
+                              <Edit className="h-3 w-3 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(transacao.id, transacao.description)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-3 w-3 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Layout desktop
+              return (
+                <div key={transacao.id} className={`flex items-center justify-between p-4 hover:bg-gray-25 transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      isReceita ? 'bg-green-50' : 'bg-gray-50'
+                    }`}>
+                      {isReceita ? 
+                        <ArrowUp className="h-4 w-4 text-green-600" /> : 
+                        <ArrowDown className="h-4 w-4 text-gray-600" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-gray-900 truncate">
+                          {transacao.description}
+                        </p>
+                        {transacao.is_agent && (
+                          <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200">
+                            Bolsofy AI
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>{transacao.category}</span>
+                        <span>•</span>
+                        <span>{new Date(transacao.tx_date).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {creditCardInfo && (
+                          <Badge
+                            className="text-xs px-2 py-0.5"
+                            style={{
+                              backgroundColor: creditCardInfo.color,
+                              color: getContrastColor(creditCardInfo.color),
+                              border: `1px solid ${creditCardInfo.color}`
+                            }}
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            {creditCardInfo.card_name || creditCardInfo.bank_name}
+                          </Badge>
+                        )}
+                        {isInstallment && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs cursor-pointer hover:bg-gray-50"
+                            onClick={() => handleInstallmentDetails(transacao)}
+                          >
+                            {transacao.installment_number}/{transacao.total_installments}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <p className={`font-semibold ${
+                      isReceita ? 'text-green-600' : 'text-gray-900'
+                    }`}>
+                      {formatCurrency(Number(transacao.amount))}
+                    </p>
+                    
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleEdit(transacao)}
+                        className="h-7 w-7 p-0 hover:bg-gray-100"
+                        disabled={updateTransactionMutation.isPending}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleDelete(transacao.id, transacao.description)}
+                        className="h-7 w-7 p-0 hover:bg-gray-100 hover:text-red-600"
+                        disabled={deleteTransactionMutation.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
