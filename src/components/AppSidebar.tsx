@@ -1,3 +1,4 @@
+
 import {
   ChevronsUpDown,
   LogOut,
@@ -25,7 +26,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { ActivePlanCard } from "./ActivePlanCard";
+import { ActivePlanCard } from "./Dashboard/ActivePlanCard"; // Fixed import path
 
 const data = {
   navMain: [
@@ -114,7 +115,6 @@ const data = {
                   <line x1="2" x2="22" y1="10" y2="10"/>
                 </svg>
       ),
-      badge: "Beta",
     },
   ],
 };
@@ -156,11 +156,6 @@ export function AppSidebar() {
                   <a href={item.url} className="flex items-center gap-3">
                     <item.icon />
                     <span>{item.title}</span>
-                    {item.badge && (
-                      <span className="ml-auto text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -188,13 +183,13 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src="" alt={user?.name || user?.email || ''} />
+                    <AvatarImage src="" alt={user?.email || ''} />
                     <AvatarFallback className="rounded-lg">
-                      {(user?.name || user?.email || '').charAt(0).toUpperCase()}
+                      {(user?.email || '').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{user?.name || 'Usuário'}</span>
+                    <span className="truncate font-semibold">Usuário</span>
                     <span className="truncate text-xs">{user?.email}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
@@ -209,13 +204,13 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="" alt={user?.name || user?.email || ''} />
+                      <AvatarImage src="" alt={user?.email || ''} />
                       <AvatarFallback className="rounded-lg">
-                        {(user?.name || user?.email || '').charAt(0).toUpperCase()}
+                        {(user?.email || '').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{user?.name || 'Usuário'}</span>
+                      <span className="truncate font-semibold">Usuário</span>
                       <span className="truncate text-xs">{user?.email}</span>
                     </div>
                   </div>

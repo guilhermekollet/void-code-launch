@@ -6,16 +6,18 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface TransactionData {
   description: string;
-  value: number;
+  amount: number; // Changed from 'value' to 'amount'
   category: string;
   tx_date: string;
   type: 'receita' | 'despesa';
   is_recurring?: boolean;
   recurring_date?: number;
   is_installment?: boolean;
+  total_installments?: number;
   installments?: number;
   credit_card_id?: number;
   installment_start_date?: string;
+  is_credit_card_expense?: boolean;
 }
 
 export function useAddTransaction() {
@@ -50,7 +52,7 @@ export function useAddTransaction() {
           installmentData.push({
             user_id: userData.id,
             description: transactionData.description,
-            value: transactionData.value / transactionData.installments,
+            value: transactionData.amount / transactionData.installments, // Use 'amount' from interface
             category: transactionData.category,
             tx_date: installmentDate.toISOString().split('T')[0],
             type: transactionData.type,
@@ -59,7 +61,7 @@ export function useAddTransaction() {
             installment_number: i,
             total_installments: transactionData.installments,
             installment_start_date: transactionData.installment_start_date || transactionData.tx_date,
-            installment_value: transactionData.value / transactionData.installments,
+            installment_value: transactionData.amount / transactionData.installments, // Use 'amount' from interface
             credit_card_id: transactionData.credit_card_id,
             is_credit_card_expense: !!transactionData.credit_card_id,
           });
@@ -79,7 +81,7 @@ export function useAddTransaction() {
         .insert({
           user_id: userData.id,
           description: transactionData.description,
-          value: transactionData.value,
+          value: transactionData.amount, // Use 'amount' from interface
           category: transactionData.category,
           tx_date: transactionData.tx_date,
           type: transactionData.type,
