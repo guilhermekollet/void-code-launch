@@ -1,11 +1,9 @@
-
 import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag, Crown, Star, Circle } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useUserProfile } from "@/hooks/useUserProfile";
 import confetti from 'canvas-confetti';
 
 const items = [{
@@ -89,22 +87,11 @@ const handleBolsofyIAClick = () => {
 
 export function AppSidebar() {
   const { data: subscription } = useSubscription();
-  const { data: userProfile } = useUserProfile();
   const navigate = useNavigate();
 
   const getPlanInfo = () => {
-    // First try to get from subscription data, then fallback to user profile
-    const planType = subscription?.plan_type || userProfile?.plan_type || 'free';
-    const billingCycle = subscription?.billing_cycle || userProfile?.billing_cycle || 'monthly';
+    const planType = subscription?.plan_type || 'basic';
     const status = subscription?.status || 'active';
-    
-    if (planType === 'free') {
-      return { 
-        name: 'Gratuito', 
-        color: 'text-gray-600 bg-gray-100',
-        status: 'Plano gratuito'
-      };
-    }
     
     switch (planType) {
       case 'premium':
@@ -114,16 +101,11 @@ export function AppSidebar() {
           status: status === 'active' ? 'Ativo' : 'Inativo'
         };
       case 'basic':
+      default:
         return { 
           name: 'Básico', 
           color: 'text-black bg-[#CFF500]',
           status: status === 'active' ? 'Ativo' : 'Inativo'
-        };
-      default:
-        return { 
-          name: 'Gratuito', 
-          color: 'text-gray-600 bg-gray-100',
-          status: 'Plano gratuito'
         };
     }
   };

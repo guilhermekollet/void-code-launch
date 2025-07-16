@@ -26,14 +26,13 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
       case 'premium':
         planName = 'Premium';
         break;
-      case 'free':
       default:
-        planName = 'Gratuito';
+        planName = 'Básico';
         break;
     }
 
-    // Adicionar período de faturamento se não for plano gratuito
-    if (planType !== 'free' && billingCycle) {
+    // Adicionar período de faturamento se disponível
+    if (billingCycle) {
       const cycleText = billingCycle === 'yearly' ? 'Anual' : 'Mensal';
       return `${planName} ${cycleText}`;
     }
@@ -41,35 +40,32 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
     return planName;
   };
 
-  const isFreePlan = subscription.plan_type === 'free';
+  const isPremium = subscription.plan_type === 'premium';
 
   return (
     <div className={`mt-8 p-6 rounded-2xl border ${
-      isFreePlan 
-        ? 'bg-gray-50 border-gray-200' 
-        : 'bg-green-50 border-green-200'
+      isPremium 
+        ? 'bg-green-50 border-green-200' 
+        : 'bg-blue-50 border-blue-200'
     }`}>
       <div className="flex items-center gap-3">
         <div className={`w-3 h-3 rounded-full ${
-          isFreePlan 
-            ? 'bg-gray-500' 
-            : 'bg-green-500 animate-pulse'
+          isPremium 
+            ? 'bg-green-500 animate-pulse' 
+            : 'bg-blue-500 animate-pulse'
         }`}></div>
         <p className={`font-semibold ${
-          isFreePlan 
-            ? 'text-gray-800' 
-            : 'text-green-800'
+          isPremium 
+            ? 'text-green-800' 
+            : 'text-blue-800'
         }`}>
-          {isFreePlan 
-            ? 'Você está usando o plano gratuito' 
-            : 'Sua assinatura está ativa'
-          }
+          Sua assinatura está ativa
         </p>
       </div>
       <p className={`text-sm mt-2 ml-6 ${
-        isFreePlan 
-          ? 'text-gray-700' 
-          : 'text-green-700'
+        isPremium 
+          ? 'text-green-700' 
+          : 'text-blue-700'
       }`}>
         Plano atual: {getPlanDisplayName(subscription.plan_type, subscription.billing_cycle)}
       </p>

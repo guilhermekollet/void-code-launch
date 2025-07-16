@@ -40,46 +40,41 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Primeiro, buscar dados do usuário na tabela users
-    const { data: userProfile, error: userProfileError } = await supabaseClient
-      .from("users")
-      .select("plan_type, billing_cycle, trial_start, trial_end")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (userProfileError) {
-      logStep("Error fetching user profile", { error: userProfileError.message });
-    }
-
-    if (userProfile) {
-      logStep("Found user profile data", {
-        planType: userProfile.plan_type,
-        billingCycle: userProfile.billing_cycle,
-        trialStart: userProfile.trial_start,
-        trialEnd: userProfile.trial_end
-      });
-
-      // Se temos dados na tabela users, retornar eles
-      const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
-      const status = userProfile.plan_type === 'free' ? 'active' : (isTrialActive ? 'trialing' : 'active');
-
-      return new Response(JSON.stringify({
-        plan_type: userProfile.plan_type || 'free',
-        billing_cycle: userProfile.billing_cycle || 'monthly',
-        status: status,
-        current_period_end: userProfile.trial_end
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    // Se não temos dados na tabela users, verificar no Stripe (fallback)
+    // Check Stripe first (main source of truth)
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
-      logStep("No Stripe key configured, returning free plan");
+      logStep("No Stripe key configured, checking users table");
+      
+      // Fallback to users table
+      const { data: userProfile, error: userProfileError } = await supabaseClient
+        .from("users")
+        .select("plan_type, billing_cycle, trial_start, trial_end")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (userProfileError) {
+        logStep("Error fetching user profile", { error: userProfileError.message });
+      }
+
+      if (userProfile && userProfile.plan_type && userProfile.plan_type !== 'free') {
+        logStep("Found user profile data", userProfile);
+        const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
+        const status = isTrialActive ? 'trialing' : 'active';
+
+        return new Response(JSON.stringify({
+          plan_type: userProfile.plan_type,
+          billing_cycle: userProfile.billing_cycle || 'monthly',
+          status: status,
+          current_period_end: userProfile.trial_end
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      // Default to basic plan if no data found
       return new Response(JSON.stringify({
-        plan_type: 'free',
+        plan_type: 'basic',
         billing_cycle: 'monthly',
         status: 'active',
         current_period_end: null
@@ -94,9 +89,9 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("No customer found in Stripe, returning free plan");
+      logStep("No customer found in Stripe, returning basic plan");
       return new Response(JSON.stringify({
-        plan_type: 'free',
+        plan_type: 'basic',
         billing_cycle: 'monthly',
         status: 'active',
         current_period_end: null
@@ -116,7 +111,7 @@ serve(async (req) => {
     });
     
     const hasActiveSub = subscriptions.data.length > 0;
-    let planType = 'free';
+    let planType = 'basic';
     let billingCycle = 'monthly';
     let subscriptionEnd = null;
 
@@ -133,7 +128,7 @@ serve(async (req) => {
       // Determinar billing_cycle
       billingCycle = price.recurring?.interval === 'year' ? 'yearly' : 'monthly';
       
-      // Determinar plan_type baseado no valor
+      // Determinar plan_type baseado no valor - só básico ou premium
       if (amount <= 1999) { // até R$ 19,99
         planType = "basic";
       } else { // acima de R$ 19,99
@@ -148,7 +143,7 @@ serve(async (req) => {
         interval: price.recurring?.interval 
       });
     } else {
-      logStep("No active subscription found");
+      logStep("No active subscription found, defaulting to basic");
     }
 
     logStep("Returning subscription info", { 
@@ -173,7 +168,7 @@ serve(async (req) => {
     logStep("ERROR in check-subscription", { message: errorMessage });
     return new Response(JSON.stringify({ 
       error: errorMessage,
-      plan_type: 'free',
+      plan_type: 'basic',
       billing_cycle: 'monthly',
       status: 'active',
       current_period_end: null

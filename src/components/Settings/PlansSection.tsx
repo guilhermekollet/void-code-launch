@@ -120,18 +120,12 @@ export function PlansSection() {
     setBillingCycle(checked ? 'yearly' : 'monthly');
   };
 
-  // Simplificar verificação de plano atual - apenas verificar se o tipo de plano bate
+  // Verificar se é o plano atual baseado nos dados do Stripe
   const isCurrentPlan = (planType: string, planBillingCycle: 'monthly' | 'yearly') => {
     if (!subscription || !subscription.plan_type) {
       return false;
     }
     
-    // Para planos free, só considerar atual se for realmente free
-    if (planType === 'free') {
-      return subscription.plan_type === 'free';
-    }
-    
-    // Para outros planos, verificar tipo e ciclo (se disponível)
     const planMatch = subscription.plan_type === planType;
     
     // Se não temos billing_cycle no subscription, considerar apenas o tipo

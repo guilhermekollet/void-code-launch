@@ -30,7 +30,7 @@ export function useRecurringTransactions() {
         .select('*')
         .eq('user_id', userData.id)
         .eq('is_recurring', true)
-        .order('created_at', { ascending: false });
+        .order('registered_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching recurring transactions:', error);
