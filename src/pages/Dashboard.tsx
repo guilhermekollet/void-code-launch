@@ -51,20 +51,23 @@ export default function Dashboard() {
     is_installment: transaction.is_installment,
     installment_number: transaction.installment_number,
     total_installments: transaction.total_installments,
-    registered_at: transaction.registered_at
+    registered_at: transaction.registered_at,
+    credit_card_id: transaction.credit_card_id,
+    is_agent: transaction.is_agent
   }));
 
   // Check if there are credit card bills to show
   const hasCreditCardBills = creditCards.length > 0 && bills.length > 0;
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-8 p-6 animate-fade-in">
       <ModernQuickStats
         totalBalance={totalBalance}
         monthlyIncome={monthlyIncome}
         monthlyExpenses={monthlyExpenses}
         monthlyRecurringExpenses={monthlyRecurringExpenses}
         formatCurrency={formatCurrency}
+        isLoading={financialDataQuery.isLoading}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

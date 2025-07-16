@@ -10,6 +10,7 @@ import { SubscriptionStatus } from "./SubscriptionStatus";
 import { PlanCard } from "./PlanCard";
 import { BillingToggle } from "./BillingToggle";
 import { useState } from "react";
+import { useModifySubscription } from "@/hooks/useModifySubscription";
 
 const plans = [
   {
@@ -84,23 +85,55 @@ export function PlansSection() {
   const { data: subscription } = useSubscription();
   const createCheckout = useCreateCheckout();
   const customerPortal = useCustomerPortal();
+  const modifySubscription = useModifySubscription();
   const { toast } = useToast();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleSubscribe = async (planType: string, targetBillingCycle: 'monthly' | 'yearly') => {
     try {
-      createCheckout.mutate({
-        planType,
-        billingCycle: targetBillingCycle
-      });
+      // Check if this is a modification of existing subscription
+      if (subscription?.status === 'active' && 
+          (subscription.plan_type !== planType || subscription.billing_cycle !== targetBillingCycle)) {
+        
+        const action = getModificationAction(
+          subscription.plan_type || 'basic',
+          planType,
+          subscription.billing_cycle || 'monthly',
+          targetBillingCycle
+        );
+
+        modifySubscription.mutate({
+          planType: planType as 'basic' | 'premium',
+          billingCycle: targetBillingCycle,
+          action
+        });
+      } else {
+        // New subscription
+        createCheckout.mutate({
+          planType,
+          billingCycle: targetBillingCycle
+        });
+      }
     } catch (error) {
-      console.error('Error creating checkout:', error);
+      console.error('Error processing subscription:', error);
       toast({
         title: "Erro",
         description: "Não foi possível processar a assinatura. Tente novamente.",
         variant: "destructive",
       });
     }
+  };
+
+  const getModificationAction = (
+    currentPlan: string,
+    targetPlan: string,
+    currentCycle: string,
+    targetCycle: string
+  ): 'upgrade' | 'downgrade' | 'change_cycle' => {
+    if (currentPlan !== targetPlan) {
+      return targetPlan === 'premium' ? 'upgrade' : 'downgrade';
+    }
+    return 'change_cycle';
   };
 
   const handleManageSubscription = async () => {
@@ -120,7 +153,7 @@ export function PlansSection() {
     setBillingCycle(checked ? 'yearly' : 'monthly');
   };
 
-  // Verificar se é o plano atual baseado nos dados do Stripe
+  // Check if it's the current plan
   const isCurrentPlan = (planType: string, planBillingCycle: 'monthly' | 'yearly') => {
     if (!subscription || !subscription.plan_type) {
       return false;
@@ -128,28 +161,39 @@ export function PlansSection() {
     
     const planMatch = subscription.plan_type === planType;
     
-    // Se não temos billing_cycle no subscription, considerar apenas o tipo
+    // If we don't have billing_cycle in subscription, only consider plan type
     if (!subscription.billing_cycle) {
       return planMatch;
     }
     
     const cycleMatch = subscription.billing_cycle === planBillingCycle;
     
-    console.log('Checking isCurrentPlan:', {
-      planType,
-      planBillingCycle,
-      subscriptionPlanType: subscription.plan_type,
-      subscriptionBillingCycle: subscription.billing_cycle,
-      planMatch,
-      cycleMatch,
-      result: planMatch && cycleMatch
-    });
-    
     return planMatch && cycleMatch;
   };
 
   const getFilteredPlans = () => {
     return plans.filter(plan => plan.billingCycle === billingCycle);
+  };
+
+  const getButtonText = (plan: typeof plans[0]) => {
+    const isCurrentUserPlan = isCurrentPlan(plan.planType, plan.billingCycle);
+    
+    if (isCurrentUserPlan) {
+      return 'Gerenciar Assinatura';
+    }
+
+    if (subscription?.status === 'active') {
+      const currentPlan = subscription.plan_type || 'basic';
+      if (plan.planType === 'premium' && currentPlan === 'basic') {
+        return 'Fazer Upgrade';
+      } else if (plan.planType === 'basic' && currentPlan === 'premium') {
+        return 'Fazer Downgrade';
+      } else if (subscription.billing_cycle !== plan.billingCycle) {
+        return `Mudar para ${plan.billingCycle === 'yearly' ? 'Anual' : 'Mensal'}`;
+      }
+    }
+
+    return 'Assinar Agora';
   };
 
   return (
@@ -182,7 +226,8 @@ export function PlansSection() {
                 onSubscribe={() => handleSubscribe(plan.planType, plan.billingCycle)}
                 onManage={handleManageSubscription}
                 isCurrentPlan={isUserCurrentPlan}
-                isLoading={createCheckout.isPending}
+                isLoading={createCheckout.isPending || modifySubscription.isPending}
+                buttonText={getButtonText(plan)}
               />
             );
           })}

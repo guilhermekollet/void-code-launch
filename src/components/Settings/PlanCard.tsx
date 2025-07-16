@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
 interface Plan {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ interface Plan {
   current?: boolean;
   premium?: boolean;
 }
+
 interface PlanCardProps {
   plan: Plan;
   billingCycle: 'monthly' | 'yearly';
@@ -20,7 +23,9 @@ interface PlanCardProps {
   isCurrentPlan: boolean;
   isLoading: boolean;
   discount?: number;
+  buttonText?: string;
 }
+
 export function PlanCard({
   plan,
   billingCycle,
@@ -28,7 +33,8 @@ export function PlanCard({
   onManage,
   isCurrentPlan,
   isLoading,
-  discount
+  discount,
+  buttonText
 }: PlanCardProps) {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -36,27 +42,36 @@ export function PlanCard({
       currency: 'BRL'
     }).format(price);
   };
+
   const monthlyPrice = plan.monthlyPrice;
   const yearlyPrice = plan.yearlyPrice;
   const displayPrice = billingCycle === 'monthly' ? monthlyPrice : yearlyPrice;
 
-  // Remove "Free" from plan name if it's the free plan
   const displayName = plan.id === 'free' ? 'Gratuito' : plan.name;
-  return <div className="relative p-6 rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
-      {plan.popular && <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white hover:bg-gray-900 px-4 py-1 text-sm font-medium shadow-sm border-0">
+  
+  const finalButtonText = buttonText || (isCurrentPlan ? 'Gerenciar Assinatura' : 'Assinar Agora');
+
+  return (
+    <div className="relative p-6 rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+      {plan.popular && (
+        <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white hover:bg-gray-900 px-4 py-1 text-sm font-medium shadow-sm border-0">
           Mais Popular
-        </Badge>}
+        </Badge>
+      )}
       
-      {isCurrentPlan && <Badge variant="outline" className="absolute -top-3 right-4 bg-green-500 text-white border-green-500 px-3 py-1 font-medium shadow-sm">
+      {isCurrentPlan && (
+        <Badge variant="outline" className="absolute -top-3 right-4 bg-green-500 text-white border-green-500 px-3 py-1 font-medium shadow-sm">
           Plano Atual
-        </Badge>}
+        </Badge>
+      )}
 
       <div className="text-center mb-6 flex-shrink-0">
         <h3 className="text-xl font-semibold text-gray-900 mb-3">
           {displayName}
         </h3>
         
-        {displayPrice > 0 ? <div className="mb-4">
+        {displayPrice > 0 ? (
+          <div className="mb-4">
             <div className="flex items-baseline justify-center gap-1 mb-2">
               <span className="text-2xl font-bold text-gray-900 leading-none">
                 {formatPrice(displayPrice)}
@@ -66,24 +81,37 @@ export function PlanCard({
               </span>
             </div>
             
-            {billingCycle === 'yearly' && yearlyPrice > 0 && <p className="text-sm text-gray-500">
+            {billingCycle === 'yearly' && yearlyPrice > 0 && (
+              <p className="text-sm text-gray-500">
                 Cobrado anualmente por {formatPrice(yearlyPrice)}
-              </p>}
-          </div> : <div className="mb-4">
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mb-4">
             <div className="flex items-baseline justify-center gap-1 mb-2">
               
             </div>
-          </div>}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 mb-8 flex-grow">
-        {plan.features.map((feature, index) => <div key={index} className="flex items-start gap-2 text-sm text-gray-600">
+        {plan.features.map((feature, index) => (
+          <div key={index} className="flex items-start gap-2 text-sm text-gray-600">
             <span className="leading-tight">{feature}</span>
-          </div>)}
+          </div>
+        ))}
       </div>
 
-      <Button onClick={isCurrentPlan ? onManage : onSubscribe} disabled={isLoading || plan.id === 'free' && !isCurrentPlan} className="w-full py-3 text-base font-medium" variant={isCurrentPlan ? 'outline' : 'default'}>
-        {isCurrentPlan ? 'Gerenciar Assinatura' : plan.id === 'free' ? 'Plano Gratuito' : 'Assinar Agora'}
+      <Button 
+        onClick={isCurrentPlan ? onManage : onSubscribe} 
+        disabled={isLoading} 
+        className="w-full py-3 text-base font-medium" 
+        variant={isCurrentPlan ? 'outline' : 'default'}
+      >
+        {finalButtonText}
       </Button>
-    </div>;
+    </div>
+  );
 }

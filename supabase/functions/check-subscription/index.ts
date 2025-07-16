@@ -32,7 +32,6 @@ serve(async (req) => {
     logStep("Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
-    logStep("Authenticating user with token");
     
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
@@ -40,24 +39,25 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Check Stripe first (main source of truth)
+    // First, check users table for existing plan data
+    const { data: userProfile, error: userProfileError } = await supabaseClient
+      .from("users")
+      .select("plan_type, billing_cycle, trial_start, trial_end")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (userProfileError) {
+      logStep("Error fetching user profile", { error: userProfileError.message });
+    }
+
+    logStep("User profile data", userProfile);
+
+    // Check Stripe if we have the key
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
-      logStep("No Stripe key configured, checking users table");
+      logStep("No Stripe key configured, using users table data");
       
-      // Fallback to users table
-      const { data: userProfile, error: userProfileError } = await supabaseClient
-        .from("users")
-        .select("plan_type, billing_cycle, trial_start, trial_end")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (userProfileError) {
-        logStep("Error fetching user profile", { error: userProfileError.message });
-      }
-
-      if (userProfile && userProfile.plan_type && userProfile.plan_type !== 'free') {
-        logStep("Found user profile data", userProfile);
+      if (userProfile && userProfile.plan_type) {
         const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
         const status = isTrialActive ? 'trialing' : 'active';
 
@@ -89,7 +89,23 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("No customer found in Stripe, returning basic plan");
+      logStep("No customer found in Stripe");
+      
+      // Use users table data if available
+      if (userProfile && userProfile.plan_type) {
+        logStep("Using users table data as fallback", userProfile);
+        const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
+        return new Response(JSON.stringify({
+          plan_type: userProfile.plan_type,
+          billing_cycle: userProfile.billing_cycle || 'monthly',
+          status: isTrialActive ? 'trialing' : 'active',
+          current_period_end: userProfile.trial_end
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
       return new Response(JSON.stringify({
         plan_type: 'basic',
         billing_cycle: 'monthly',
@@ -120,22 +136,22 @@ serve(async (req) => {
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
       
-      // Determinar plan_type e billing_cycle do Stripe
+      // Determine plan_type and billing_cycle from Stripe
       const priceId = subscription.items.data[0].price.id;
       const price = await stripe.prices.retrieve(priceId);
       const amount = price.unit_amount || 0;
       
-      // Determinar billing_cycle
+      // Determine billing_cycle
       billingCycle = price.recurring?.interval === 'year' ? 'yearly' : 'monthly';
       
-      // Determinar plan_type baseado no valor - só básico ou premium
-      if (amount <= 1999) { // até R$ 19,99
+      // Determine plan_type based on amount - only basic or premium
+      if (amount <= 1999) { // up to R$ 19,99
         planType = "basic";
-      } else { // acima de R$ 19,99
+      } else { // above R$ 19,99
         planType = "premium";
       }
       
-      logStep("Determined subscription details", { 
+      logStep("Determined subscription details from Stripe", { 
         priceId, 
         amount, 
         planType, 
@@ -143,7 +159,14 @@ serve(async (req) => {
         interval: price.recurring?.interval 
       });
     } else {
-      logStep("No active subscription found, defaulting to basic");
+      logStep("No active subscription found in Stripe");
+      
+      // Use users table data as fallback when no active Stripe subscription
+      if (userProfile && userProfile.plan_type) {
+        planType = userProfile.plan_type;
+        billingCycle = userProfile.billing_cycle || 'monthly';
+        logStep("Using users table data as fallback for inactive subscription", { planType, billingCycle });
+      }
     }
 
     logStep("Returning subscription info", { 
