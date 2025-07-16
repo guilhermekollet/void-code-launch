@@ -109,3 +109,42 @@ export function useCustomerPortal() {
     },
   });
 }
+
+export function useRefreshSubscription() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async () => {
+      console.log('[useRefreshSubscription] Refreshing subscription status');
+      
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+
+      if (error) {
+        console.error('Error refreshing subscription:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      console.log('[useRefreshSubscription] Subscription refreshed successfully');
+      
+      // Invalidar queries relacionadas para atualizar a UI
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      
+      toast({
+        title: "Sucesso",
+        description: "Status da assinatura atualizado!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error in subscription refresh:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar status. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+}
