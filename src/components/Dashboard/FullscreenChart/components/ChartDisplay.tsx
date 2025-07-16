@@ -1,3 +1,4 @@
+
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export function ChartDisplay({
   };
 
   const formatTooltip = (value: number, name: string) => {
-    return [formatCurrency(value), name === 'receitas' ? 'Receitas' : name === 'despesas' ? 'Despesas' : 'Saldo'];
+    return [formatCurrency(value), name === 'receitas' ? 'Receitas' : name === 'despesas' ? 'Despesas' : 'Fluxo Líquido'];
   };
 
   const handlePointClick = (data: any) => {
@@ -86,7 +87,7 @@ export function ChartDisplay({
       case 'despesas':
         return 'Despesas';
       case 'saldo':
-        return 'Saldo';
+        return 'Fluxo Líquido';
       default:
         return 'Fluxo Financeiro';
     }
@@ -102,6 +103,19 @@ export function ChartDisplay({
         return '#3b82f6';
       default:
         return '#3b82f6';
+    }
+  };
+
+  const getDataKey = () => {
+    switch (chartType) {
+      case 'receitas':
+        return 'receitas';
+      case 'despesas':
+        return 'despesas';
+      case 'saldo':
+        return 'fluxoLiquido';
+      default:
+        return 'fluxoLiquido';
     }
   };
 
@@ -181,7 +195,7 @@ export function ChartDisplay({
                 <ReferenceLine x={data.length - 1} stroke="#94a3b8" strokeDasharray="2 2" />
                 <Line
                   type="monotone"
-                  dataKey={chartType}
+                  dataKey={getDataKey()}
                   stroke={getLineColor()}
                   strokeWidth={3}
                   dot={{ fill: getLineColor(), strokeWidth: 2, r: 6, cursor: 'pointer' }}

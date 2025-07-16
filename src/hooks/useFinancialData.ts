@@ -112,7 +112,8 @@ export function useFinancialData() {
       return result;
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 2, // Reduzido para 2 minutos para atualização mais rápida
+    refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
   });
 }
 
@@ -194,7 +195,8 @@ export function useTransactions() {
       })) || [];
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 1, // Reduzido para 1 minuto para atualização mais rápida
+    refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
   });
 }
 
@@ -253,7 +255,13 @@ export function useChartData() {
 
         // Monthly data
         if (!monthlyMap.has(monthKey)) {
-          monthlyMap.set(monthKey, { mes: monthKey, receitas: 0, despesas: 0, gastosRecorrentes: 0 });
+          monthlyMap.set(monthKey, { 
+            mes: monthKey, 
+            receitas: 0, 
+            despesas: 0, 
+            gastosRecorrentes: 0,
+            fluxoLiquido: 0 
+          });
         }
 
         const monthData = monthlyMap.get(monthKey);
@@ -265,6 +273,9 @@ export function useChartData() {
             monthData.gastosRecorrentes += Math.abs(value);
           }
         }
+        
+        // Calculate fluxo líquido
+        monthData.fluxoLiquido = monthData.receitas - monthData.despesas;
 
         // Category data
         if (transaction.type === 'despesa') {
@@ -285,7 +296,8 @@ export function useChartData() {
       };
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 2, // Reduzido para 2 minutos
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -338,7 +350,13 @@ export function useDailyData(days: number) {
         const value = Number(transaction.value) || 0;
 
         if (!dailyMap.has(dayKey)) {
-          dailyMap.set(dayKey, { mes: dayKey, receitas: 0, despesas: 0, gastosRecorrentes: 0 });
+          dailyMap.set(dayKey, { 
+            mes: dayKey, 
+            receitas: 0, 
+            despesas: 0, 
+            gastosRecorrentes: 0,
+            fluxoLiquido: 0 
+          });
         }
 
         const dayData = dailyMap.get(dayKey);
@@ -350,11 +368,15 @@ export function useDailyData(days: number) {
             dayData.gastosRecorrentes += Math.abs(value);
           }
         }
+        
+        // Calculate fluxo líquido
+        dayData.fluxoLiquido = dayData.receitas - dayData.despesas;
       });
 
       return Array.from(dailyMap.values());
     },
     enabled: !!user?.id && days > 0,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 1, // Reduzido para 1 minuto
+    refetchOnWindowFocus: true,
   });
 }

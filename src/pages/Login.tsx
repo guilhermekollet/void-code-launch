@@ -16,6 +16,7 @@ export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState('55');
   const [maskedEmail, setMaskedEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -37,7 +38,7 @@ export default function Login() {
     return `+${phone}`;
   };
 
-  const handleSendMagicLink = async () => {
+  const handleSendMagicLink = async (isResend = false) => {
     if (!phoneNumber || phoneNumber.length < 10) {
       toast({
         title: "Número inválido",
@@ -47,7 +48,12 @@ export default function Login() {
       return;
     }
 
-    setLoading(true);
+    if (isResend) {
+      setIsResending(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('send-magic-link', {
         body: { phoneNumber }
@@ -58,7 +64,7 @@ export default function Login() {
       if (data?.error) {
         toast({
           title: "Conta não encontrada",
-          description: "Não foi encontrada uma conta com este número. Cadastre-se primeiro.",
+          description: "Não encontramos uma conta associada a este número. Cadastre-se primeiro para acessar o Bolsofy.",
           variant: "destructive"
         });
         return;
@@ -66,22 +72,34 @@ export default function Login() {
 
       if (data?.maskedEmail) {
         setMaskedEmail(data.maskedEmail);
-        toast({
-          title: data.message || "Link enviado",
-          description: `Link de acesso enviado para ${data.maskedEmail}.`
-        });
         
-        setAuthStep('email-sent');
+        if (isResend) {
+          toast({
+            title: "Link reenviado com sucesso!",
+            description: `Novo link de acesso enviado para ${data.maskedEmail}. Verifique sua caixa de entrada.`,
+          });
+        } else {
+          toast({
+            title: data.message || "Link enviado",
+            description: `Link de acesso enviado para ${data.maskedEmail}.`
+          });
+          setAuthStep('email-sent');
+        }
       }
     } catch (error: any) {
       console.error('Error sending magic link:', error);
+      const errorMessage = isResend ? 
+        "Não foi possível reenviar o link. Tente novamente." :
+        "Não foi possível enviar o link. Tente novamente.";
+      
       toast({
         title: "Erro no envio",
-        description: "Não foi possível enviar o link. Tente novamente.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
+      setIsResending(false);
     }
   };
 
@@ -122,7 +140,7 @@ export default function Login() {
               </div>
               
               <Button 
-                onClick={handleSendMagicLink}
+                onClick={() => handleSendMagicLink(false)}
                 className="w-full bg-[#61710C] hover:bg-[#4a5709] text-white"
                 disabled={loading}
               >
@@ -170,12 +188,12 @@ export default function Login() {
               </div>
               
               <Button
-                onClick={handleSendMagicLink}
+                onClick={() => handleSendMagicLink(true)}
                 variant="outline"
                 className="w-full border-[#61710C] text-[#61710C] hover:bg-[#61710C] hover:text-white"
-                disabled={loading}
+                disabled={isResending}
               >
-                {loading ? 'Enviando...' : 'Reenviar Link'}
+                {isResending ? 'Reenviando...' : 'Reenviar Link'}
               </Button>
             </div>
           )}

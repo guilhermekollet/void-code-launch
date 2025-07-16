@@ -94,6 +94,39 @@ serve(async (req) => {
       planType 
     });
 
+    // Enviar email de boas-vindas
+    try {
+      logStep("Sending welcome email");
+      
+      const welcomeEmailResponse = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-welcome-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+          },
+          body: JSON.stringify({
+            email: record.email,
+            name: record.raw_user_meta_data?.name || 'Usuário',
+            planType: planType || 'free'
+          }),
+        }
+      );
+
+      if (welcomeEmailResponse.ok) {
+        logStep("Welcome email sent successfully");
+      } else {
+        logStep("Failed to send welcome email", { 
+          status: welcomeEmailResponse.status 
+        });
+      }
+    } catch (emailError) {
+      logStep("Error sending welcome email", { 
+        error: emailError instanceof Error ? emailError.message : String(emailError) 
+      });
+    }
+
     return new Response(JSON.stringify({ 
       success: true,
       plan_type: planType 
