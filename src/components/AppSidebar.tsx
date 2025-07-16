@@ -168,7 +168,7 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupLabel>Assinatura</SidebarGroupLabel>
             <div className="px-3 py-2">
-              <ActivePlanCard subscription={subscription} />
+              <ActivePlanCard />
             </div>
           </SidebarGroup>
         )}
