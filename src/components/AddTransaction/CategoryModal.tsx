@@ -29,6 +29,20 @@ const CATEGORY_COLORS = [
   '#06B6D4', '#0891B2', '#0E7490', '#3B82F6', '#2563EB', '#1D4ED8'
 ];
 
+// Function to calculate if text should be white or black based on background color
+const getContrastColor = (hexColor: string) => {
+  // Convert hex to RGB
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  
+  // Calculate luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return white for dark colors, black for light colors
+  return luminance > 0.5 ? '#000000' : '#FFFFFF';
+};
+
 export function CategoryModal({ 
   open, 
   onOpenChange, 
@@ -81,6 +95,9 @@ export function CategoryModal({
     });
   };
 
+  const IconComponent = getIconComponent(selectedIcon);
+  const contrastColor = getContrastColor(selectedColor);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white max-w-md">
@@ -102,27 +119,44 @@ export function CategoryModal({
             />
           </div>
 
+          {/* Color Preview Card */}
+          <div className="space-y-2">
+            <Label>Prévia da Categoria</Label>
+            <div 
+              className="flex items-center gap-3 p-4 rounded-lg border-2 border-gray-200"
+              style={{ backgroundColor: selectedColor }}
+            >
+              <IconComponent 
+                className="w-6 h-6" 
+                style={{ color: contrastColor }} 
+              />
+              <span 
+                className="font-medium text-base"
+                style={{ color: contrastColor }}
+              >
+                {name || "Nome da categoria"}
+              </span>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Ícone</Label>
             <Select value={selectedIcon} onValueChange={setSelectedIcon}>
               <SelectTrigger>
                 <SelectValue>
                   <div className="flex items-center gap-2">
-                    {(() => {
-                      const IconComponent = getIconComponent(selectedIcon);
-                      return <IconComponent className="w-4 h-4" style={{ color: selectedColor }} />;
-                    })()}
+                    <IconComponent className="w-4 h-4" style={{ color: selectedColor }} />
                     <span className="capitalize">{selectedIcon.replace('-', ' ')}</span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-white border border-[#DEDEDE] max-h-60">
                 {CATEGORY_ICONS.map((icon) => {
-                  const IconComponent = getIconComponent(icon);
+                  const IconComp = getIconComponent(icon);
                   return (
                     <SelectItem key={icon} value={icon}>
                       <div className="flex items-center gap-2">
-                        <IconComponent className="w-4 h-4" style={{ color: selectedColor }} />
+                        <IconComp className="w-4 h-4" style={{ color: selectedColor }} />
                         <span className="capitalize">{icon.replace('-', ' ')}</span>
                       </div>
                     </SelectItem>

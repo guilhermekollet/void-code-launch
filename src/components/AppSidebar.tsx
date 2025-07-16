@@ -5,6 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupConte
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import confetti from 'canvas-confetti';
 
 const items = [{
@@ -88,10 +89,16 @@ const handleBolsofyIAClick = () => {
 
 export function AppSidebar() {
   const { data: subscription } = useSubscription();
+  const { data: userProfile } = useUserProfile();
   const navigate = useNavigate();
 
   const getPlanInfo = () => {
-    if (!subscription || subscription.plan_type === 'free') {
+    // First try to get from subscription data, then fallback to user profile
+    const planType = subscription?.plan_type || userProfile?.plan_type || 'free';
+    const billingCycle = subscription?.billing_cycle || userProfile?.billing_cycle || 'monthly';
+    const status = subscription?.status || 'active';
+    
+    if (planType === 'free') {
       return { 
         name: 'Gratuito', 
         color: 'text-gray-600 bg-gray-100',
@@ -99,18 +106,18 @@ export function AppSidebar() {
       };
     }
     
-    switch (subscription.plan_type) {
+    switch (planType) {
       case 'premium':
         return { 
           name: 'Premium', 
           color: 'text-white bg-[#61710C]',
-          status: subscription.status === 'active' ? 'Ativo' : 'Inativo'
+          status: status === 'active' ? 'Ativo' : 'Inativo'
         };
       case 'basic':
         return { 
           name: 'Básico', 
           color: 'text-black bg-[#CFF500]',
-          status: subscription.status === 'active' ? 'Ativo' : 'Inativo'
+          status: status === 'active' ? 'Ativo' : 'Inativo'
         };
       default:
         return { 
@@ -127,9 +134,10 @@ export function AppSidebar() {
     navigate('/configuracoes');
   };
 
-  return <Sidebar className="border-r bg-white" style={{
-    borderColor: '#DEDEDE'
-  }}>
+  return (
+    <Sidebar className="border-r bg-white" style={{
+      borderColor: '#DEDEDE'
+    }}>
       <SidebarHeader className="p-6 bg-white">
         <div className="flex items-center gap-3">
           <img src="/lovable-uploads/549233e8-56e8-49c8-b3d7-3393077d8256.png" alt="Bolsofy Logo" className="h-10 w-auto" />
@@ -139,9 +147,10 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu style={{
-            gap: '10px'
-          }}>
-              {items.map(item => <SidebarMenuItem key={item.title}>
+              gap: '10px'
+            }}>
+              {items.map(item => (
+                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="lg" className="h-14">
                     <NavLink 
                       to={item.url} 
@@ -158,7 +167,8 @@ export function AppSidebar() {
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
-                </SidebarMenuItem>)}
+                </SidebarMenuItem>
+              ))}
               
               {/* Bolsofy IA Button */}
               <SidebarMenuItem>
@@ -188,11 +198,9 @@ export function AppSidebar() {
               <span className="text-xs opacity-80">
                 {planInfo.status}
               </span>
-              {subscription?.status === 'active' && subscription.plan_type !== 'free' && (
-                <span className="text-xs opacity-70">
-                  Clique para gerenciar
-                </span>
-              )}
+              <span className="text-xs opacity-70">
+                Clique para gerenciar
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -210,5 +218,6 @@ export function AppSidebar() {
           </Badge>
         </div>
       </SidebarFooter>
-    </Sidebar>;
+    </Sidebar>
+  );
 }
