@@ -240,6 +240,7 @@ export function AddTransactionModal({
                   value={category} 
                   onChange={setCategory}
                   onCategoryAdded={handleCategoryAdded}
+                  transactionType={type}
                 />
               </div>
 

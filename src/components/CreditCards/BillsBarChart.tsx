@@ -110,7 +110,7 @@ export function BillsBarChart() {
               </p>
             </div>
             {data.isCurrent && (
-              <div className="text-xs text-blue-600 font-medium">📅 Mês Atual</div>
+              <div className="text-xs text-blue-600 font-medium">Mês Atual</div>
             )}
           </div>
         </div>
@@ -192,14 +192,12 @@ export function BillsBarChart() {
                 key={data.monthKey} 
                 className={`p-3 rounded-lg border text-center ${
                   data.isCurrent 
-                    ? 'bg-blue-50 border-blue-200' 
-                    : data.isPast 
-                      ? 'bg-gray-50 border-gray-200' 
-                      : 'bg-green-50 border-green-200'
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-gray-50 border-gray-200'
                 }`}
               >
                 <div className="text-xs font-medium text-gray-600 mb-1">
-                  {data.isPast ? '📅 Passado' : data.isCurrent ? '🔵 Atual' : '🔮 Futuro'}
+                  {data.isPast ? 'Passado' : data.isCurrent ? 'Atual' : 'Futuro'}
                 </div>
                 <div className="text-sm font-semibold text-gray-800">{data.month}</div>
                 <div className="text-xs text-gray-600 mt-1">
