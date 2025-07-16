@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Star, Crown } from "lucide-react";
@@ -18,10 +17,12 @@ const plans = [
     monthlyPrice: 19.90,
     yearlyPrice: 19.90,
     features: [
-      "Controle básico de gastos",
-      "Até 3 cartões de crédito",
-      "Relatórios simples",
-      "Suporte por email"
+      "Envio de mensagens ilimitadas pelo WhatsApp",
+      "Relatórios financeiros básicos", 
+      "Gastos recorrentes",
+      "Até 1 cartão",
+      "Categorias",
+      "Fluxo de caixa financeiro"
     ],
     icon: <Star className="h-5 w-5" />,
     planType: "basic" as const,
@@ -33,10 +34,12 @@ const plans = [
     monthlyPrice: 16.66,
     yearlyPrice: 199.90,
     features: [
-      "Controle básico de gastos",
-      "Até 3 cartões de crédito",
-      "Relatórios simples",
-      "Suporte por email",
+      "Envio de mensagens ilimitadas pelo WhatsApp",
+      "Relatórios financeiros básicos",
+      "Gastos recorrentes",
+      "Até 1 cartão",
+      "Categorias",
+      "Fluxo de caixa financeiro",
       "💰 Economia de 20%"
     ],
     icon: <Star className="h-5 w-5" />,
@@ -49,10 +52,12 @@ const plans = [
     monthlyPrice: 29.90,
     yearlyPrice: 29.90,
     features: [
-      "Todos os recursos do Básico",
-      "Cartões de crédito ilimitados",
-      "Agente de IA personalizado",
-      "Relatórios avançados",
+      "Tudo do básico",
+      "Educação financeira com base no seu contexto",
+      "Relatórios financeiros avançados",
+      "Exportação de relatórios PDF e CSV",
+      "Até 5 cartões",
+      "Acesso antecipado",
       "Suporte prioritário"
     ],
     icon: <Crown className="h-5 w-5" />,
@@ -66,10 +71,12 @@ const plans = [
     monthlyPrice: 24.15,
     yearlyPrice: 289.90,
     features: [
-      "Todos os recursos do Básico",
-      "Cartões de crédito ilimitados",
-      "Agente de IA personalizado",
-      "Relatórios avançados",
+      "Tudo do básico",
+      "Educação financeira com base no seu contexto",
+      "Relatórios financeiros avançados",
+      "Exportação de relatórios PDF e CSV",
+      "Até 5 cartões",
+      "Acesso antecipado",
       "Suporte prioritário",
       "💰 Economia de 20%"
     ],

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,10 +26,12 @@ const plans: Plan[] = [
     monthlyPrice: 19.90,
     yearlyPrice: 199.90,
     features: [
-      'Controle de gastos básico',
-      'Relatórios mensais',
-      'Até 3 cartões de crédito',
-      'Suporte por email'
+      'Envio de mensagens ilimitadas pelo WhatsApp',
+      'Relatórios financeiros básicos',
+      'Gastos recorrentes',
+      'Até 1 cartão',
+      'Categorias',
+      'Fluxo de caixa financeiro'
     ]
   },
   {
@@ -39,12 +40,13 @@ const plans: Plan[] = [
     monthlyPrice: 29.90,
     yearlyPrice: 289.90,
     features: [
-      'Controle completo de gastos',
-      'Relatórios detalhados',
-      'Cartões ilimitados',
-      'Suporte prioritário',
-      'Análises avançadas',
-      'Integração com bancos'
+      'Tudo do básico',
+      'Educação financeira com base no seu contexto',
+      'Relatórios financeiros avançados',
+      'Exportação de relatórios PDF e CSV',
+      'Até 5 cartões',
+      'Acesso antecipado',
+      'Suporte prioritário'
     ]
   }
 ];
