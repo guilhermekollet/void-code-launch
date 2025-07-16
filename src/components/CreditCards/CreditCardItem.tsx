@@ -24,10 +24,9 @@ interface CreditCard {
 
 interface CreditCardItemProps {
   card: CreditCard;
-  userId: number;
 }
 
-export function CreditCardItem({ card, userId }: CreditCardItemProps) {
+export function CreditCardItem({ card }: CreditCardItemProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTransactionsModal, setShowTransactionsModal] = useState(false);
