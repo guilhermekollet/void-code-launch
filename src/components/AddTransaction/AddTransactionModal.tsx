@@ -86,12 +86,8 @@ export function AddTransactionModal({
   const handleSave = () => {
     if (!amount) return;
 
-    // Para despesas, salvar como valor negativo
-    const amountValue = parseFloat(amount);
-    const finalAmount = type === 'despesa' ? -Math.abs(amountValue) : amountValue;
-
     const baseData = {
-      amount: finalAmount,
+      amount: parseFloat(amount),
       type,
       category: category || 'Outros',
       description: description || 'Sem descrição',
@@ -100,7 +96,7 @@ export function AddTransactionModal({
         is_credit_card_expense: true,
         credit_card_id: parseInt(selectedCreditCard),
         installments: parseInt(creditCardInstallments),
-        installment_value: finalAmount / parseInt(creditCardInstallments)
+        installment_value: parseFloat(amount) / parseInt(creditCardInstallments)
       })
     };
 
