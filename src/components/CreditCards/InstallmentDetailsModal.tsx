@@ -10,8 +10,8 @@ interface InstallmentTransaction {
   description: string;
   value: number;
   tx_date: string;
-  installment_number: number;
-  total_installments: number;
+  installment_number?: number;
+  total_installments?: number;
   category: string;
 }
 
@@ -48,6 +48,15 @@ export function InstallmentDetailsModal({
 
   const baseTransaction = transactions[0];
   const totalAmount = transactions.reduce((sum, t) => sum + t.value, 0);
+  const isInstallmentPurchase = transactions.length > 1 && baseTransaction.total_installments && baseTransaction.total_installments > 1;
+
+  // Ordenar transações por data ou número da parcela
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    if (a.installment_number && b.installment_number) {
+      return a.installment_number - b.installment_number;
+    }
+    return new Date(a.tx_date).getTime() - new Date(b.tx_date).getTime();
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -63,7 +72,7 @@ export function InstallmentDetailsModal({
                 style={{ color: getContrastColor(creditCardColor) }}
               />
             </div>
-            Detalhes do Parcelamento
+            {isInstallmentPurchase ? 'Detalhes da Compra Parcelada' : 'Detalhes da Compra'}
           </DialogTitle>
           <div className="flex items-center gap-2 text-[#64748B]">
             <span>{creditCardName}</span>
@@ -73,33 +82,40 @@ export function InstallmentDetailsModal({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Resumo */}
+          {/* Resumo da Compra */}
           <div className="bg-[#F8F9FA] p-4 rounded-lg border border-[#E2E8F0]">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p className="text-sm text-[#64748B]">Valor Total</p>
+                <p className="text-sm text-[#64748B]">
+                  {isInstallmentPurchase ? 'Valor Total' : 'Valor da Compra'}
+                </p>
                 <p className="text-lg font-bold text-[#121212]">
                   {formatCurrency(totalAmount)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-[#64748B]">Parcelas</p>
+                <p className="text-sm text-[#64748B]">
+                  {isInstallmentPurchase ? 'Parcelas' : 'Forma de Pagamento'}
+                </p>
                 <p className="text-lg font-bold text-[#121212]">
-                  {baseTransaction.total_installments}x de {formatCurrency(baseTransaction.value)}
+                  {isInstallmentPurchase 
+                    ? `${baseTransaction.total_installments}x de ${formatCurrency(baseTransaction.value)}`
+                    : 'À vista'
+                  }
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Lista de Parcelas */}
+          {/* Lista de Transações */}
           <div className="space-y-3">
             <h3 className="font-semibold text-[#121212] flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Parcelas
+              {isInstallmentPurchase ? 'Parcelas' : 'Transação'}
             </h3>
             
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {transactions.map((transaction) => {
+              {sortedTransactions.map((transaction) => {
                 const isPaid = new Date(transaction.tx_date) <= new Date();
                 
                 return (
@@ -110,14 +126,16 @@ export function InstallmentDetailsModal({
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Badge 
-                        variant={isPaid ? "default" : "outline"}
-                        className={`text-xs ${
-                          isPaid ? 'bg-green-100 text-green-700 border-green-200' : ''
-                        }`}
-                      >
-                        {transaction.installment_number}/{transaction.total_installments}
-                      </Badge>
+                      {isInstallmentPurchase && (
+                        <Badge 
+                          variant={isPaid ? "default" : "outline"}
+                          className={`text-xs ${
+                            isPaid ? 'bg-green-100 text-green-700 border-green-200' : ''
+                          }`}
+                        >
+                          {transaction.installment_number || 1}/{transaction.total_installments || 1}
+                        </Badge>
+                      )}
                       <div>
                         <p className="font-medium text-[#121212]">
                           {transaction.description}

@@ -102,7 +102,19 @@ export default function Register() {
   };
 
   const validatePhone = (phone: string): boolean => {
-    return phone.length >= 10;
+    // Remove all non-digits for validation
+    const numericPhone = phone.replace(/\D/g, '');
+    
+    // For Brazilian numbers (+55), check if it's valid
+    if (numericPhone.startsWith('55')) {
+      const phoneWithoutCountryCode = numericPhone.substring(2);
+      // Brazilian mobile numbers: 11 digits total (2 country + 2 area + 9 number)
+      // or 10 digits for landlines (2 country + 2 area + 8 number)
+      return phoneWithoutCountryCode.length >= 10 && phoneWithoutCountryCode.length <= 11;
+    }
+    
+    // For other countries, minimum 10 digits
+    return numericPhone.length >= 10;
   };
 
   const checkEmailExists = async (email: string): Promise<any> => {
@@ -547,7 +559,7 @@ export default function Register() {
               <div className="space-y-4">
                 <div className="text-center mb-6">
                   <h2 className="text-xl font-semibold text-[#121212]">Qual é o seu telefone?</h2>
-                  <p className="text-sm text-[#64748B]">Insira seu número com DDD</p>
+                  <p className="text-sm text-[#64748B]">Insira seu número com DDD (máx. 11 dígitos)</p>
                 </div>
                 
                 <div className="space-y-2">
@@ -558,7 +570,12 @@ export default function Register() {
                     onChange={(phone) => handleInputChange('phone', phone.replace(/\D/g, ''))}
                   />
                   {formData.phone && formData.phone.length > 2 && !validatePhone(formData.phone) && (
-                    <p className="text-sm text-red-500">Telefone inválido</p>
+                    <p className="text-sm text-red-500">
+                      {formData.phone.startsWith('55') 
+                        ? 'Número brasileiro deve ter entre 10 e 11 dígitos após o DDD'
+                        : 'Telefone inválido'
+                      }
+                    </p>
                   )}
                 </div>
               </div>

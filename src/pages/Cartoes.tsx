@@ -9,17 +9,14 @@ import { Eye, CreditCard } from "lucide-react";
 import { InstallmentDetailsModal } from "@/components/CreditCards/InstallmentDetailsModal";
 import { useCreditCards } from "@/hooks/useCreditCards";
 import { useTransactions } from "@/hooks/useFinancialData";
-import { useInstallmentTransactions } from "@/hooks/useInstallmentTransactions";
+import { useGroupedPurchases } from "@/hooks/useGroupedPurchases";
 
 export default function Cartoes() {
-  const [selectedInstallment, setSelectedInstallment] = useState<any>(null);
+  const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
   const [installmentModalOpen, setInstallmentModalOpen] = useState(false);
   const { data: creditCards = [] } = useCreditCards();
   const { data: transactions = [] } = useTransactions();
-  const { data: installmentTransactions = [] } = useInstallmentTransactions(
-    selectedInstallment?.description || '',
-    selectedInstallment?.total_installments || 0
-  );
+  const groupedPurchases = useGroupedPurchases(transactions);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -28,8 +25,8 @@ export default function Cartoes() {
     }).format(value);
   };
 
-  const handleInstallmentDetails = (transaction: any) => {
-    setSelectedInstallment(transaction);
+  const handlePurchaseDetails = (purchase: any) => {
+    setSelectedPurchase(purchase);
     setInstallmentModalOpen(true);
   };
 
@@ -45,29 +42,26 @@ export default function Cartoes() {
     return '#ffffff';
   };
 
-  // Filtrar transações de cartão de crédito
-  const creditCardTransactions = transactions.filter(t => t.is_credit_card_expense);
-
   return (
     <div className="space-y-6">
       <BillsBarChart />
       <CreditCardsSection />
 
-      {/* Seção de Transações Recentes do Cartão */}
-      {creditCardTransactions.length > 0 && (
+      {/* Seção de Compras Recentes do Cartão */}
+      {groupedPurchases.length > 0 && (
         <Card className="bg-white border-[#E2E8F0]">
           <CardHeader>
             <CardTitle className="text-[#121212]">Compras Recentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {creditCardTransactions.slice(0, 10).map((transaction) => {
-                const creditCardInfo = getCreditCardInfo(transaction.credit_card_id);
-                const isInstallment = transaction.total_installments && transaction.total_installments > 1;
+              {groupedPurchases.slice(0, 10).map((purchase) => {
+                const creditCardInfo = getCreditCardInfo(purchase.credit_card_id);
+                const isInstallment = purchase.totalInstallments > 1;
                 
                 return (
                   <div
-                    key={transaction.id}
+                    key={purchase.id}
                     className="flex items-center justify-between p-4 rounded-lg border border-[#E2E8F0] hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1">
@@ -75,12 +69,12 @@ export default function Cartoes() {
                         <CreditCard className="h-5 w-5 text-red-600" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium text-[#121212]">{transaction.description}</p>
+                        <p className="font-medium text-[#121212]">{purchase.description}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm text-[#64748B]">{transaction.category}</span>
+                          <span className="text-sm text-[#64748B]">{purchase.category}</span>
                           <span className="text-sm text-[#64748B]">•</span>
                           <span className="text-sm text-[#64748B]">
-                            {new Date(transaction.tx_date).toLocaleDateString('pt-BR')}
+                            {new Date(purchase.firstPaymentDate).toLocaleDateString('pt-BR')}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
@@ -93,7 +87,6 @@ export default function Cartoes() {
                                 border: `1px solid ${creditCardInfo.color}`
                               }}
                             >
-                              <CreditCard className="h-3 w-3 mr-1" />
                               {creditCardInfo.card_name || creditCardInfo.bank_name}
                             </Badge>
                           )}
@@ -101,10 +94,10 @@ export default function Cartoes() {
                             <Badge
                               variant="outline"
                               className="text-xs cursor-pointer hover:bg-gray-100"
-                              onClick={() => handleInstallmentDetails(transaction)}
+                              onClick={() => handlePurchaseDetails(purchase)}
                             >
                               <Eye className="h-3 w-3 mr-1" />
-                              {transaction.installment_number}/{transaction.total_installments}
+                              {purchase.totalInstallments}x de {formatCurrency(purchase.installmentValue)}
                             </Badge>
                           )}
                         </div>
@@ -113,17 +106,17 @@ export default function Cartoes() {
                     
                     <div className="text-right">
                       <p className="font-semibold text-[#121212]">
-                        {formatCurrency(transaction.value)}
+                        {formatCurrency(isInstallment ? purchase.totalValue : purchase.installmentValue)}
                       </p>
                       {isInstallment && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="mt-2"
-                          onClick={() => handleInstallmentDetails(transaction)}
+                          onClick={() => handlePurchaseDetails(purchase)}
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          Ver Parcelas
+                          Ver Compra
                         </Button>
                       )}
                     </div>
@@ -135,13 +128,13 @@ export default function Cartoes() {
         </Card>
       )}
 
-      {selectedInstallment && (
+      {selectedPurchase && (
         <InstallmentDetailsModal
           open={installmentModalOpen}
           onOpenChange={setInstallmentModalOpen}
-          transactions={installmentTransactions}
-          creditCardName={getCreditCardInfo(selectedInstallment.credit_card_id)?.card_name || getCreditCardInfo(selectedInstallment.credit_card_id)?.bank_name || 'Cartão'}
-          creditCardColor={getCreditCardInfo(selectedInstallment.credit_card_id)?.color || '#e5e7eb'}
+          transactions={selectedPurchase.transactions}
+          creditCardName={getCreditCardInfo(selectedPurchase.credit_card_id)?.card_name || getCreditCardInfo(selectedPurchase.credit_card_id)?.bank_name || 'Cartão'}
+          creditCardColor={getCreditCardInfo(selectedPurchase.credit_card_id)?.color || '#e5e7eb'}
         />
       )}
     </div>

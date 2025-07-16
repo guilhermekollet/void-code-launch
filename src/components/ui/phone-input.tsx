@@ -63,10 +63,13 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
       
       if (country.code === '+55') { // Brasil
         if (numericPhone.length > 11) {
-          return "Número muito longo para o Brasil"
+          return "Número muito longo para o Brasil (máx. 11 dígitos)"
         }
         if (numericPhone.length === 11 && !numericPhone.startsWith('9', 2)) {
           return "Celular deve começar com 9 após o DDD"
+        }
+        if (numericPhone.length < 10) {
+          return "Número muito curto (mín. 10 dígitos)"
         }
       } else if (country.code === '+1') { // EUA/Canada
         if (numericPhone.length > 10) {
@@ -103,6 +106,11 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
       
       // Extract only numbers for validation and storage
       const numericValue = cleanedValue.replace(/\D/g, '')
+      
+      // For Brazilian numbers, enforce 11 digit limit during input
+      if (countryCode === '+55' && numericValue.length > 11) {
+        return // Don't allow more than 11 digits for Brazil
+      }
       
       // Validate based on country
       const error = validatePhoneNumber(cleanedValue, selectedCountry)
