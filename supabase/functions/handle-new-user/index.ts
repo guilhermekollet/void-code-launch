@@ -44,6 +44,7 @@ serve(async (req) => {
     let trialStart = null;
     let trialEnd = null;
     let stripeSessionId = null;
+    let onboardingId = null;
 
     try {
       // Primeiro, verificar se há dados de onboarding para este email
@@ -65,6 +66,7 @@ serve(async (req) => {
         planType = onboardingData.selected_plan;
         billingCycle = onboardingData.billing_cycle;
         stripeSessionId = onboardingData.stripe_session_id;
+        onboardingId = onboardingData.id;
         
         // Se há dados de trial no onboarding, usar eles
         if (onboardingData.trial_start_date && onboardingData.trial_end_date) {
@@ -141,17 +143,18 @@ serve(async (req) => {
     });
 
     // Enviar email de boas-vindas se tiver dados de plano
-    if (planType) {
+    if (planType && onboardingId) {
       try {
         logStep("Sending welcome email");
         
+        // Usar URL completa para chamar a função send-welcome-email
         const welcomeEmailResponse = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-welcome-email`,
           {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
             },
             body: JSON.stringify({
               email: record.email,
@@ -163,9 +166,23 @@ serve(async (req) => {
 
         if (welcomeEmailResponse.ok) {
           logStep("Welcome email sent successfully");
+          
+          // Atualizar sended_email para TRUE no onboarding
+          const { error: updateEmailError } = await supabaseClient
+            .from("onboarding")
+            .update({ sended_email: true })
+            .eq("id", onboardingId);
+
+          if (updateEmailError) {
+            logStep("Error updating sended_email flag", { error: updateEmailError.message });
+          } else {
+            logStep("Updated sended_email flag to TRUE");
+          }
         } else {
+          const errorText = await welcomeEmailResponse.text();
           logStep("Failed to send welcome email", { 
-            status: welcomeEmailResponse.status 
+            status: welcomeEmailResponse.status,
+            error: errorText
           });
         }
       } catch (emailError) {
@@ -173,6 +190,12 @@ serve(async (req) => {
           error: emailError instanceof Error ? emailError.message : String(emailError) 
         });
       }
+    } else {
+      logStep("Skipping welcome email", { 
+        planType, 
+        onboardingId,
+        reason: !planType ? "No plan type" : "No onboarding ID" 
+      });
     }
 
     return new Response(JSON.stringify({ 

@@ -358,6 +358,7 @@ export type Database = {
           phone: string
           registration_stage: string
           selected_plan: string
+          sended_email: boolean | null
           stripe_session_id: string | null
           trial_end_date: string | null
           trial_start_date: string | null
@@ -375,6 +376,7 @@ export type Database = {
           phone: string
           registration_stage?: string
           selected_plan: string
+          sended_email?: boolean | null
           stripe_session_id?: string | null
           trial_end_date?: string | null
           trial_start_date?: string | null
@@ -392,6 +394,7 @@ export type Database = {
           phone?: string
           registration_stage?: string
           selected_plan?: string
+          sended_email?: boolean | null
           stripe_session_id?: string | null
           trial_end_date?: string | null
           trial_start_date?: string | null
