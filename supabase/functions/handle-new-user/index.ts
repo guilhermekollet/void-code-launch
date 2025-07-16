@@ -44,6 +44,7 @@ serve(async (req) => {
     let trialStart = null;
     let trialEnd = null;
     let stripeSessionId = null;
+    let onboardingId = null;
 
     try {
       // Primeiro, verificar se há dados de onboarding para este email
@@ -65,6 +66,7 @@ serve(async (req) => {
         planType = onboardingData.selected_plan;
         billingCycle = onboardingData.billing_cycle;
         stripeSessionId = onboardingData.stripe_session_id;
+        onboardingId = onboardingData.id;
         
         // Se há dados de trial no onboarding, usar eles
         if (onboardingData.trial_start_date && onboardingData.trial_end_date) {
@@ -163,9 +165,21 @@ serve(async (req) => {
 
         if (welcomeEmailResponse.ok) {
           logStep("Welcome email sent successfully");
+          
+          // Atualizar onboarding para marcar que o email foi enviado
+          if (onboardingId) {
+            await supabaseClient
+              .from('onboarding')
+              .update({ sended_email: true })
+              .eq('id', onboardingId);
+            
+            logStep("Updated onboarding sended_email to true", { onboardingId });
+          }
         } else {
+          const errorText = await welcomeEmailResponse.text();
           logStep("Failed to send welcome email", { 
-            status: welcomeEmailResponse.status 
+            status: welcomeEmailResponse.status,
+            error: errorText
           });
         }
       } catch (emailError) {

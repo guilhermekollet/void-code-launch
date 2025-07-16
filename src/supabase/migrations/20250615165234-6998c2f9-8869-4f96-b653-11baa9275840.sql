@@ -14,37 +14,24 @@ FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Enable insert for authenticated users only" ON public.users
 FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Função para chamar a edge function handle-new-user em vez de inserir diretamente
+-- Função simples para inserir dados básicos do usuário
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
-DECLARE
-  response_data jsonb;
 BEGIN
-  -- Chama a edge function handle-new-user que tem toda a lógica necessária
-  -- incluindo verificação do Stripe e envio de email de boas-vindas
-  SELECT content::jsonb INTO response_data
-  FROM http((
-    'POST',
-    current_setting('app.settings.supabase_url') || '/functions/v1/handle-new-user',
-    ARRAY[
-      http_header('Content-Type', 'application/json'),
-      http_header('Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'))
-    ],
-    'application/json',
-    jsonb_build_object('record', to_jsonb(new))::text
-  )::http_request);
-  
-  -- Se a edge function falhar, ainda assim insere o registro básico para não bloquear o signup
-  IF response_data IS NULL OR (response_data->>'success')::boolean IS NOT TRUE THEN
-    INSERT INTO public.users (user_id, email, phone_number, name, completed_onboarding)
-    VALUES (
-      new.id,
-      new.email,
-      COALESCE(new.raw_user_meta_data->>'phone_number', ''),
-      COALESCE(new.raw_user_meta_data->>'name', ''),
-      false
-    );
-  END IF;
+  -- Inserir dados básicos do usuário
+  INSERT INTO public.users (user_id, email, phone_number, name, completed_onboarding)
+  VALUES (
+    new.id,
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'phone_number', ''),
+    COALESCE(new.raw_user_meta_data->>'name', ''),
+    false
+  );
+
+  -- Chamar a edge function handle-new-user de forma assíncrona para processar dados adicionais
+  PERFORM pg_notify('new_user_created', json_build_object(
+    'record', to_json(new)
+  )::text);
   
   RETURN new;
 END;

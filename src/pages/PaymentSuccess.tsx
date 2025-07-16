@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle, AlertCircle, Mail, Phone } from 'lucide-react';
+import { Loader2, AlertCircle, Mail, Phone } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -159,11 +159,8 @@ const PaymentSuccess = () => {
                 <img 
                   src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
                   alt="Bolsofy Logo" 
-                  className="h-16 w-auto mx-auto" 
+                  className="h-12 w-auto mx-auto" 
                 />
-              </div>
-              <div className="mx-auto mb-4">
-                <CheckCircle className="h-16 w-16 text-green-500" />
               </div>
               <CardTitle className="text-2xl text-green-700 mb-2">Bem-vindo ao Bolsofy! 🎉</CardTitle>
               <CardDescription className="text-lg">
