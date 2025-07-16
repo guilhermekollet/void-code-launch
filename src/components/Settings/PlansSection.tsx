@@ -31,7 +31,7 @@ const plans = [
   {
     id: "basic-yearly",
     name: "Básico Anual",
-    monthlyPrice: 16.66,
+    monthlyPrice: 19.90,
     yearlyPrice: 199.90,
     features: [
       "Envio de mensagens ilimitadas pelo WhatsApp",
@@ -68,7 +68,7 @@ const plans = [
   {
     id: "premium-yearly",
     name: "Premium Anual",
-    monthlyPrice: 24.15,
+    monthlyPrice: 29.90,
     yearlyPrice: 289.90,
     features: [
       "Tudo do básico",

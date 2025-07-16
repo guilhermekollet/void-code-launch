@@ -45,7 +45,7 @@ export function PlanCard({
 
   const monthlyPrice = plan.monthlyPrice;
   const yearlyPrice = plan.yearlyPrice;
-  const displayPrice = billingCycle === 'monthly' ? monthlyPrice : yearlyPrice;
+  const displayPrice = billingCycle === 'monthly' ? monthlyPrice : monthlyPrice; // Sempre mostra preço mensal
 
   // Remove "Free" from plan name if it's the free plan
   const displayName = plan.id === 'free' ? 'Gratuito' : plan.name;
@@ -79,6 +79,17 @@ export function PlanCard({
     return false;
   };
 
+  const getYearlyBillingLabel = () => {
+    if (billingCycle === 'yearly') {
+      if (plan.id.includes('basic')) {
+        return 'Cobrado anualmente por R$ 199,90';
+      } else if (plan.id.includes('premium')) {
+        return 'Cobrado anualmente por R$ 289,90';
+      }
+    }
+    return null;
+  };
+
   return (
     <div className="relative p-6 rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
       {plan.popular && (
@@ -105,13 +116,13 @@ export function PlanCard({
                 {formatPrice(displayPrice)}
               </span>
               <span className="text-base font-medium text-gray-500">
-                /{billingCycle === 'monthly' ? 'mês' : 'ano'}
+                /mês
               </span>
             </div>
             
-            {billingCycle === 'yearly' && yearlyPrice > 0 && (
+            {billingCycle === 'yearly' && (
               <p className="text-sm text-gray-500">
-                Cobrado anualmente por {formatPrice(yearlyPrice)}
+                {getYearlyBillingLabel()}
               </p>
             )}
           </div>
