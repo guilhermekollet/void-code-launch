@@ -11,6 +11,8 @@ interface UserProfile {
   phone_number: string;
   user_id: string | null;
   completed_onboarding: boolean | null;
+  plan_type: string | null;
+  billing_cycle: string | null;
 }
 
 export function useUserProfile() {
