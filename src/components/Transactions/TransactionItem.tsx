@@ -17,6 +17,7 @@ interface Transaction {
   is_installment?: boolean;
   installment_number?: number;
   total_installments?: number;
+  is_agent?: boolean;
 }
 
 interface TransactionItemProps {
@@ -48,6 +49,11 @@ export function TransactionItem({ transaction, onEdit, onDelete, formatCurrency 
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-medium text-gray-900">{transaction.description}</h3>
+            {transaction.is_agent && (
+              <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200">
+                Bolsofy AI
+              </Badge>
+            )}
             {transaction.is_recurring && (
               <Badge variant="outline" className="text-xs">
                 <Repeat className="h-3 w-3 mr-1" />
