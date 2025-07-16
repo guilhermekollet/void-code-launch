@@ -1,4 +1,5 @@
 
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -55,16 +56,24 @@ serve(async (req) => {
       if (userProfile && userProfile.plan_type) {
         logStep("Found user profile data with plan", userProfile);
         
-        // Se tem plano definido na tabela users, usar essa informação
-        if (userProfile.plan_type !== 'free') {
-          const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
+        // Verificar se o trial está ativo
+        const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
+        logStep("Trial status check", { 
+          trial_end: userProfile.trial_end, 
+          isTrialActive,
+          current_time: new Date().toISOString()
+        });
+        
+        // Se tem plano definido na tabela users e está em trial ativo, usar essa informação
+        if (userProfile.plan_type !== 'free' && (userProfile.plan_type !== 'basic' || isTrialActive)) {
           const status = isTrialActive ? 'trialing' : 'active';
 
-          logStep("Using user profile data as primary source", {
+          logStep("Using user profile data as primary source (trial active or premium plan)", {
             planType: userProfile.plan_type,
             billingCycle: userProfile.billing_cycle,
             status: status,
-            trialEnd: userProfile.trial_end
+            trialEnd: userProfile.trial_end,
+            isTrialActive
           });
 
           return new Response(JSON.stringify({
@@ -118,24 +127,51 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
+    // Buscar assinaturas com múltiplos status válidos (incluindo trialing)
+    const validStatuses = ["active", "trialing", "past_due"];
+    let activeSubscription = null;
     
-    const hasActiveSub = subscriptions.data.length > 0;
+    for (const status of validStatuses) {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: status,
+        limit: 1,
+      });
+      
+      logStep(`Checking subscriptions with status: ${status}`, { 
+        found: subscriptions.data.length,
+        subscriptions: subscriptions.data.map(s => ({
+          id: s.id,
+          status: s.status,
+          current_period_end: s.current_period_end
+        }))
+      });
+      
+      if (subscriptions.data.length > 0) {
+        activeSubscription = subscriptions.data[0];
+        logStep(`Found subscription with status: ${status}`, { 
+          subscriptionId: activeSubscription.id,
+          subscriptionStatus: activeSubscription.status
+        });
+        break;
+      }
+    }
+    
+    const hasActiveSub = activeSubscription !== null;
     let planType = 'basic';
     let billingCycle = 'monthly';
     let subscriptionEnd = null;
 
-    if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+    if (hasActiveSub && activeSubscription) {
+      subscriptionEnd = new Date(activeSubscription.current_period_end * 1000).toISOString();
+      logStep("Active subscription found", { 
+        subscriptionId: activeSubscription.id, 
+        status: activeSubscription.status,
+        endDate: subscriptionEnd 
+      });
       
       // Determinar plan_type e billing_cycle do Stripe
-      const priceId = subscription.items.data[0].price.id;
+      const priceId = activeSubscription.items.data[0].price.id;
       const price = await stripe.prices.retrieve(priceId);
       const amount = price.unit_amount || 0;
       
@@ -154,7 +190,8 @@ serve(async (req) => {
         amount, 
         planType, 
         billingCycle,
-        interval: price.recurring?.interval 
+        interval: price.recurring?.interval,
+        subscriptionStatus: activeSubscription.status
       });
     } else {
       logStep("No active subscription found in Stripe, defaulting to basic");
@@ -164,13 +201,14 @@ serve(async (req) => {
       planType, 
       billingCycle, 
       hasActiveSub, 
-      subscriptionEnd 
+      subscriptionEnd,
+      subscriptionStatus: activeSubscription?.status || 'none'
     });
     
     return new Response(JSON.stringify({
       plan_type: planType,
       billing_cycle: billingCycle,
-      status: hasActiveSub ? 'active' : 'active', // Manter como active para user experience
+      status: hasActiveSub ? (activeSubscription?.status || 'active') : 'active',
       current_period_end: subscriptionEnd
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -192,3 +230,4 @@ serve(async (req) => {
     });
   }
 });
+
