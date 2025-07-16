@@ -3,13 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function useCreditCardBillTransactions(billId?: number) {
+export function useCreditCardBillTransactions(creditCardId: number, billCloseDate: string, billDueDate: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['credit-card-bill-transactions', billId],
+    queryKey: ['credit-card-bill-transactions', creditCardId, billCloseDate, billDueDate],
     queryFn: async () => {
-      if (!user || !billId) return [];
+      if (!user || !creditCardId) return [];
 
       const { data: userData } = await supabase
         .from('users')
@@ -19,17 +19,8 @@ export function useCreditCardBillTransactions(billId?: number) {
 
       if (!userData) return [];
 
-      // Get the bill details first
-      const { data: bill } = await supabase
-        .from('credit_card_bills')
-        .select('*')
-        .eq('id', billId)
-        .single();
-
-      if (!bill) return [];
-
       // Calculate the billing period for this specific bill
-      const closeDate = new Date(bill.close_date || bill.due_date);
+      const closeDate = new Date(billCloseDate);
       const previousCloseDate = new Date(closeDate);
       previousCloseDate.setMonth(previousCloseDate.getMonth() - 1);
 
@@ -37,7 +28,7 @@ export function useCreditCardBillTransactions(billId?: number) {
         .from('transactions')
         .select('*')
         .eq('user_id', userData.id)
-        .eq('credit_card_id', bill.credit_card_id)
+        .eq('credit_card_id', creditCardId)
         .eq('is_credit_card_expense', true)
         .gte('tx_date', previousCloseDate.toISOString())
         .lt('tx_date', closeDate.toISOString())
@@ -50,7 +41,7 @@ export function useCreditCardBillTransactions(billId?: number) {
 
       return data || [];
     },
-    enabled: !!user && !!billId,
+    enabled: !!user && !!creditCardId && !!billCloseDate,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }

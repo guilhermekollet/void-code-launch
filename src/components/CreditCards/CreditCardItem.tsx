@@ -1,132 +1,162 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Eye, Edit, Trash2, CreditCard } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useCurrentCreditCardBill } from '@/hooks/useCurrentCreditCardBill';
-import { useCreditCardBillTransactions } from '@/hooks/useCreditCardBillTransactions';
-import { EditCreditCardModal } from './EditCreditCardModal';
-import { DeleteCreditCardDialog } from './DeleteCreditCardDialog';
-import { CreditCardBillTransactionsModal } from './CreditCardBillTransactionsModal';
-import { formatCurrency } from '@/lib/utils';
-
-interface CreditCard {
-  id: number;
-  bank_name: string;
-  card_name?: string;
-  card_type: string;
-  due_date: number;
-  close_date?: number;
-  color: string;
-}
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, CreditCard, Eye } from "lucide-react";
+import { useCreditCardTransactions } from "@/hooks/useCreditCards";
+import { useState } from "react";
+import { EditCreditCardModal } from "./EditCreditCardModal";
+import { DeleteCreditCardDialog } from "./DeleteCreditCardDialog";
+import { CreditCardBillTransactionsModal } from "./CreditCardBillTransactionsModal";
+import { useCurrentCreditCardBill } from "@/hooks/useCurrentCreditCardBill";
 
 interface CreditCardItemProps {
-  card: CreditCard;
+  card: {
+    id: number;
+    bank_name: string;
+    card_name: string | null;
+    close_date: number | null;
+    due_date: number;
+    card_type: string;
+    color: string;
+  };
 }
 
+const getContrastColor = (backgroundColor: string) => {
+  // Convert hex to RGB
+  const hex = backgroundColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Calculate luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  return luminance > 0.5 ? '#000000' : '#FFFFFF';
+};
+
 export function CreditCardItem({ card }: CreditCardItemProps) {
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showTransactionsModal, setShowTransactionsModal] = useState(false);
-
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+  const { data: transactions = [] } = useCreditCardTransactions(card.id);
   const { data: currentBill } = useCurrentCreditCardBill(card.id);
-  const { data: transactions = [] } = useCreditCardBillTransactions(currentBill?.id);
 
-  const handleViewTransactions = () => {
-    setShowTransactionsModal(true);
+  const monthlySpent = transactions.reduce((sum, transaction) => sum + Number(transaction.value), 0);
+  const cardName = card.card_name || card.bank_name;
+  const cardColor = card.color || '#e5e7eb';
+  const textColor = getContrastColor(cardColor);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
 
-  const displayName = card.card_name || `${card.bank_name} ${card.card_type}`;
-  
+  const handleViewTransactions = () => {
+    setIsTransactionsModalOpen(true);
+  };
+
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow bg-white border-[#E2E8F0]">
+        {/* Banner colorido - 30% do card */}
         <div 
-          className="h-4 w-full" 
-          style={{ background: card.color }}
-        />
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <h3 className="font-semibold text-sm">{displayName}</h3>
-                <p className="text-xs text-muted-foreground">{card.bank_name}</p>
-              </div>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-1 h-6 w-6">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleViewTransactions}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Ver transações
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowEditModal(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="text-red-600"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          className="h-20 flex items-center justify-between px-4"
+          style={{ backgroundColor: cardColor }}
+        >
+          <div className="flex items-center gap-3">
+            <CreditCard className="h-6 w-6" style={{ color: textColor }} />
+            <span className="font-medium text-sm" style={{ color: textColor }}>
+              {card.card_type}
+            </span>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-black/10"
+              onClick={handleViewTransactions}
+              title="Ver transações"
+            >
+              <Eye className="h-4 w-4" style={{ color: textColor }} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-black/10"
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              <Edit className="h-4 w-4" style={{ color: textColor }} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-black/10"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" style={{ color: textColor }} />
+            </Button>
+          </div>
+        </div>
+
+        <CardContent className="p-4 space-y-3">
+          <div>
+            <h3 className="font-semibold text-[#121212] text-lg">{cardName}</h3>
+            <p className="text-sm text-[#64748B]">{card.bank_name}</p>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Vencimento:</span>
-              <span>Dia {card.due_date}</span>
-            </div>
+          <div className="grid grid-cols-2 gap-4 text-sm">
             {card.close_date && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Fechamento:</span>
-                <span>Dia {card.close_date}</span>
+              <div>
+                <p className="text-[#64748B]">Fecha dia</p>
+                <p className="font-medium text-[#121212]">{card.close_date}</p>
               </div>
             )}
-            
-            {currentBill && (
-              <div className="mt-3 p-2 bg-muted rounded-md">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Fatura atual:</span>
-                  <Badge variant={currentBill.status === 'paid' ? 'default' : 'secondary'}>
-                    {formatCurrency(currentBill.remaining_amount)}
-                  </Badge>
-                </div>
-              </div>
-            )}
+            <div>
+              <p className="text-[#64748B]">Vence dia</p>
+              <p className="font-medium text-[#121212]">{card.due_date}</p>
+            </div>
           </div>
+
+          <div className="pt-2 border-t border-[#E2E8F0]">
+            <p className="text-sm text-[#64748B]">Gasto este mês</p>
+            <p className="text-xl font-bold text-[#121212]">
+              {formatCurrency(monthlySpent)}
+            </p>
+          </div>
+
+          <Button
+            onClick={handleViewTransactions}
+            variant="outline"
+            size="sm"
+            className="w-full mt-2"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Ver Transações
+          </Button>
         </CardContent>
       </Card>
 
       <EditCreditCardModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
         card={card}
-        open={showEditModal}
-        onOpenChange={setShowEditModal}
       />
 
       <DeleteCreditCardDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
         card={card}
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
       />
 
-      <CreditCardBillTransactionsModal
-        open={showTransactionsModal}
-        onOpenChange={setShowTransactionsModal}
-        bill={currentBill}
-        transactions={transactions}
-        cardName={displayName}
-      />
+      {currentBill && (
+        <CreditCardBillTransactionsModal
+          open={isTransactionsModalOpen}
+          onOpenChange={setIsTransactionsModalOpen}
+          bill={currentBill}
+        />
+      )}
     </>
   );
 }

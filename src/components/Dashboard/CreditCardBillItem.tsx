@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditCard, AlertTriangle, Eye, Archive, History } from "lucide-react";
@@ -7,7 +6,6 @@ import { PayBillModal } from "./PayBillModal";
 import { ArchiveBillModal } from "./ArchiveBillModal";
 import { BillPaymentHistory } from "./BillPaymentHistory";
 import { CreditCardBillTransactionsModal } from "@/components/CreditCards/CreditCardBillTransactionsModal";
-import { useCreditCardBillTransactions } from "@/hooks/useCreditCardBillTransactions";
 import type { CreditCardBill } from "@/hooks/useCreditCardBillsNew";
 
 interface CreditCardBillItemProps {
@@ -19,8 +17,6 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
-
-  const { data: transactions = [] } = useCreditCardBillTransactions(bill.id);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -177,8 +173,6 @@ export function CreditCardBillItem({ bill }: CreditCardBillItemProps) {
         open={isTransactionsModalOpen}
         onOpenChange={setIsTransactionsModalOpen}
         bill={bill}
-        transactions={transactions}
-        cardName={cardName}
       />
     </>
   );
