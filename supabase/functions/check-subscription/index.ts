@@ -40,12 +40,8 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Check Stripe first (main source of truth)
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      logStep("No Stripe key configured, checking users table");
-      
-      // Fallback to users table
+    // PRIMEIRO: Verificar dados na tabela users (dados locais)
+    try {
       const { data: userProfile, error: userProfileError } = await supabaseClient
         .from("users")
         .select("plan_type, billing_cycle, trial_start, trial_end")
@@ -56,23 +52,41 @@ serve(async (req) => {
         logStep("Error fetching user profile", { error: userProfileError.message });
       }
 
-      if (userProfile && userProfile.plan_type && userProfile.plan_type !== 'free') {
-        logStep("Found user profile data", userProfile);
-        const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
-        const status = isTrialActive ? 'trialing' : 'active';
+      if (userProfile && userProfile.plan_type) {
+        logStep("Found user profile data with plan", userProfile);
+        
+        // Se tem plano definido na tabela users, usar essa informação
+        if (userProfile.plan_type !== 'free') {
+          const isTrialActive = userProfile.trial_end ? new Date(userProfile.trial_end) > new Date() : false;
+          const status = isTrialActive ? 'trialing' : 'active';
 
-        return new Response(JSON.stringify({
-          plan_type: userProfile.plan_type,
-          billing_cycle: userProfile.billing_cycle || 'monthly',
-          status: status,
-          current_period_end: userProfile.trial_end
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
+          logStep("Using user profile data as primary source", {
+            planType: userProfile.plan_type,
+            billingCycle: userProfile.billing_cycle,
+            status: status,
+            trialEnd: userProfile.trial_end
+          });
+
+          return new Response(JSON.stringify({
+            plan_type: userProfile.plan_type,
+            billing_cycle: userProfile.billing_cycle || 'monthly',
+            status: status,
+            current_period_end: userProfile.trial_end
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
       }
+    } catch (error) {
+      logStep("Error querying user profile", { error: error.message });
+    }
 
-      // Default to basic plan if no data found
+    // SEGUNDO: Verificar Stripe (fonte secundária para validação)
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      logStep("No Stripe key configured, using user profile fallback");
+      
       return new Response(JSON.stringify({
         plan_type: 'basic',
         billing_cycle: 'monthly',
@@ -135,7 +149,7 @@ serve(async (req) => {
         planType = "premium";
       }
       
-      logStep("Determined subscription details", { 
+      logStep("Determined subscription details from Stripe", { 
         priceId, 
         amount, 
         planType, 
@@ -143,7 +157,7 @@ serve(async (req) => {
         interval: price.recurring?.interval 
       });
     } else {
-      logStep("No active subscription found, defaulting to basic");
+      logStep("No active subscription found in Stripe, defaulting to basic");
     }
 
     logStep("Returning subscription info", { 
@@ -156,7 +170,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       plan_type: planType,
       billing_cycle: billingCycle,
-      status: hasActiveSub ? 'active' : 'inactive',
+      status: hasActiveSub ? 'active' : 'active', // Manter como active para user experience
       current_period_end: subscriptionEnd
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

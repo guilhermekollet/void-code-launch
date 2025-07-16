@@ -13,7 +13,7 @@ export function useSubscription() {
 
       console.log('[useSubscription] Checking subscription for user:', user.id);
 
-      // First try to get subscription from edge function (most reliable)
+      // Verificar edge function primeiro
       try {
         const { data, error } = await supabase.functions.invoke('check-subscription');
 
@@ -27,7 +27,7 @@ export function useSubscription() {
         console.error('Edge function call failed:', error);
       }
 
-      // Fallback: try to get from users table
+      // Fallback: verificar tabela users diretamente
       try {
         const { data: userData, error: userError } = await supabase
           .from('users')
@@ -61,8 +61,8 @@ export function useSubscription() {
       };
     },
     enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 2, // 2 minutos (reduzido para garantir dados frescos)
+    refetchOnWindowFocus: true,
     refetchOnMount: true,
   });
 }

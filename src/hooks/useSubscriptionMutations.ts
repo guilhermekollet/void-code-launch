@@ -1,39 +1,77 @@
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from './use-toast';
 
-interface CheckoutParams {
-  planType: string;
-  billingCycle: 'monthly' | 'yearly';
-}
-
-export function useCreateCheckout() {
-  const { user } = useAuth();
+export function useModifySubscription() {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (params: CheckoutParams) => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: params
+    mutationFn: async ({ planType, billingCycle }: { planType: string; billingCycle: string }) => {
+      console.log('[useModifySubscription] Modifying subscription:', { planType, billingCycle });
+      
+      const { data, error } = await supabase.functions.invoke('modify-subscription', {
+        body: { planType, billingCycle }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error modifying subscription:', error);
+        throw error;
+      }
+
       return data;
     },
     onSuccess: (data) => {
-      if (data.url) {
-        window.open(data.url, '_blank');
-      }
+      console.log('[useModifySubscription] Subscription modified successfully:', data);
+      
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      
+      toast({
+        title: "Sucesso",
+        description: "Plano atualizado com sucesso!",
+      });
     },
     onError: (error) => {
-      console.error('Error creating checkout:', error);
+      console.error('Error in subscription modification:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar sessão de pagamento.",
+        description: "Erro ao atualizar plano. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useCreateCheckout() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ planType, billingCycle }: { planType: string; billingCycle: string }) => {
+      console.log('[useCreateCheckout] Creating checkout:', { planType, billingCycle });
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { planType, billingCycle }
+      });
+
+      if (error) {
+        console.error('Error creating checkout:', error);
+        throw error;
+      }
+
+      // Abrir em nova aba
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error in checkout creation:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar checkout. Tente novamente.",
         variant: "destructive",
       });
     },
@@ -41,60 +79,31 @@ export function useCreateCheckout() {
 }
 
 export function useCustomerPortal() {
-  const { user } = useAuth();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error('User not authenticated');
-
+      console.log('[useCustomerPortal] Opening customer portal');
+      
       const { data, error } = await supabase.functions.invoke('customer-portal');
 
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      if (data.url) {
+      if (error) {
+        console.error('Error opening customer portal:', error);
+        throw error;
+      }
+
+      // Abrir em nova aba
+      if (data?.url) {
         window.open(data.url, '_blank');
       }
-    },
-    onError: (error) => {
-      console.error('Error accessing customer portal:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao acessar portal do cliente.",
-        variant: "destructive",
-      });
-    },
-  });
-}
 
-export function useRefreshSubscription() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase.functions.invoke('check-subscription');
-
-      if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscription'] });
-      toast({
-        title: "Sucesso",
-        description: "Status da assinatura atualizado!",
-      });
-    },
     onError: (error) => {
-      console.error('Error refreshing subscription:', error);
+      console.error('Error in customer portal:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar status da assinatura.",
+        description: "Erro ao abrir portal de gerenciamento. Tente novamente.",
         variant: "destructive",
       });
     },

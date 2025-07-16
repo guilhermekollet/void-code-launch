@@ -1,10 +1,10 @@
+
 import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag, Crown, Star, Circle } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/useSubscription";
-import confetti from 'canvas-confetti';
 
 const items = [{
   title: "Dashboard",
@@ -36,49 +36,9 @@ const items = [{
   icon: Settings
 }];
 
+// Função vazia para o beta badge (sem confetti)
 const handleBetaClick = () => {
-  // Enhanced confetti with green and yellow colors for 1.2 seconds
-  const colors = ['#61710C', '#92CB0B', '#CFF500', '#FFEB3B'];
-  const duration = 1200; // 1.2 seconds
-  const end = Date.now() + duration;
-
-  // Multiple confetti bursts
-  const frame = () => {
-    // Random positions across the screen
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-    confetti({
-      particleCount: randomInRange(20, 40),
-      spread: randomInRange(50, 90),
-      origin: { 
-        x: randomInRange(0.1, 0.9), 
-        y: randomInRange(0.1, 0.7) 
-      },
-      colors: colors,
-      startVelocity: randomInRange(25, 45),
-      decay: randomInRange(0.85, 0.95),
-      gravity: randomInRange(0.8, 1.2),
-      drift: randomInRange(-0.5, 0.5),
-      ticks: randomInRange(150, 250),
-      scalar: randomInRange(0.8, 1.2)
-    });
-
-    if (Date.now() < end) {
-      requestAnimationFrame(frame);
-    }
-  };
-
-  // Start with immediate burst
-  frame();
-
-  // Additional bursts every 480ms
-  const interval = setInterval(() => {
-    if (Date.now() >= end) {
-      clearInterval(interval);
-      return;
-    }
-    frame();
-  }, 480);
+  // Removido confetti - apenas um clique sem ação
 };
 
 const handleBolsofyIAClick = () => {
@@ -92,6 +52,8 @@ export function AppSidebar() {
   const getPlanInfo = () => {
     const planType = subscription?.plan_type || 'basic';
     const status = subscription?.status || 'active';
+    
+    console.log('[AppSidebar] Plan info:', { planType, status, subscription });
     
     switch (planType) {
       case 'premium':

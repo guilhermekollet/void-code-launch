@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Star, Crown } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useCreateCheckout } from "@/hooks/useSubscriptionMutations";
+import { useCreateCheckout, useModifySubscription } from "@/hooks/useSubscriptionMutations";
 import { useCustomerPortal } from "@/hooks/useSubscriptionMutations";
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionStatus } from "./SubscriptionStatus";
@@ -83,18 +83,30 @@ const plans = [
 export function PlansSection() {
   const { data: subscription } = useSubscription();
   const createCheckout = useCreateCheckout();
+  const modifySubscription = useModifySubscription();
   const customerPortal = useCustomerPortal();
   const { toast } = useToast();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleSubscribe = async (planType: string, targetBillingCycle: 'monthly' | 'yearly') => {
     try {
-      createCheckout.mutate({
-        planType,
-        billingCycle: targetBillingCycle
-      });
+      // Se usuário já tem assinatura, usar modify-subscription
+      if (subscription && subscription.status === 'active') {
+        console.log('[PlansSection] Modifying existing subscription');
+        modifySubscription.mutate({
+          planType,
+          billingCycle: targetBillingCycle
+        });
+      } else {
+        // Se não tem assinatura, criar nova
+        console.log('[PlansSection] Creating new subscription');
+        createCheckout.mutate({
+          planType,
+          billingCycle: targetBillingCycle
+        });
+      }
     } catch (error) {
-      console.error('Error creating checkout:', error);
+      console.error('Error processing subscription:', error);
       toast({
         title: "Erro",
         description: "Não foi possível processar a assinatura. Tente novamente.",
@@ -152,6 +164,26 @@ export function PlansSection() {
     return plans.filter(plan => plan.billingCycle === billingCycle);
   };
 
+  const getButtonText = (plan: any, isUserCurrentPlan: boolean) => {
+    if (isUserCurrentPlan) {
+      return 'Plano Atual';
+    }
+    
+    if (subscription && subscription.status === 'active') {
+      // Determinar se é upgrade ou downgrade
+      const currentPlan = subscription.plan_type;
+      if (currentPlan === 'basic' && plan.planType === 'premium') {
+        return 'Fazer Upgrade';
+      } else if (currentPlan === 'premium' && plan.planType === 'basic') {
+        return 'Fazer Downgrade';
+      } else {
+        return 'Alterar Plano';
+      }
+    }
+    
+    return 'Assinar Agora';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -173,6 +205,7 @@ export function PlansSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {getFilteredPlans().map((plan) => {
             const isUserCurrentPlan = isCurrentPlan(plan.planType, plan.billingCycle);
+            const buttonText = getButtonText(plan, isUserCurrentPlan);
 
             return (
               <PlanCard
@@ -182,11 +215,33 @@ export function PlansSection() {
                 onSubscribe={() => handleSubscribe(plan.planType, plan.billingCycle)}
                 onManage={handleManageSubscription}
                 isCurrentPlan={isUserCurrentPlan}
-                isLoading={createCheckout.isPending}
+                isLoading={createCheckout.isPending || modifySubscription.isPending}
+                buttonText={buttonText}
               />
             );
           })}
         </div>
+
+        {/* Portal de Gerenciamento */}
+        {subscription && subscription.status === 'active' && (
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900">Gerenciar Assinatura</h3>
+                <p className="text-sm text-gray-600">
+                  Acesse o portal para alterar método de pagamento, histórico de faturas e mais.
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleManageSubscription}
+                disabled={customerPortal.isPending}
+              >
+                {customerPortal.isPending ? 'Carregando...' : 'Abrir Portal'}
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

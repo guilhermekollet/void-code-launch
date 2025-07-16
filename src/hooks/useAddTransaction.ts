@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -179,10 +178,17 @@ export function useAddTransaction() {
       }
     },
     onSuccess: () => {
+      // Invalidar TODAS as queries relacionadas ao dashboard para garantir atualização completa
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-data'] });
       queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['category-chart-data'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-chart-data'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
       queryClient.invalidateQueries({ queryKey: ['credit-card-transactions'] });
+      
+      console.log('[useAddTransaction] All dashboard queries invalidated for fresh data');
+      
       toast({
         title: "Sucesso",
         description: "Transação adicionada com sucesso!",
