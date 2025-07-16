@@ -63,7 +63,7 @@ export function PlanCard({
     }
     
     if (isCurrentPlan) {
-      return 'Gerenciar Assinatura';
+      return 'Gerenciar Plano';
     }
     
     if (plan.id === 'free') {

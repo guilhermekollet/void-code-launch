@@ -51,23 +51,20 @@ export function AppSidebar() {
 
   const getPlanInfo = () => {
     const planType = subscription?.plan_type || 'basic';
-    const status = subscription?.status || 'active';
     
-    console.log('[AppSidebar] Plan info:', { planType, status, subscription });
+    console.log('[AppSidebar] Plan info:', { planType, subscription });
     
     switch (planType) {
       case 'premium':
         return { 
           name: 'Premium', 
-          color: 'text-white bg-[#61710C]',
-          status: status === 'active' ? 'Ativo' : 'Inativo'
+          color: 'text-white bg-[#61710C]'
         };
       case 'basic':
       default:
         return { 
           name: 'Básico', 
-          color: 'text-black bg-[#CFF500]',
-          status: status === 'active' ? 'Ativo' : 'Inativo'
+          color: 'text-black bg-[#CFF500]'
         };
     }
   };
@@ -137,14 +134,8 @@ export function AppSidebar() {
           onClick={handlePlanCardClick}
         >
           <CardContent className="p-4">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold">Plano {planInfo.name}</span>
-              <span className="text-xs opacity-80">
-                {planInfo.status}
-              </span>
-              <span className="text-xs opacity-70">
-                Clique para gerenciar
-              </span>
             </div>
           </CardContent>
         </Card>
