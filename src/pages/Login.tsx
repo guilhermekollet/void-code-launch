@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,21 +54,37 @@ export default function Login() {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-magic-link', {
+      const response = await supabase.functions.invoke('send-magic-link', {
         body: { phoneNumber }
       });
 
-      if (error) throw error;
+      // Verificar se houve erro na resposta
+      if (response.error) {
+        throw response.error;
+      }
 
+      const data = response.data;
+
+      // Se há erro específico na resposta da função
       if (data?.error) {
-        toast({
-          title: "Conta não encontrada",
-          description: "Não encontramos uma conta associada a este número. Cadastre-se primeiro para acessar o Bolsofy.",
-          variant: "destructive"
-        });
+        // Verificar se é erro de conta não encontrada
+        if (data.error === "Conta não encontrada") {
+          toast({
+            title: "Conta não encontrada",
+            description: "Não encontramos uma conta associada a este número. Cadastre-se primeiro para acessar o Bolsofy.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Erro no envio",
+            description: data.message || "Não foi possível enviar o link. Tente novamente.",
+            variant: "destructive"
+          });
+        }
         return;
       }
 
+      // Se chegou até aqui, o link foi enviado com sucesso
       if (data?.maskedEmail) {
         setMaskedEmail(data.maskedEmail);
         
@@ -80,14 +95,15 @@ export default function Login() {
           });
         } else {
           toast({
-            title: data.message || "Link enviado",
-            description: `Link de acesso enviado para ${data.maskedEmail}.`
+            title: "Link enviado com sucesso!",
+            description: `Link de acesso enviado para ${data.maskedEmail}. Verifique sua caixa de entrada.`,
           });
           setAuthStep('email-sent');
         }
       }
     } catch (error: any) {
       console.error('Error sending magic link:', error);
+      
       const errorMessage = isResend ? 
         "Não foi possível reenviar o link. Tente novamente." :
         "Não foi possível enviar o link. Tente novamente.";

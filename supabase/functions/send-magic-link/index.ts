@@ -47,7 +47,7 @@ serve(async (req) => {
           message: "Não encontramos uma conta associada a este número. Cadastre-se primeiro para acessar o Bolsofy."
         }),
         { 
-          status: 400, 
+          status: 200, // Mudando para 200 mas com erro específico
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         }
       );
@@ -71,7 +71,7 @@ serve(async (req) => {
           message: "Não foi possível enviar o link de acesso. Tente novamente."
         }),
         { 
-          status: 500, 
+          status: 200, // Retornando 200 mas com erro específico
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         }
       );

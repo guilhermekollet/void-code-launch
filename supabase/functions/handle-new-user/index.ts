@@ -38,32 +38,73 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Verificar se existe assinatura no Stripe
+    // Verificar se existe dados de onboarding ou assinatura no Stripe
     let planType = null;
-    try {
-      const stripeResponse = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/functions/v1/check-existing-stripe-subscription`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-          },
-          body: JSON.stringify({ email: record.email }),
-        }
-      );
+    let billingCycle = null;
+    let trialStart = null;
+    let trialEnd = null;
+    let stripeSessionId = null;
 
-      if (stripeResponse.ok) {
-        const stripeData = await stripeResponse.json();
-        planType = stripeData.plan_type;
-        logStep("Stripe subscription check result", { planType });
-      } else {
-        logStep("Failed to check Stripe subscription", { 
-          status: stripeResponse.status 
+    try {
+      // Primeiro, verificar se há dados de onboarding para este email
+      const { data: onboardingData, error: onboardingError } = await supabaseClient
+        .from('onboarding')
+        .select('*')
+        .eq('email', record.email)
+        .eq('payment_confirmed', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!onboardingError && onboardingData) {
+        logStep("Found onboarding data", { 
+          selectedPlan: onboardingData.selected_plan,
+          billingCycle: onboardingData.billing_cycle 
         });
+        
+        planType = onboardingData.selected_plan;
+        billingCycle = onboardingData.billing_cycle;
+        stripeSessionId = onboardingData.stripe_session_id;
+        
+        // Se há dados de trial no onboarding, usar eles
+        if (onboardingData.trial_start_date && onboardingData.trial_end_date) {
+          trialStart = onboardingData.trial_start_date;
+          trialEnd = onboardingData.trial_end_date;
+        } else {
+          // Se não há dados de trial, criar trial de 3 dias
+          const now = new Date();
+          trialStart = now.toISOString();
+          trialEnd = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000)).toISOString();
+        }
+      } else {
+        // Se não há onboarding, verificar assinatura no Stripe
+        logStep("No onboarding data found, checking Stripe subscription");
+        
+        const stripeResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/check-existing-stripe-subscription`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+            },
+            body: JSON.stringify({ email: record.email }),
+          }
+        );
+
+        if (stripeResponse.ok) {
+          const stripeData = await stripeResponse.json();
+          planType = stripeData.plan_type;
+          billingCycle = stripeData.billing_cycle;
+          logStep("Stripe subscription check result", { planType, billingCycle });
+        } else {
+          logStep("Failed to check Stripe subscription", { 
+            status: stripeResponse.status 
+          });
+        }
       }
     } catch (error) {
-      logStep("Error checking Stripe subscription", { 
+      logStep("Error checking onboarding/Stripe data", { 
         error: error instanceof Error ? error.message : String(error) 
       });
     }
@@ -74,8 +115,12 @@ serve(async (req) => {
       email: record.email,
       phone_number: record.raw_user_meta_data?.phone_number || '',
       name: record.raw_user_meta_data?.name || '',
-      completed_onboarding: false,
-      plan_type: planType, // Será null se não encontrar assinatura no Stripe
+      completed_onboarding: !!planType, // true se tem plano, false se não
+      plan_type: planType,
+      billing_cycle: billingCycle,
+      trial_start: trialStart,
+      trial_end: trialEnd,
+      stripe_session_id: stripeSessionId,
     };
 
     logStep("Creating user record", userData);
@@ -91,45 +136,49 @@ serve(async (req) => {
 
     logStep("User record created successfully", { 
       userId: record.id,
-      planType 
+      planType,
+      billingCycle 
     });
 
-    // Enviar email de boas-vindas
-    try {
-      logStep("Sending welcome email");
-      
-      const welcomeEmailResponse = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-welcome-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-          },
-          body: JSON.stringify({
-            email: record.email,
-            name: record.raw_user_meta_data?.name || 'Usuário',
-            planType: planType || 'free'
-          }),
-        }
-      );
+    // Enviar email de boas-vindas se tiver dados de plano
+    if (planType) {
+      try {
+        logStep("Sending welcome email");
+        
+        const welcomeEmailResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-welcome-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+            },
+            body: JSON.stringify({
+              email: record.email,
+              name: record.raw_user_meta_data?.name || 'Usuário',
+              planType: planType
+            }),
+          }
+        );
 
-      if (welcomeEmailResponse.ok) {
-        logStep("Welcome email sent successfully");
-      } else {
-        logStep("Failed to send welcome email", { 
-          status: welcomeEmailResponse.status 
+        if (welcomeEmailResponse.ok) {
+          logStep("Welcome email sent successfully");
+        } else {
+          logStep("Failed to send welcome email", { 
+            status: welcomeEmailResponse.status 
+          });
+        }
+      } catch (emailError) {
+        logStep("Error sending welcome email", { 
+          error: emailError instanceof Error ? emailError.message : String(emailError) 
         });
       }
-    } catch (emailError) {
-      logStep("Error sending welcome email", { 
-        error: emailError instanceof Error ? emailError.message : String(emailError) 
-      });
     }
 
     return new Response(JSON.stringify({ 
       success: true,
-      plan_type: planType 
+      plan_type: planType,
+      billing_cycle: billingCycle 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
