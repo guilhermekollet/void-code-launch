@@ -303,7 +303,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
         isOpen={modalOpen}
         onClose={handleCloseModal}
         period={selectedMonth}
-        timeRange="monthly"
+        timeRange="month"
       />
     </>
   );

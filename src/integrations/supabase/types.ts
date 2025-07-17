@@ -643,7 +643,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_credit_card_bill: {
+        Args: { card_id: number; due_date_param: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
