@@ -21,7 +21,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       
       const { data, error } = await supabase
         .from('users')
-        .select('completed_onboarding, plan_type')
+        .select('completed_onboarding, plan_type, trial_start, trial_end')
         .eq('user_id', user.id)
         .single();
       
@@ -34,6 +34,33 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       return data;
     },
     enabled: !!user,
+  });
+
+  // Check onboarding status for recovery detection
+  const { data: onboardingData, isLoading: isLoadingOnboarding } = useQuery({
+    queryKey: ['onboardingStatus', user?.email],
+    queryFn: async () => {
+      if (!user?.email) return null;
+      
+      console.log('[ProtectedRoute] Checking onboarding status for:', user.email);
+      
+      const { data, error } = await supabase
+        .from('onboarding')
+        .select('payment_confirmed, selected_plan, billing_cycle')
+        .eq('email', user.email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching onboarding data:', error);
+        return null;
+      }
+      
+      console.log('[ProtectedRoute] Onboarding data:', data);
+      return data;
+    },
+    enabled: !!user?.email,
   });
 
   const { data: subscription, isLoading: isLoadingSubscription } = useQuery({
@@ -63,7 +90,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     refetchOnMount: true,
   });
 
-  if (loading || isLoadingProfile || isLoadingSubscription) {
+  if (loading || isLoadingProfile || isLoadingSubscription || isLoadingOnboarding) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#61710C]"></div>
@@ -80,6 +107,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (!userProfile) {
     console.log('[ProtectedRoute] No user profile found, redirecting to register');
     return <Navigate to="/register" replace />;
+  }
+
+  // Check if user needs account recovery
+  // User needs recovery if: not completed onboarding OR no plan_type, AND has onboarding data but payment_confirmed is false
+  const needsRecovery = (!userProfile.completed_onboarding || !userProfile.plan_type) && 
+                       onboardingData && !onboardingData.payment_confirmed;
+
+  if (needsRecovery) {
+    console.log('[ProtectedRoute] User needs account recovery, redirecting to recover');
+    return <Navigate to="/recover" replace />;
   }
 
   // Check if user has an active subscription (not free plan)

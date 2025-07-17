@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useAccountRecovery } from '@/hooks/useAccountRecovery';
 
 interface AuthContextType {
   user: User | null;
@@ -20,10 +21,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        console.log('[AuthContext] Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // When user logs in, attempt automatic account recovery
+        if (event === 'SIGNED_IN' && session?.user?.email) {
+          console.log('[AuthContext] User signed in, checking for account recovery needs');
+          
+          // Use setTimeout to avoid blocking the auth state change
+          setTimeout(async () => {
+            try {
+              // Check if user needs recovery (has onboarding data but incomplete user profile)
+              const { data: onboardingData } = await supabase
+                .from('onboarding')
+                .select('payment_confirmed, stripe_session_id')
+                .eq('email', session.user.email)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              const { data: userData } = await supabase
+                .from('users')
+                .select('completed_onboarding, plan_type')
+                .eq('email', session.user.email)
+                .maybeSingle();
+
+              // If has onboarding data but user profile is incomplete, attempt recovery
+              if (onboardingData && (!userData?.completed_onboarding || !userData?.plan_type)) {
+                console.log('[AuthContext] Attempting automatic recovery for user');
+                
+                // Import the hook function directly to avoid React hooks rules
+                const { verifyAndRecoverPlan } = await import('@/hooks/useAccountRecovery').then(module => {
+                  const hook = module.useAccountRecovery();
+                  return hook;
+                });
+                
+                await verifyAndRecoverPlan(onboardingData.stripe_session_id, session.user.email);
+              }
+            } catch (error) {
+              console.error('[AuthContext] Error during automatic recovery check:', error);
+            }
+          }, 1000); // 1 second delay to ensure auth is fully established
+        }
       }
     );
 
