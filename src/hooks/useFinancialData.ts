@@ -268,6 +268,7 @@ export function useChartData() {
         if (transaction.type === 'receita') {
           monthData.receitas += value;
         } else if (transaction.type === 'despesa') {
+          // Garantir que despesas sempre sejam positivas no gráfico
           monthData.despesas += Math.abs(value);
           if (transaction.is_recurring) {
             monthData.gastosRecorrentes += Math.abs(value);
@@ -363,6 +364,7 @@ export function useDailyData(days: number) {
         if (transaction.type === 'receita') {
           dayData.receitas += value;
         } else if (transaction.type === 'despesa') {
+          // Garantir que despesas sempre sejam positivas no gráfico
           dayData.despesas += Math.abs(value);
           if (transaction.is_recurring) {
             dayData.gastosRecorrentes += Math.abs(value);
