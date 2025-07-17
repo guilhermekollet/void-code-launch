@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,6 +120,10 @@ const Recover = () => {
     }
   };
 
+  const handleBillingCycleChange = (checked: boolean) => {
+    setBillingCycle(checked ? 'yearly' : 'monthly');
+  };
+
   const plans = [
     {
       id: 'basic',
@@ -239,7 +242,10 @@ const Recover = () => {
 
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-center mb-8">
-            <BillingToggle value={billingCycle} onChange={setBillingCycle} />
+            <BillingToggle 
+              billingCycle={billingCycle} 
+              onBillingCycleChange={handleBillingCycleChange} 
+            />
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
