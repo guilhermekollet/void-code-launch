@@ -85,6 +85,9 @@ export default function Register() {
   const stepKeys: RegistrationStep[] = ['name', 'email', 'phone', 'plan'];
   const currentStepIndex = stepKeys.indexOf(currentStep);
 
+  console.log(currentStepIndex);
+  console.log("Está no step: ", currentStep);
+
   useEffect(() => {
     if (user) {
       navigate('/', { replace: true });
