@@ -443,7 +443,7 @@ export type Database = {
           category: string
           credit_card_id?: number | null
           description?: string | null
-          id: number
+          id?: number
           installment_billing_date?: string | null
           installment_number?: number | null
           installment_start_date?: string | null

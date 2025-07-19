@@ -30,8 +30,6 @@ export function useAddTransaction() {
     mutationFn: async (transactionData: TransactionData) => {
       if (!user) throw new Error('User not authenticated');
 
-      // Use the auth user ID directly (no need to fetch internal ID)
-
       // Se for despesa de cartão de crédito com parcelamento, criar múltiplas transações
       if (transactionData.is_credit_card_expense && transactionData.credit_card_id && transactionData.installments && transactionData.installments > 1) {
         // Get credit card info to calculate billing dates
@@ -68,7 +66,7 @@ export function useAddTransaction() {
               total_installments: transactionData.installments,
               is_installment: true,
               installment_start_date: transactionData.tx_date,
-            })
+            } as any)
             .select()
             .single();
 
@@ -98,7 +96,7 @@ export function useAddTransaction() {
             credit_card_id: transactionData.credit_card_id,
             installments: 1,
             installment_value: transactionData.amount,
-          })
+          } as any)
           .select()
           .single();
 
@@ -132,7 +130,7 @@ export function useAddTransaction() {
               installment_number: i,
               total_installments: transactionData.total_installments,
               installment_start_date: transactionData.installment_start_date,
-            })
+            } as any)
             .select()
             .single();
 
@@ -159,7 +157,7 @@ export function useAddTransaction() {
             registered_at: new Date().toISOString(),
             is_recurring: transactionData.is_recurring || false,
             recurring_date: transactionData.recurring_date,
-          })
+          } as any)
           .select()
           .single();
 

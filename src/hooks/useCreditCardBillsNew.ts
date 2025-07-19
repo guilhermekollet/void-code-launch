@@ -1,186 +1,69 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
-export interface CreditCardBill {
-  id: number;
-  credit_card_id: number;
-  bill_amount: number;
-  paid_amount: number;
-  remaining_amount: number;
-  due_date: string;
-  close_date: string | null;
-  status: 'pending' | 'paid' | 'overdue';
-  archived: boolean | null;
-  credit_cards: {
-    id: number;
-    bank_name: string;
-    card_name: string | null;
-    color: string;
-  };
-}
+export const useCreditCardBillsNew = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-export function useCreditCardBills() {
-  return useQuery({
-    queryKey: ['credit-card-bills'],
+  const { data: bills = [], isLoading, error } = useQuery({
+    queryKey: ['credit-card-bills-new', user?.id],
     queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      if (!user) return [];
 
-      const { data: userProfile } = await supabase
+      const { data: userData } = await supabase
         .from('users')
         .select('id')
-        .eq('user_id', user.user.id)
+        .eq('user_id', user.id)
         .single();
 
-      if (!userProfile) throw new Error('User profile not found');
+      if (!userData) return [];
 
       const { data, error } = await supabase
         .from('credit_card_bills')
         .select(`
           *,
           credit_cards (
-            id,
             bank_name,
             card_name,
-            color
+            color,
+            due_date,
+            close_date
           )
         `)
-        .eq('user_id', userProfile.id)
+        .eq('user_id', userData.id)
         .eq('archived', false)
         .order('due_date', { ascending: true });
 
-      if (error) throw error;
-      return data as CreditCardBill[];
+      if (error) {
+        console.error('Error fetching credit card bills:', error);
+        return [];
+      }
+
+      return data || [];
     },
+    enabled: !!user,
   });
-}
 
-export function useBillExpenses() {
-  return useQuery({
-    queryKey: ['bill-expenses'],
-    queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('id')
-        .eq('user_id', user.user.id)
-        .single();
-
-      if (!userProfile) throw new Error('User profile not found');
-
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth() + 1;
-      const currentYear = currentDate.getFullYear();
-
-      const { data, error } = await supabase
-        .from('credit_card_bills')
-        .select('bill_amount')
-        .eq('user_id', userProfile.id)
-        .eq('archived', false)
-        .gte('due_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-        .lt('due_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
-
-      if (error) throw error;
-
-      const totalBillExpenses = data?.reduce((sum, bill) => sum + bill.bill_amount, 0) || 0;
-      
-      return { totalBillExpenses };
-    },
-  });
-}
-
-export function useArchiveBill() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (billId: number) => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('credit_card_bills')
-        .update({ archived: true })
-        .eq('id', billId);
-
-      if (error) throw error;
-      return { success: true };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
-      queryClient.invalidateQueries({ queryKey: ['bill-expenses'] });
-      
-      toast({
-        title: "Fatura arquivada",
-        description: "A fatura foi arquivada com sucesso.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: "Não foi possível arquivar a fatura.",
-        variant: "destructive",
-      });
-      console.error('Error archiving bill:', error);
-    },
-  });
-}
-
-export function usePayBill() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
+  const payBillMutation = useMutation({
     mutationFn: async ({ billId, amount }: { billId: number; amount: number }) => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('id')
-        .eq('user_id', user.user.id)
-        .single();
-
-      if (!userProfile) throw new Error('User profile not found');
-
-      // Get bill details for transaction creation
       const { data: bill } = await supabase
         .from('credit_card_bills')
-        .select(`
-          *,
-          credit_cards (
-            id,
-            bank_name,
-            card_name
-          )
-        `)
+        .select('*')
         .eq('id', billId)
         .single();
 
       if (!bill) throw new Error('Fatura não encontrada');
 
-      // Create payment record
-      const { error: paymentError } = await supabase
-        .from('bill_payments')
-        .insert({
-          bill_id: billId,
-          amount,
-          user_id: userProfile.id,
-          payment_date: new Date().toISOString()
-        });
-
-      if (paymentError) throw paymentError;
-
-      // Update bill amounts
       const newPaidAmount = Number(bill.paid_amount) + amount;
       const newRemainingAmount = Number(bill.bill_amount) - newPaidAmount;
-      const newStatus = newRemainingAmount <= 0 ? 'paid' : 'pending';
+      const newStatus = newRemainingAmount <= 0 ? 'paid' : 'partial';
 
-      const { error: billError } = await supabase
+      // Update bill
+      const { error: updateError } = await supabase
         .from('credit_card_bills')
         .update({
           paid_amount: newPaidAmount,
@@ -189,48 +72,161 @@ export function usePayBill() {
         })
         .eq('id', billId);
 
-      if (billError) throw billError;
+      if (updateError) throw updateError;
 
-      // Create transaction record for the payment
-      const cardName = bill.credit_cards.card_name || bill.credit_cards.bank_name;
-      const { error: transactionError } = await supabase
-        .from('transactions')
+      // Record payment
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!userData) throw new Error('Usuário não encontrado');
+
+      const { error: paymentError } = await supabase
+        .from('bill_payments')
         .insert({
-          user_id: user.user.id,
-          type: 'despesa',
-          category: 'Cartão de Crédito',
-          value: amount,
-          description: `Pagamento de fatura - ${cardName}`,
-          tx_date: new Date().toISOString(),
-          registered_at: new Date().toISOString(),
-          is_credit_card_expense: false
+          bill_id: billId,
+          user_id: userData.id,
+          amount: amount,
+          payment_date: new Date().toISOString()
         });
 
-      if (transactionError) throw transactionError;
+      if (paymentError) throw paymentError;
 
-      return { success: true };
+      return { billId, amount, newStatus };
     },
     onSuccess: () => {
-      // Invalidate multiple queries to ensure UI updates
-      queryClient.invalidateQueries({ queryKey: ['credit-card-bills'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
       queryClient.invalidateQueries({ queryKey: ['bill-payments'] });
       queryClient.invalidateQueries({ queryKey: ['financial-data'] });
-      queryClient.invalidateQueries({ queryKey: ['chart-data'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['bill-expenses'] });
-      
       toast({
         title: "Pagamento registrado",
-        description: "O pagamento da fatura foi registrado com sucesso e uma transação foi criada.",
+        description: "O pagamento da fatura foi registrado com sucesso.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Error paying bill:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível registrar o pagamento.",
+        description: "Erro ao registrar pagamento. Tente novamente.",
         variant: "destructive",
       });
-      console.error('Error paying bill:', error);
     },
   });
-}
+
+  const archiveBillMutation = useMutation({
+    mutationFn: async (billId: number) => {
+      const { error } = await supabase
+        .from('credit_card_bills')
+        .update({ archived: true })
+        .eq('id', billId);
+
+      if (error) throw error;
+      return billId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
+      toast({
+        title: "Fatura arquivada",
+        description: "A fatura foi arquivada com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error archiving bill:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao arquivar fatura. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTransactionMutation = useMutation({
+    mutationFn: async (transactionId: number) => {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transactionId);
+
+      if (error) throw error;
+      return transactionId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-data'] });
+      toast({
+        title: "Transação excluída",
+        description: "A transação foi excluída com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir transação. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addBillPaymentMutation = useMutation({
+    mutationFn: async ({ billAmount, description }: { billAmount: number; description: string }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          type: 'despesa',
+          category: 'Cartão de Crédito',
+          value: billAmount,
+          description: description,
+          tx_date: new Date().toISOString(),
+          registered_at: new Date().toISOString(),
+          is_credit_card_expense: false,
+        } as any)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding bill payment transaction:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-card-bills-new'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-data'] });
+      toast({
+        title: "Pagamento adicionado",
+        description: "O pagamento da fatura foi registrado como despesa.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error adding bill payment:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar pagamento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return {
+    bills,
+    isLoading,
+    error,
+    payBill: payBillMutation.mutate,
+    isPayingBill: payBillMutation.isPending,
+    archiveBill: archiveBillMutation.mutate,
+    isArchivingBill: archiveBillMutation.isPending,
+    deleteTransaction: deleteTransactionMutation.mutate,
+    isDeletingTransaction: deleteTransactionMutation.isPending,
+    addBillPayment: addBillPaymentMutation.mutate,
+    isAddingBillPayment: addBillPaymentMutation.isPending,
+  };
+};
