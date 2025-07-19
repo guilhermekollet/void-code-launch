@@ -51,16 +51,58 @@ serve(async (req) => {
     // Check if user already exists
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id')
+      .select('*')
       .eq('email', onboardingData.email)
       .single();
 
     if (existingUser) {
+      console.log('[create-user-from-onboarding] User already exists, updating with onboarding data...');
+      
+      // Calculate trial dates (3 days from now)
+      const trialStart = new Date();
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + 3);
+
+      // Update existing user with onboarding data
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({
+          plan_type: onboardingData.selected_plan,
+          billing_cycle: onboardingData.billing_cycle || 'monthly',
+          stripe_session_id: onboardingData.stripe_session_id,
+          trial_start: trialStart.toISOString(),
+          trial_end: trialEnd.toISOString(),
+          completed_onboarding: true
+        })
+        .eq('id', existingUser.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('[create-user-from-onboarding] User update error:', updateError);
+        throw new Error(`Failed to update existing user: ${updateError.message}`);
+      }
+
+      // Update onboarding status
+      await supabase
+        .from('onboarding')
+        .update({ 
+          payment_confirmed: true,
+          trial_start_date: trialStart.toISOString(),
+          trial_end_date: trialEnd.toISOString()
+        })
+        .eq('id', onboardingId);
+
       return new Response(
         JSON.stringify({ 
           success: true,
           userId: existingUser.id,
-          message: "User already exists"
+          trialStart: trialStart.toISOString(),
+          trialEnd: trialEnd.toISOString(),
+          trialDays: 3,
+          planType: onboardingData.selected_plan,
+          completedOnboarding: true,
+          message: "User updated successfully"
         }),
         { 
           status: 200, 
