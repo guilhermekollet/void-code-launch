@@ -562,6 +562,7 @@ export type Database = {
           last_used_credit_card_id: number | null
           name: string | null
           phone_number: string
+          plan_status: string | null
           plan_type: string | null
           stripe_session_id: string | null
           trial_end: string | null
@@ -577,6 +578,7 @@ export type Database = {
           last_used_credit_card_id?: number | null
           name?: string | null
           phone_number: string
+          plan_status?: string | null
           plan_type?: string | null
           stripe_session_id?: string | null
           trial_end?: string | null
@@ -592,6 +594,7 @@ export type Database = {
           last_used_credit_card_id?: number | null
           name?: string | null
           phone_number?: string
+          plan_status?: string | null
           plan_type?: string | null
           stripe_session_id?: string | null
           trial_end?: string | null
