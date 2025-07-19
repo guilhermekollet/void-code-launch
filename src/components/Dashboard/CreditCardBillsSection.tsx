@@ -54,7 +54,13 @@ export function CreditCardBillsSection() {
       <CardContent>
         <div className="grid grid-cols-1 gap-4">
           {bills.map((bill) => (
-            <CreditCardBillItem key={bill.id} bill={bill} />
+            <CreditCardBillItem 
+              key={bill.id} 
+              bill={{
+                ...bill,
+                status: bill.status as 'pending' | 'paid' | 'overdue' | 'partial'
+              }} 
+            />
           ))}
         </div>
       </CardContent>
