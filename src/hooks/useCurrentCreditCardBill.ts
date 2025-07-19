@@ -60,7 +60,7 @@ export function useCurrentCreditCardBill(creditCardId: number) {
       // Type cast to ensure proper typing with status
       return {
         ...data,
-        status: data.status as 'pending' | 'paid' | 'overdue'
+        status: data.status as 'pending' | 'paid' | 'overdue' | 'partial'
       } as CreditCardBill;
     },
     enabled: !!user && !!creditCardId,

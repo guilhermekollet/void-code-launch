@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 export interface CreditCardBill {
   id: number;
-  user_id: string;
+  user_id: number;
   credit_card_id: number;
   bill_amount: number;
   due_date: string;
@@ -31,10 +31,18 @@ export const useCreditCardBillsNew = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: bills = [], isLoading, error } = useQuery({
+  const query = useQuery({
     queryKey: ['credit-card-bills-new', user?.id],
     queryFn: async () => {
       if (!user) return [];
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData) return [];
 
       const { data, error } = await supabase
         .from('credit_card_bills')
@@ -49,7 +57,7 @@ export const useCreditCardBillsNew = () => {
             close_date
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userData.id)
         .eq('archived', false)
         .order('due_date', { ascending: true });
 
@@ -94,10 +102,10 @@ export const useCreditCardBillsNew = () => {
         .from('bill_payments')
         .insert({
           bill_id: billId,
-          user_id: user?.id,
+          user_id: bill.user_id,
           amount: amount,
           payment_date: new Date().toISOString()
-        });
+        } as any);
 
       if (paymentError) throw paymentError;
 
@@ -182,6 +190,14 @@ export const useCreditCardBillsNew = () => {
     mutationFn: async ({ billAmount, description }: { billAmount: number; description: string }) => {
       if (!user) throw new Error('User not authenticated');
 
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData) throw new Error('User not found');
+
       const { data, error } = await supabase
         .from('transactions')
         .insert({
@@ -224,9 +240,10 @@ export const useCreditCardBillsNew = () => {
   });
 
   return {
-    bills,
-    isLoading,
-    error,
+    data: query.data || [],
+    bills: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
     payBill: payBillMutation.mutate,
     isPayingBill: payBillMutation.isPending,
     archiveBill: archiveBillMutation.mutate,
@@ -245,7 +262,6 @@ export const useCreditCardBills = useCreditCardBillsNew;
 export const usePayBill = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ billId, amount }: { billId: number; amount: number }) => {
@@ -278,10 +294,10 @@ export const usePayBill = () => {
         .from('bill_payments')
         .insert({
           bill_id: billId,
-          user_id: user?.id,
+          user_id: bill.user_id,
           amount: amount,
           payment_date: new Date().toISOString()
-        });
+        } as any);
 
       if (paymentError) throw paymentError;
 
