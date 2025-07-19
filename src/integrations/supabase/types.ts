@@ -76,34 +76,47 @@ export type Database = {
           },
         ]
       }
-      balances: {
+      analytics: {
         Row: {
           created_at: string
           id: number
-          user_id: number
-          value: number
+          started_bot_no_register: boolean
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: number
-          user_id: number
-          value: number
+          started_bot_no_register: boolean
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: number
-          user_id?: number
-          value?: number
+          started_bot_no_register?: boolean
+          user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "balances_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      balances: {
+        Row: {
+          created_at: string
+          user_id: string
+          value: number
+          valueOld: number
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+          value: number
+          valueOld: number
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+          value?: number
+          valueOld?: number
+        }
+        Relationships: []
       }
       bill_payments: {
         Row: {
@@ -423,14 +436,14 @@ export type Database = {
           total_installments: number | null
           tx_date: string
           type: string | null
-          user_id: number
+          user_id: string
           value: number
         }
         Insert: {
           category: string
           credit_card_id?: number | null
           description?: string | null
-          id?: number
+          id: number
           installment_billing_date?: string | null
           installment_number?: number | null
           installment_start_date?: string | null
@@ -446,7 +459,7 @@ export type Database = {
           total_installments?: number | null
           tx_date: string
           type?: string | null
-          user_id: number
+          user_id: string
           value: number
         }
         Update: {
@@ -469,7 +482,7 @@ export type Database = {
           total_installments?: number | null
           tx_date?: string
           type?: string | null
-          user_id?: number
+          user_id?: string
           value?: number
         }
         Relationships: [
@@ -481,9 +494,9 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "transactions_user_id_users_id_fk"
-            columns: ["user_id"]
-            isOneToOne: false
+            foreignKeyName: "transactions_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -560,7 +573,7 @@ export type Database = {
           stripe_session_id: string | null
           trial_end: string | null
           trial_start: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           billing_cycle?: string | null
@@ -575,7 +588,7 @@ export type Database = {
           stripe_session_id?: string | null
           trial_end?: string | null
           trial_start?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           billing_cycle?: string | null
@@ -590,7 +603,7 @@ export type Database = {
           stripe_session_id?: string | null
           trial_end?: string | null
           trial_start?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {

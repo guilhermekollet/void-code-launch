@@ -18,6 +18,8 @@ serve(async (req) => {
   try {
     const { onboardingId } = await req.json();
     
+    console.log('[create-user-from-onboarding] Starting with onboardingId:', onboardingId);
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false }
     });
@@ -29,9 +31,22 @@ serve(async (req) => {
       .eq('id', onboardingId)
       .single();
 
-    if (onboardingError || !onboardingData) {
+    if (onboardingError) {
+      console.error('[create-user-from-onboarding] Onboarding query error:', onboardingError);
+      throw new Error(`Onboarding query failed: ${onboardingError.message}`);
+    }
+
+    if (!onboardingData) {
+      console.error('[create-user-from-onboarding] No onboarding data found for ID:', onboardingId);
       throw new Error('Onboarding data not found');
     }
+
+    console.log('[create-user-from-onboarding] Found onboarding data:', {
+      email: onboardingData.email,
+      phone: onboardingData.phone,
+      name: onboardingData.name,
+      plan: onboardingData.selected_plan
+    });
 
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -54,7 +69,18 @@ serve(async (req) => {
       );
     }
 
+    // Validate required fields
+    if (!onboardingData.email || !onboardingData.phone || !onboardingData.name) {
+      console.error('[create-user-from-onboarding] Missing required fields:', {
+        email: !!onboardingData.email,
+        phone: !!onboardingData.phone,
+        name: !!onboardingData.name
+      });
+      throw new Error('Missing required fields: email, phone, or name');
+    }
+
     // Create user in auth.users first
+    console.log('[create-user-from-onboarding] Creating auth user...');
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: onboardingData.email,
       phone: onboardingData.phone,
@@ -65,9 +91,17 @@ serve(async (req) => {
       email_confirm: true
     });
 
-    if (authError || !authUser.user) {
-      throw new Error(`Failed to create auth user: ${authError?.message}`);
+    if (authError) {
+      console.error('[create-user-from-onboarding] Auth creation error:', authError);
+      throw new Error(`Auth creation failed: ${authError.message}`);
     }
+
+    if (!authUser.user) {
+      console.error('[create-user-from-onboarding] No auth user returned');
+      throw new Error('Auth creation failed: No user returned');
+    }
+
+    console.log('[create-user-from-onboarding] Auth user created successfully:', authUser.user.id);
 
     // Calculate trial dates (3 days from now)
     const trialStart = new Date();
@@ -75,15 +109,16 @@ serve(async (req) => {
     trialEnd.setDate(trialEnd.getDate() + 3);
 
     // Create user in public.users table with all necessary data
+    console.log('[create-user-from-onboarding] Creating public user...');
     const { data: newUser, error: userError } = await supabase
       .from('users')
       .insert([{
         user_id: authUser.user.id,
         name: onboardingData.name,
         email: onboardingData.email,
-        phone_number: onboardingData.phone,
+        phone_number: onboardingData.phone || '', // Ensure not null
         plan_type: onboardingData.selected_plan,
-        billing_cycle: onboardingData.billing_cycle,
+        billing_cycle: onboardingData.billing_cycle || 'monthly',
         stripe_session_id: onboardingData.stripe_session_id,
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),
@@ -93,10 +128,14 @@ serve(async (req) => {
       .single();
 
     if (userError) {
+      console.error('[create-user-from-onboarding] User creation error:', userError);
       // If user creation fails, clean up auth user
+      console.log('[create-user-from-onboarding] Cleaning up auth user...');
       await supabase.auth.admin.deleteUser(authUser.user.id);
-      throw new Error(`Failed to create user: ${userError.message}`);
+      throw new Error(`Database error creating new user: ${userError.message}`);
     }
+
+    console.log('[create-user-from-onboarding] Public user created successfully:', newUser.id);
 
     // Update onboarding status
     await supabase
