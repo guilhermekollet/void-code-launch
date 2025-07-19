@@ -493,13 +493,6 @@ export type Database = {
             referencedRelation: "credit_cards"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "transactions_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       transactions_archive: {
