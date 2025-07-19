@@ -59,7 +59,7 @@ interface FormData {
   confirmEmail: string;
   phone: string;
   selectedPlan: string;
-  billingCycle: 'monthly' | 'yearly';
+  billingCycle: string;
 }
 
 export default function Register() {
@@ -70,7 +70,7 @@ export default function Register() {
     confirmEmail: '',
     phone: '55',
     selectedPlan: '',
-    billingCycle: 'yearly' // Padrão anual
+    billingCycle: ''
   });
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [checkingPhone, setCheckingPhone] = useState(false);
@@ -84,9 +84,6 @@ export default function Register() {
   const steps = ['Nome', 'Email', 'Telefone', 'Plano'];
   const stepKeys: RegistrationStep[] = ['name', 'email', 'phone', 'plan'];
   const currentStepIndex = stepKeys.indexOf(currentStep);
-
-  console.log(currentStepIndex);
-  console.log("Está no step: ", currentStep);
 
   useEffect(() => {
     if (user) {
@@ -282,7 +279,7 @@ export default function Register() {
     }
 
     if (currentStep === 'name') {
-      await saveOrUpdateOnboarding('name');
+      //await saveOrUpdateOnboarding('name');
       const nextIndex = currentStepIndex + 1;
       if (nextIndex < stepKeys.length) {
         setCurrentStep(stepKeys[nextIndex]);
@@ -391,12 +388,12 @@ export default function Register() {
     try {
       await saveOrUpdateOnboarding('payment');
 
-      console.log('Creating checkout session with data:', {
+      /*console.log('Creating checkout session with data:', {
         planType: formData.selectedPlan,
         billingCycle: formData.billingCycle,
         onboardingId: onboardingId,
         email: formData.email
-      });
+      });*/
 
       // Use create-checkout edge function with email
       const { data, error } = await supabase.functions.invoke('create-checkout', {
