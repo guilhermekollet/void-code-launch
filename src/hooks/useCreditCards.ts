@@ -63,7 +63,7 @@ export function useCreditCardTransactions(cardId: number) {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .eq('credit_card_id', cardId)
         .eq('is_credit_card_expense', true)
         .eq('type', 'despesa')

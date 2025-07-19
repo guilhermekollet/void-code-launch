@@ -11,15 +11,6 @@ export function useCategoryChartDataWithPeriod(period: string) {
     queryFn: async () => {
       if (!user) return [];
 
-      // First get the user's internal ID
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userData) return [];
-
       // Calculate date range based on period
       const endDate = new Date();
       const startDate = new Date();
@@ -33,11 +24,11 @@ export function useCategoryChartDataWithPeriod(period: string) {
         startDate.setMonth(startDate.getMonth() - months);
       }
 
-      // Get transactions with category data for the specified period
+      // Get transactions with category data for the specified period (using auth user ID directly)
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .eq('type', 'despesa')
         .gte('tx_date', startDate.toISOString())
         .lte('tx_date', endDate.toISOString());
@@ -46,6 +37,15 @@ export function useCategoryChartDataWithPeriod(period: string) {
         console.error('Error fetching transactions:', transactionsError);
         return [];
       }
+
+      // Get user's internal ID for categories (categories still use internal ID)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData) return [];
 
       // Get categories
       const { data: categories, error: categoriesError } = await supabase

@@ -61,7 +61,7 @@ export function useFinancialData() {
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select('value, type, is_recurring')
-        .eq('user_id', internalUserId)
+        .eq('user_id', user.id)
         .gte('tx_date', startOfMonth.toISOString())
         .lte('tx_date', endOfMonth.toISOString());
 
@@ -172,7 +172,7 @@ export function useTransactions() {
           is_agent,
           registered_at
         `)
-        .eq('user_id', internalUserId)
+        .eq('user_id', user.id)
         .order('registered_at', { ascending: false })
         .limit(50);
 
@@ -237,7 +237,7 @@ export function useChartData() {
       const { data: transactions } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .order('tx_date', { ascending: false });
 
       if (!transactions) {
@@ -334,7 +334,7 @@ export function useDailyData(days: number) {
       const { data: transactions } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .gte('tx_date', startDate.toISOString())
         .lte('tx_date', endDate.toISOString())
         .order('tx_date', { ascending: true });

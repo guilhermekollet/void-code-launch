@@ -41,7 +41,7 @@ export const useTransactionsByMonth = (monthString: string) => {
             icon
           )
         `)
-        .eq('user_id', userData.id)
+        .eq('user_id', user.user.id)
         .gte('tx_date', startDate)
         .lte('tx_date', endDate)
         .order('tx_date', { ascending: false });

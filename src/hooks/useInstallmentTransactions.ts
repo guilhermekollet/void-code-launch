@@ -22,7 +22,7 @@ export function useInstallmentTransactions(description: string, totalInstallment
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .eq('total_installments', totalInstallments)
         .like('description', `%${description.split(' (')[0]}%`)
         .eq('is_installment', true)

@@ -26,14 +26,14 @@ export const useReportsFutureData = () => {
       const { data: recurringTransactions } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.user.id)
         .eq('is_recurring', true);
 
       // Get installment transactions that will continue
       const { data: installmentTransactions } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.user.id)
         .eq('is_installment', true)
         .gte('tx_date', format(currentDate, 'yyyy-MM-dd'));
 

@@ -93,7 +93,7 @@ export function useUndoPayment() {
       const { data: transactions, error: transactionSearchError } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userProfile.id)
+        .eq('user_id', user.user.id)
         .eq('type', 'despesa')
         .eq('category', 'Cartão de Crédito')
         .eq('value', payment.amount)

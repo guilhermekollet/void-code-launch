@@ -30,14 +30,7 @@ export function useAddTransaction() {
     mutationFn: async (transactionData: TransactionData) => {
       if (!user) throw new Error('User not authenticated');
 
-      // First get the user's internal ID
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userData) throw new Error('User not found');
+      // Use the auth user ID directly (no need to fetch internal ID)
 
       // Se for despesa de cartão de crédito com parcelamento, criar múltiplas transações
       if (transactionData.is_credit_card_expense && transactionData.credit_card_id && transactionData.installments && transactionData.installments > 1) {
@@ -60,7 +53,7 @@ export function useAddTransaction() {
           const { data, error } = await supabase
             .from('transactions')
             .insert({
-              user_id: userData.id,
+              user_id: user.id,
               value: installmentAmount,
               type: transactionData.type,
               category: transactionData.category,
@@ -94,7 +87,7 @@ export function useAddTransaction() {
         const { data, error } = await supabase
           .from('transactions')
           .insert({
-            user_id: userData.id,
+            user_id: user.id,
             value: transactionData.amount,
             type: transactionData.type,
             category: transactionData.category,
@@ -128,7 +121,7 @@ export function useAddTransaction() {
           const { data, error } = await supabase
             .from('transactions')
             .insert({
-              user_id: userData.id,
+              user_id: user.id,
               value: installmentAmount,
               type: transactionData.type,
               category: transactionData.category,
@@ -157,7 +150,7 @@ export function useAddTransaction() {
         const { data, error } = await supabase
           .from('transactions')
           .insert({
-            user_id: userData.id,
+            user_id: user.id,
             value: transactionData.amount,
             type: transactionData.type,
             category: transactionData.category,

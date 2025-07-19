@@ -11,7 +11,19 @@ export function useCategoryChartData() {
     queryFn: async () => {
       if (!user) return [];
 
-      // First get the user's internal ID
+      // Get transactions with category data (using auth user ID directly)
+      const { data: transactions, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('type', 'despesa');
+
+      if (transactionsError) {
+        console.error('Error fetching transactions:', transactionsError);
+        return [];
+      }
+
+      // Get user's internal ID for categories (categories still use internal ID)
       const { data: userData } = await supabase
         .from('users')
         .select('id')
@@ -19,18 +31,6 @@ export function useCategoryChartData() {
         .single();
 
       if (!userData) return [];
-
-      // Get transactions with category data
-      const { data: transactions, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', userData.id)
-        .eq('type', 'despesa');
-
-      if (transactionsError) {
-        console.error('Error fetching transactions:', transactionsError);
-        return [];
-      }
 
       // Get categories
       const { data: categories, error: categoriesError } = await supabase

@@ -196,7 +196,7 @@ export function usePayBill() {
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
-          user_id: userProfile.id,
+          user_id: user.user.id,
           type: 'despesa',
           category: 'Cartão de Crédito',
           value: amount,

@@ -28,7 +28,7 @@ export function useRecurringTransactions() {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .eq('is_recurring', true)
         .order('registered_at', { ascending: false });
 

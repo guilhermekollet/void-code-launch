@@ -27,7 +27,7 @@ export function useCreditCardBillTransactions(creditCardId: number, billCloseDat
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .eq('credit_card_id', creditCardId)
         .eq('is_credit_card_expense', true)
         .gte('tx_date', previousCloseDate.toISOString())

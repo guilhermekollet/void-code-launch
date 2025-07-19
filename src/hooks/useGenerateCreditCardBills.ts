@@ -88,7 +88,7 @@ export const useGenerateCreditCardBills = () => {
         const { data: transactions, error: transactionsError } = await supabase
           .from('transactions')
           .select('*')
-          .eq('user_id', userData.id)
+          .eq('user_id', user.user.id)
           .eq('credit_card_id', card.id)
           .gte('tx_date', format(billStartDate, 'yyyy-MM-dd'))
           .lte('tx_date', format(billEndDate, 'yyyy-MM-dd'));
