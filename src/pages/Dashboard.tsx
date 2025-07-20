@@ -28,15 +28,10 @@ export default function Dashboard() {
   // Verificar status da assinatura e redirecionar se necessário
   useEffect(() => {
     if (subscription?.plan_status === 'canceled') {
-      // Tentar recuperar plano com dados do usuário
-      verifyAndRecoverPlan(undefined, user?.email).then((result) => {
-        if (!result.recovered) {
-          // Se não conseguiu recuperar, redirecionar para página de assinatura
-          navigate('/assinatura');
-        }
-      });
+      // Redirecionar para página de recovery para escolher um plano e assinar
+      navigate('/recover');
     }
-  }, [subscription?.plan_status, navigate, verifyAndRecoverPlan, user?.email]);
+  }, [subscription?.plan_status, navigate]);
 
   // Access data through query result with fallbacks
   const {
