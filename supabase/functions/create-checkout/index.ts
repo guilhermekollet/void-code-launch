@@ -24,7 +24,7 @@ serve(async (req) => {
     const { planType, billingCycle: rawBillingCycle, onboardingId, email } = await req.json();
     
     // Garantir que billingCycle tem um valor padrão válido
-    const billingCycle = rawBillingCycle || 'monthly';
+    const billingCycle = rawBillingCycle || 'yearly';
     
     logStep("Request received", { planType, billingCycle: rawBillingCycle, normalizedBillingCycle: billingCycle, onboardingId, email });
 
