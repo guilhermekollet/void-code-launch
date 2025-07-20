@@ -110,9 +110,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Check if user needs account recovery
-  // User needs recovery if: not completed onboarding OR no plan_type, AND has onboarding data but payment_confirmed is false
-  const needsRecovery = (!userProfile.completed_onboarding || !userProfile.plan_type) && 
-                       onboardingData && !onboardingData.payment_confirmed;
+  // User needs recovery if: 
+  // 1. not completed onboarding OR no plan_type, AND has onboarding data but payment_confirmed is false
+  // 2. OR has a canceled subscription
+  const needsRecovery = ((!userProfile.completed_onboarding || !userProfile.plan_type) && 
+                        onboardingData && !onboardingData.payment_confirmed) ||
+                        (subscription?.plan_status === 'canceled');
 
   if (needsRecovery) {
     console.log('[ProtectedRoute] User needs account recovery, redirecting to recover');

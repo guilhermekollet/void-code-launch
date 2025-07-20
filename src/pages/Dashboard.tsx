@@ -3,8 +3,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFinancialData, useTransactions } from "@/hooks/useFinancialData";
 import { useCreditCardBills } from "@/hooks/useCreditCardBillsNew";
 import { useCreditCards } from "@/hooks/useCreditCards";
-import { useSubscription } from "@/hooks/useSubscription";
-import { useAccountRecovery } from "@/hooks/useAccountRecovery";
 import { ModernQuickStats } from "@/components/Dashboard/ModernQuickStats";
 import { TransactionChart } from "@/components/Dashboard/TransactionChart";
 import { CategoryChart } from "@/components/Dashboard/CategoryChart";
@@ -12,26 +10,14 @@ import { RecentTransactions } from "@/components/Dashboard/RecentTransactions";
 import { CreditCardBillsSection } from "@/components/Dashboard/CreditCardBillsSection";
 import { AddTransactionFAB } from "@/components/AddTransaction/AddTransactionFAB";
 import { WelcomeModal } from "@/components/WelcomeModal";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const { data: subscription } = useSubscription();
-  const { verifyAndRecoverPlan } = useAccountRecovery();
   const financialDataQuery = useFinancialData();
   const transactionsQuery = useTransactions();
   const { data: bills = [] } = useCreditCardBills();
   const { data: creditCards = [] } = useCreditCards();
 
-  // Verificar status da assinatura e redirecionar se necessário
-  useEffect(() => {
-    if (subscription?.plan_status === 'canceled') {
-      // Redirecionar para página de recovery para escolher um plano e assinar
-      navigate('/recover');
-    }
-  }, [subscription?.plan_status, navigate]);
 
   // Access data through query result with fallbacks
   const {

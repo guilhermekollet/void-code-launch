@@ -33,49 +33,23 @@ const Recover = () => {
 
         setUserEmail(user.email);
 
-        // Verificar dados do usuário atual
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('completed_onboarding, plan_type, trial_start')
-          .eq('email', user.email)
-          .maybeSingle();
-
-        if (userError) {
-          console.error('Error checking user data:', userError);
-        }
-
-        // Verificar dados do onboarding
-        const { data: onboardingData, error: onboardingError } = await supabase
-          .from('onboarding')
-          .select('payment_confirmed, selected_plan, billing_cycle')
-          .eq('email', user.email)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (onboardingError && onboardingError.code !== 'PGRST116') {
-          console.error('Error checking onboarding data:', onboardingError);
-        }
-
-        // Usuário precisa de recuperação se:
-        // 1. Não completou onboarding OU não tem plan_type
-        // 2. E existe registro no onboarding mas payment_confirmed é false
-        const userNeedsRecovery = (!userData?.completed_onboarding || !userData?.plan_type) && 
-                                 onboardingData && !onboardingData.payment_confirmed;
-
-        if (userNeedsRecovery) {
+        // Verificar status da assinatura usando a edge function
+        const { data: subscriptionData, error: subscriptionError } = await supabase.functions.invoke('check-subscription');
+        
+        if (subscriptionError) {
+          console.error('Error checking subscription:', subscriptionError);
           setNeedsRecovery(true);
-          // Definir billing cycle baseado no onboarding se disponível
-          if (onboardingData?.billing_cycle) {
-            setBillingCycle(onboardingData.billing_cycle as 'monthly' | 'yearly');
-          }
-        } else if (userData?.completed_onboarding && userData?.plan_type) {
-          // Usuário já tem conta completa, redirecionar para dashboard
-          navigate('/', { replace: true });
-          return;
         } else {
-          // Caso edge: usuário logado mas sem dados de onboarding, permitir seleção de plano
-          setNeedsRecovery(true);
+          console.log('Subscription data:', subscriptionData);
+          
+          // Se o plano está cancelado ou não tem assinatura ativa, precisa de recovery
+          if (subscriptionData?.plan_status === 'canceled' || !subscriptionData?.subscribed) {
+            setNeedsRecovery(true);
+          } else {
+            // Usuário tem assinatura ativa, redirecionar para dashboard
+            navigate('/', { replace: true });
+            return;
+          }
         }
 
       } catch (error) {
