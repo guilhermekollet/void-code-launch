@@ -21,8 +21,12 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const { planType, billingCycle, onboardingId, email } = await req.json();
-    logStep("Request received", { planType, billingCycle, onboardingId, email });
+    const { planType, billingCycle: rawBillingCycle, onboardingId, email } = await req.json();
+    
+    // Garantir que billingCycle tem um valor padrão válido
+    const billingCycle = rawBillingCycle || 'monthly';
+    
+    logStep("Request received", { planType, billingCycle: rawBillingCycle, normalizedBillingCycle: billingCycle, onboardingId, email });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {

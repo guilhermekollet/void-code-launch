@@ -70,7 +70,7 @@ export default function Register() {
     confirmEmail: '',
     phone: '55',
     selectedPlan: '',
-    billingCycle: ''
+    billingCycle: 'monthly'
   });
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [checkingPhone, setCheckingPhone] = useState(false);
