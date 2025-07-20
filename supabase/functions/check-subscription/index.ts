@@ -23,9 +23,11 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Use service role for updates
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
     );
 
     const authHeader = req.headers.get("Authorization");
@@ -45,7 +47,7 @@ serve(async (req) => {
     try {
       const { data: userProfile, error: userProfileError } = await supabaseClient
         .from("users")
-        .select("plan_type, billing_cycle, trial_start, trial_end")
+        .select("plan_type, billing_cycle, trial_start, trial_end, plan_status")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -127,11 +129,12 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Buscar assinaturas com múltiplos status válidos (incluindo trialing)
-    const validStatuses = ["active", "trialing", "past_due"];
+    // Buscar assinaturas com múltiplos status válidos (incluindo canceled, unpaid)
+    const allStatuses = ["active", "trialing", "past_due", "canceled", "unpaid", "incomplete"];
     let activeSubscription = null;
+    let planStatus = 'active'; // Default status
     
-    for (const status of validStatuses) {
+    for (const status of allStatuses) {
       const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
         status: status,
@@ -149,9 +152,29 @@ serve(async (req) => {
       
       if (subscriptions.data.length > 0) {
         activeSubscription = subscriptions.data[0];
+        
+        // Definir plan_status baseado no status do Stripe
+        switch (status) {
+          case 'canceled':
+            planStatus = 'canceled';
+            break;
+          case 'unpaid':
+          case 'incomplete':
+          case 'past_due':
+            planStatus = 'pending';
+            break;
+          case 'active':
+          case 'trialing':
+            planStatus = 'active';
+            break;
+          default:
+            planStatus = 'active';
+        }
+        
         logStep(`Found subscription with status: ${status}`, { 
           subscriptionId: activeSubscription.id,
-          subscriptionStatus: activeSubscription.status
+          subscriptionStatus: activeSubscription.status,
+          planStatus: planStatus
         });
         break;
       }
@@ -191,10 +214,24 @@ serve(async (req) => {
         planType, 
         billingCycle,
         interval: price.recurring?.interval,
-        subscriptionStatus: activeSubscription.status
+        subscriptionStatus: activeSubscription.status,
+        planStatus: planStatus
       });
+      
+      // Atualizar plan_status na tabela users baseado no Stripe
+      try {
+        await supabaseClient
+          .from("users")
+          .update({ plan_status: planStatus })
+          .eq("user_id", user.id);
+        
+        logStep("Updated plan_status in users table", { planStatus });
+      } catch (updateError) {
+        logStep("Error updating plan_status", { error: updateError });
+      }
     } else {
-      logStep("No active subscription found in Stripe, defaulting to basic");
+      logStep("No subscription found in Stripe, defaulting to basic");
+      planStatus = 'active'; // Default for basic plan
     }
 
     logStep("Returning subscription info", { 
@@ -202,13 +239,15 @@ serve(async (req) => {
       billingCycle, 
       hasActiveSub, 
       subscriptionEnd,
-      subscriptionStatus: activeSubscription?.status || 'none'
+      subscriptionStatus: activeSubscription?.status || 'none',
+      planStatus: planStatus
     });
     
     return new Response(JSON.stringify({
       plan_type: planType,
       billing_cycle: billingCycle,
       status: hasActiveSub ? (activeSubscription?.status || 'active') : 'active',
+      plan_status: planStatus,
       current_period_end: subscriptionEnd
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

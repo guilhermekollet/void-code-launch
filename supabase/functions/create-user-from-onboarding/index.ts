@@ -72,6 +72,7 @@ serve(async (req) => {
           stripe_session_id: onboardingData.stripe_session_id,
           trial_start: trialStart.toISOString(),
           trial_end: trialEnd.toISOString(),
+          plan_status: 'active',
           completed_onboarding: true
         })
         .eq('id', existingUser.id)
@@ -164,6 +165,7 @@ serve(async (req) => {
         stripe_session_id: onboardingData.stripe_session_id,
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),
+        plan_status: 'active',
         completed_onboarding: true
       }])
       .select()
