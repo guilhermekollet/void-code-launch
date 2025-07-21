@@ -244,19 +244,31 @@ export function useChartData() {
         return { monthlyData: [], categoryData: [] };
       }
 
-      // Process monthly data
+      // Process monthly data - group by month-year to handle proper ordering
       const monthlyMap = new Map();
       const categoryMap = new Map();
 
       transactions.forEach(transaction => {
         const date = new Date(transaction.tx_date);
+        const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         const monthKey = date.toLocaleDateString('pt-BR', { month: 'short' });
-        const value = Number(transaction.value) || 0;
+        
+        // Handle installment transactions properly
+        let value = Number(transaction.value) || 0;
+        
+        // For installment transactions, use the installment value instead of total value
+        if (transaction.is_installment && transaction.installment_value) {
+          value = Number(transaction.installment_value);
+        } else if (transaction.is_installment && transaction.total_installments) {
+          // If installment_value is not available, divide total by installments
+          value = value / Number(transaction.total_installments);
+        }
 
         // Monthly data
-        if (!monthlyMap.has(monthKey)) {
-          monthlyMap.set(monthKey, { 
-            mes: monthKey, 
+        if (!monthlyMap.has(monthYear)) {
+          monthlyMap.set(monthYear, { 
+            mes: monthKey,
+            monthYear: monthYear,
             receitas: 0, 
             despesas: 0, 
             gastosRecorrentes: 0,
@@ -264,7 +276,7 @@ export function useChartData() {
           });
         }
 
-        const monthData = monthlyMap.get(monthKey);
+        const monthData = monthlyMap.get(monthYear);
         if (transaction.type === 'receita') {
           monthData.receitas += value;
         } else if (transaction.type === 'despesa') {
@@ -278,8 +290,9 @@ export function useChartData() {
         // Calculate fluxo líquido
         monthData.fluxoLiquido = monthData.receitas - monthData.despesas;
 
-        // Category data
+        // Category data - use original transaction value for categories
         if (transaction.type === 'despesa') {
+          const originalValue = Math.abs(Number(transaction.value) || 0);
           if (!categoryMap.has(transaction.category)) {
             categoryMap.set(transaction.category, {
               name: transaction.category,
@@ -287,12 +300,18 @@ export function useChartData() {
               color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`
             });
           }
-          categoryMap.get(transaction.category).value += Math.abs(value);
+          categoryMap.get(transaction.category).value += originalValue;
         }
       });
 
+      // Sort monthly data chronologically and remove monthYear field
+      const sortedMonthlyData = Array.from(monthlyMap.values())
+        .sort((a, b) => a.monthYear.localeCompare(b.monthYear))
+        .slice(-12) // Get last 12 months
+        .map(({ monthYear, ...rest }) => rest);
+
       return {
-        monthlyData: Array.from(monthlyMap.values()).slice(0, 12),
+        monthlyData: sortedMonthlyData,
         categoryData: Array.from(categoryMap.values()).sort((a, b) => b.value - a.value)
       };
     },

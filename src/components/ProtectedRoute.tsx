@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { usePlanStatus } from '@/hooks/usePlanStatus';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -21,7 +22,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       
       const { data, error } = await supabase
         .from('users')
-        .select('completed_onboarding, plan_type, trial_start, trial_end')
+        .select('completed_onboarding, plan_type, plan_status, trial_start, trial_end')
         .eq('user_id', user.id)
         .single();
       
@@ -35,6 +36,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     },
     enabled: !!user,
   });
+
+  // Use dedicated hook for plan status
+  const { data: planStatus, isLoading: isLoadingPlanStatus } = usePlanStatus();
 
   // Check onboarding status for recovery detection
   const { data: onboardingData, isLoading: isLoadingOnboarding } = useQuery({
@@ -90,7 +94,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     refetchOnMount: true,
   });
 
-  if (loading || isLoadingProfile || isLoadingSubscription || isLoadingOnboarding) {
+  if (loading || isLoadingProfile || isLoadingSubscription || isLoadingOnboarding || isLoadingPlanStatus) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#61710C]"></div>
@@ -109,13 +113,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/register" replace />;
   }
 
+  // Check if user has canceled plan status - redirect immediately to recover
+  if (userProfile?.plan_status === 'canceled') {
+    console.log('[ProtectedRoute] User plan status is canceled, redirecting to recover');
+    return <Navigate to="/recover" replace />;
+  }
+
   // Check if user needs account recovery
   // User needs recovery if: 
   // 1. not completed onboarding OR no plan_type, AND has onboarding data but payment_confirmed is false
-  // 2. OR has a canceled subscription
-  const needsRecovery = ((!userProfile.completed_onboarding || !userProfile.plan_type) && 
-                        onboardingData && !onboardingData.payment_confirmed) ||
-                        (subscription?.plan_status === 'canceled');
+  const needsRecovery = (!userProfile.completed_onboarding || !userProfile.plan_type) && 
+                        onboardingData && !onboardingData.payment_confirmed;
 
   if (needsRecovery) {
     console.log('[ProtectedRoute] User needs account recovery, redirecting to recover');
