@@ -6,7 +6,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import { BillingToggle } from '@/components/Settings/BillingToggle';
 import { PlanCard } from '@/components/Settings/PlanCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCreateCheckout } from '@/hooks/useSubscriptionMutations';
+import { useReactivateSubscription } from '@/hooks/useReactivateSubscription';
 import { useAccountRecovery } from '@/hooks/useAccountRecovery';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,7 +18,7 @@ const Recover = () => {
   const [needsRecovery, setNeedsRecovery] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   
-  const createCheckout = useCreateCheckout();
+  const reactivateSubscription = useReactivateSubscription();
   const { verifyAndRecoverPlan, isRecovering } = useAccountRecovery();
 
   // Verificar se usuário precisa de recuperação
@@ -88,9 +88,9 @@ const Recover = () => {
     }
 
     try {
-      await createCheckout.mutateAsync({ planType, billingCycle });
+      await reactivateSubscription.mutateAsync({ planType, billingCycle });
     } catch (error) {
-      console.error('Error creating checkout:', error);
+      console.error('Error reactivating subscription:', error);
     }
   };
 
@@ -198,10 +198,10 @@ const Recover = () => {
             />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Finalize sua Assinatura
+            Reative sua Assinatura
           </h1>
           <p className="text-xl text-gray-600 mb-8">
-            Escolha seu plano e continue aproveitando o Bolsofy com <strong>3 dias grátis</strong>
+            Escolha seu plano e continue aproveitando o Bolsofy
           </p>
           
           {isRecovering && (
@@ -231,15 +231,15 @@ const Recover = () => {
                 onSubscribe={() => handleSubscribe(plan.id)}
                 onManage={() => {}} // Não usado neste contexto
                 isCurrentPlan={false}
-                isLoading={createCheckout.isPending}
-                buttonText="Continuar com Este Plano"
+                isLoading={reactivateSubscription.isPending}
+                buttonText="Reativar com Este Plano"
               />
             ))}
           </div>
 
           <div className="text-center mt-12 text-sm text-gray-500">
-            <p>Ao continuar, você terá <strong>3 dias grátis</strong> para testar todos os recursos</p>
-            <p>Depois será cobrado conforme o plano escolhido</p>
+            <p>A cobrança será feita imediatamente após a confirmação</p>
+            <p>Você terá acesso completo a todos os recursos do plano escolhido</p>
           </div>
 
           <div className="text-center mt-8">

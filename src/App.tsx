@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import RepaymentSuccess from "./pages/RepaymentSuccess";
 import Recover from "./pages/Recover";
 import Transacoes from "./pages/Transacoes";
 import Cartoes from "./pages/Cartoes";
@@ -40,8 +41,9 @@ const App = () => (
             } />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/payment-success" element={<PaymentSuccess />} />
-            <Route path="/recover" element={<Recover />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/repayment-success" element={<RepaymentSuccess />} />
+        <Route path="/recover" element={<Recover />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Layout>
