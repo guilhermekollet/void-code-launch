@@ -30,6 +30,71 @@ export function useAddTransaction() {
     mutationFn: async (transactionData: TransactionData) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Input validation
+      if (!transactionData.amount || transactionData.amount <= 0) {
+        throw new Error('Amount must be greater than 0');
+      }
+      
+      if (transactionData.amount > 999999999) {
+        throw new Error('Amount is too large');
+      }
+
+      if (!transactionData.type || !['receita', 'despesa'].includes(transactionData.type)) {
+        throw new Error('Invalid transaction type');
+      }
+
+      if (!transactionData.category || transactionData.category.trim().length === 0) {
+        throw new Error('Category is required');
+      }
+
+      if (!transactionData.description || transactionData.description.trim().length === 0) {
+        throw new Error('Description is required');
+      }
+
+      if (transactionData.description.length > 500) {
+        throw new Error('Description is too long (max 500 characters)');
+      }
+
+      if (!transactionData.tx_date) {
+        throw new Error('Transaction date is required');
+      }
+
+      // Validate date
+      const txDate = new Date(transactionData.tx_date);
+      if (isNaN(txDate.getTime())) {
+        throw new Error('Invalid transaction date');
+      }
+
+      // Validate installments
+      if (transactionData.installments && (transactionData.installments < 1 || transactionData.installments > 36)) {
+        throw new Error('Installments must be between 1 and 36');
+      }
+
+      // Validate credit card ownership if specified
+      if (transactionData.credit_card_id) {
+        const { data: cardOwnership, error: cardError } = await supabase
+          .from('credit_cards')
+          .select('user_id')
+          .eq('id', transactionData.credit_card_id)
+          .single();
+
+        if (cardError || !cardOwnership) {
+          throw new Error('Invalid credit card');
+        }
+
+        // Since we don't have direct access to the user's numeric ID in the users table,
+        // we'll verify through the auth context that they own this card
+        const { data: userRecord } = await supabase
+          .from('users')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!userRecord || cardOwnership.user_id !== userRecord.id) {
+          throw new Error('You can only use your own credit cards');
+        }
+      }
+
       // Se for despesa de cartão de crédito com parcelamento, criar múltiplas transações
       if (transactionData.is_credit_card_expense && transactionData.credit_card_id && transactionData.installments && transactionData.installments > 1) {
         // Get credit card info to calculate billing dates

@@ -20,12 +20,60 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Step 1: Authenticate the user first
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      logStep("Missing authorization header");
+      throw new Error("Authorization header is required");
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !userData.user) {
+      logStep("Authentication failed", { error: userError?.message });
+      throw new Error("Invalid or expired authentication token");
+    }
+
+    const authenticatedUser = userData.user;
+    logStep("User authenticated", { userId: authenticatedUser.id, email: authenticatedUser.email });
+
+    // Step 2: Parse and validate request
     const { planType, billingCycle: rawBillingCycle, userId, email } = await req.json();
     
     // Garantir que billingCycle tem um valor padrão válido
     const billingCycle = rawBillingCycle || 'yearly';
     
     logStep("Request received", { planType, billingCycle, userId, email });
+
+    // Step 3: Critical security check - ensure user can only reactivate their own account
+    if (authenticatedUser.id !== userId || authenticatedUser.email !== email) {
+      logStep("Authorization failed - user mismatch", { 
+        authenticatedUserId: authenticatedUser.id, 
+        requestedUserId: userId,
+        authenticatedEmail: authenticatedUser.email,
+        requestedEmail: email
+      });
+      throw new Error("Unauthorized: You can only reactivate your own account");
+    }
+
+    // Step 4: Validate input parameters
+    const allowedPlans = ['basic', 'premium'];
+    const allowedCycles = ['monthly', 'yearly'];
+    
+    if (!planType || !allowedPlans.includes(planType.toLowerCase())) {
+      logStep("Invalid plan type", { planType, allowedPlans });
+      throw new Error(`Invalid plan type. Must be one of: ${allowedPlans.join(', ')}`);
+    }
+    
+    if (!billingCycle || !allowedCycles.includes(billingCycle.toLowerCase())) {
+      logStep("Invalid billing cycle", { billingCycle, allowedCycles });
+      throw new Error(`Invalid billing cycle. Must be one of: ${allowedCycles.join(', ')}`);
+    }
 
     if (!userId || !email) {
       throw new Error("userId e email são obrigatórios para reativação");

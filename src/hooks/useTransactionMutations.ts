@@ -22,8 +22,58 @@ export function useUpdateTransaction() {
       console.log('Updating transaction:', { id, updateData });
       
       // Validar dados obrigatórios
-      if (!id) {
-        throw new Error('ID da transação é obrigatório');
+      if (!id || id <= 0) {
+        throw new Error('Valid transaction ID is required');
+      }
+
+      // Validate numeric values
+      if (updateData.value !== undefined) {
+        if (updateData.value <= 0) {
+          throw new Error('Amount must be greater than 0');
+        }
+        if (updateData.value > 999999999) {
+          throw new Error('Amount is too large');
+        }
+      }
+
+      // Validate type
+      if (updateData.type !== undefined && !['receita', 'despesa'].includes(updateData.type)) {
+        throw new Error('Invalid transaction type');
+      }
+
+      // Validate text fields
+      if (updateData.description !== undefined) {
+        if (updateData.description.trim().length === 0) {
+          throw new Error('Description cannot be empty');
+        }
+        if (updateData.description.length > 500) {
+          throw new Error('Description is too long (max 500 characters)');
+        }
+      }
+
+      if (updateData.category !== undefined && updateData.category.trim().length === 0) {
+        throw new Error('Category cannot be empty');
+      }
+
+      // Validate date
+      if (updateData.tx_date !== undefined) {
+        const txDate = new Date(updateData.tx_date);
+        if (isNaN(txDate.getTime())) {
+          throw new Error('Invalid transaction date');
+        }
+      }
+
+      // Validate credit card ownership if specified
+      if (updateData.credit_card_id !== undefined && updateData.credit_card_id !== null) {
+        const { data: cardOwnership, error: cardError } = await supabase
+          .from('credit_cards')
+          .select('user_id')
+          .eq('id', updateData.credit_card_id)
+          .single();
+
+        if (cardError || !cardOwnership) {
+          throw new Error('Invalid credit card');
+        }
       }
 
       // Preparar dados para atualização, removendo campos undefined

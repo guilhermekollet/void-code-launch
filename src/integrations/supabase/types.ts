@@ -80,20 +80,26 @@ export type Database = {
         Row: {
           created_at: string
           id: number
-          started_bot_no_register: boolean
+          started_bot_no_register: boolean | null
+          user_canceled: boolean | null
           user_id: string | null
+          user_pending: boolean | null
         }
         Insert: {
           created_at?: string
           id?: number
-          started_bot_no_register: boolean
+          started_bot_no_register?: boolean | null
+          user_canceled?: boolean | null
           user_id?: string | null
+          user_pending?: boolean | null
         }
         Update: {
           created_at?: string
           id?: number
-          started_bot_no_register?: boolean
+          started_bot_no_register?: boolean | null
+          user_canceled?: boolean | null
           user_id?: string | null
+          user_pending?: boolean | null
         }
         Relationships: []
       }
