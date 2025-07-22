@@ -23,6 +23,17 @@ serve(async (req) => {
 
   try {
     const { sessionId } = await req.json();
+    
+    // Input validation
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.trim().length === 0) {
+      throw new Error('Valid session ID is required');
+    }
+    
+    // Sanitize sessionId to prevent injection
+    if (!/^cs_[a-zA-Z0-9_]+$/.test(sessionId)) {
+      throw new Error('Invalid session ID format');
+    }
+    
     logStep('Verifying reactivation for session', { sessionId });
     
     const stripe = new Stripe(stripeSecretKey, {
