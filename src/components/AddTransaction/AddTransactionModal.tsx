@@ -15,7 +15,7 @@ import { CreditCardDropdown } from "@/components/CreditCards/CreditCardDropdown"
 import { InstallmentSelect } from "./InstallmentSelect";
 import { useAddTransaction } from "@/hooks/useAddTransaction";
 import { useCreditCards } from "@/hooks/useCreditCards";
-import { useLastUsedCreditCard, useUpdateLastUsedCreditCard } from "@/hooks/useLastUsedCreditCard";
+// Removed useLastUsedCreditCard hook as it's no longer needed
 
 interface AddTransactionModalProps {
   open: boolean;
@@ -44,8 +44,6 @@ export function AddTransactionModal({
   
   const addTransaction = useAddTransaction();
   const { data: creditCards = [] } = useCreditCards();
-  const { data: lastUsedCard } = useLastUsedCreditCard();
-  const updateLastUsedCard = useUpdateLastUsedCreditCard();
 
   // Auto-select credit card logic
   useEffect(() => {
@@ -53,12 +51,12 @@ export function AddTransactionModal({
       if (creditCards.length === 1) {
         // If only one card, select it automatically
         setSelectedCreditCard(creditCards[0].id.toString());
-      } else if (lastUsedCard && !selectedCreditCard) {
-        // If multiple cards and last used exists, select it
-        setSelectedCreditCard(lastUsedCard.id.toString());
+      } else if (!selectedCreditCard) {
+        // If multiple cards and no selection, select the first one
+        setSelectedCreditCard(creditCards[0].id.toString());
       }
     }
-  }, [isCreditCardExpense, creditCards, lastUsedCard, selectedCreditCard]);
+  }, [isCreditCardExpense, creditCards, selectedCreditCard]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -119,10 +117,6 @@ export function AddTransactionModal({
 
     addTransaction.mutate(transactionData, {
       onSuccess: () => {
-        // Update last used credit card
-        if (isCreditCardExpense && selectedCreditCard) {
-          updateLastUsedCard.mutate(parseInt(selectedCreditCard));
-        }
         onOpenChange(false);
       }
     });

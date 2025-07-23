@@ -565,7 +565,6 @@ export type Database = {
           created_at: string
           email: string | null
           id: number
-          last_used_credit_card_id: number | null
           name: string | null
           phone_number: string
           plan_status: string | null
@@ -581,7 +580,6 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: number
-          last_used_credit_card_id?: number | null
           name?: string | null
           phone_number: string
           plan_status?: string | null
@@ -597,7 +595,6 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: number
-          last_used_credit_card_id?: number | null
           name?: string | null
           phone_number?: string
           plan_status?: string | null
@@ -607,15 +604,7 @@ export type Database = {
           trial_start?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "users_last_used_credit_card_id_fkey"
-            columns: ["last_used_credit_card_id"]
-            isOneToOne: false
-            referencedRelation: "credit_cards"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       users_archive: {
         Row: {

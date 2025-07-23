@@ -47,7 +47,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] bg-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Crown className="h-5 w-5 text-[#61710C]" />
@@ -58,32 +58,44 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 mt-4">
-          <p className="text-sm text-gray-600">
-            Com o plano Premium, você terá acesso a:
-          </p>
+        <div className="space-y-6 mt-6">
+          <div className="text-center space-y-2">
+            <p className="text-base text-gray-700 font-medium">
+              Com o plano Premium, você terá acesso a:
+            </p>
+          </div>
           
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {reportFeatures.map((feature, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="text-[#61710C] mt-0.5">
+              <div key={index} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border">
+                <div className="text-[#61710C] mt-1">
                   {feature.icon}
                 </div>
-                <div>
-                  <p className="font-medium text-sm">{feature.title}</p>
-                  <p className="text-xs text-gray-500">{feature.description}</p>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-gray-900">{feature.title}</p>
+                  <p className="text-xs text-gray-600 mt-1">{feature.description}</p>
                 </div>
               </div>
             ))}
           </div>
           
-          <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleUpgrade} className="bg-[#61710C] hover:bg-[#61710C]/90">
-              Fazer Upgrade
-            </Button>
+          <div className="border-t pt-6">
+            <div className="flex justify-center gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="px-8"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleUpgrade} 
+                className="bg-[#61710C] hover:bg-[#61710C]/90 px-8"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Fazer Upgrade
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

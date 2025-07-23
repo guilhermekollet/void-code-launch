@@ -5,7 +5,7 @@ import { useCreditCardBills } from "@/hooks/useCreditCardBillsNew";
 import { useCreditCards } from "@/hooks/useCreditCards";
 import { ModernQuickStats } from "@/components/Dashboard/ModernQuickStats";
 import { TransactionChart } from "@/components/Dashboard/TransactionChart";
-import { CategoryChart } from "@/components/Dashboard/CategoryChart";
+import { RevenueExpenseChart } from "@/components/Dashboard/RevenueExpenseChart";
 import { RecentTransactions } from "@/components/Dashboard/RecentTransactions";
 import { CreditCardBillsSection } from "@/components/Dashboard/CreditCardBillsSection";
 import { AddTransactionFAB } from "@/components/AddTransaction/AddTransactionFAB";
@@ -70,7 +70,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TransactionChart />
-        <CategoryChart />
+        <RevenueExpenseChart />
       </div>
 
       <div className={`grid grid-cols-1 ${hasCreditCardBills ? 'lg:grid-cols-2' : ''} gap-6`}>

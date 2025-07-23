@@ -44,8 +44,8 @@ export default function Cartoes() {
 
   return (
     <div className="space-y-6">
-      <BillsBarChart />
       <CreditCardsSection />
+      <BillsBarChart />
 
       {/* Seção de Compras Recentes do Cartão */}
       {groupedPurchases.length > 0 && (
