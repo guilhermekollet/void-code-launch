@@ -15,48 +15,87 @@ const RepaymentSuccess = () => {
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const sessionId = searchParams.get('session_id');
 
-  useEffect(() => {
-    const verifyReactivation = async () => {
-      if (!sessionId) {
-        setError('Session ID não encontrado');
-        setIsVerifying(false);
+  const verifyReactivation = async (attempt: number = 1) => {
+    if (!sessionId) {
+      console.error('Session ID not found in URL parameters');
+      setError('Session ID não encontrado na URL');
+      setIsVerifying(false);
+      return;
+    }
+
+    console.log(`[RepaymentSuccess] Attempt ${attempt} - Verifying reactivation for session:`, sessionId);
+    
+    try {
+      const startTime = Date.now();
+      
+      const { data, error } = await supabase.functions.invoke('verify-reactivation', {
+        body: { sessionId }
+      });
+
+      const duration = Date.now() - startTime;
+      console.log(`[RepaymentSuccess] Verification took ${duration}ms`, { data, error });
+
+      if (error) {
+        console.error(`[RepaymentSuccess] Edge function error on attempt ${attempt}:`, error);
+        
+        // Auto-retry for certain errors (max 3 attempts)
+        if (attempt < 3 && (error.message?.includes('timeout') || error.message?.includes('network'))) {
+          console.log(`[RepaymentSuccess] Retrying in 2 seconds... (attempt ${attempt + 1})`);
+          setRetryCount(attempt);
+          setIsRetrying(true);
+          
+          setTimeout(() => {
+            setIsRetrying(false);
+            verifyReactivation(attempt + 1);
+          }, 2000);
+          return;
+        }
+        
+        setError(error.message || 'Erro ao verificar reativação');
+      } else if (data?.success) {
+        console.log('[RepaymentSuccess] Reactivation verified successfully:', data);
+        setVerificationResult(data);
+        setShowConfetti(true);
+        
+        // Stop confetti after 5 seconds
+        setTimeout(() => {
+          setShowConfetti(false);
+        }, 5000);
+      } else {
+        console.error('[RepaymentSuccess] Reactivation verification failed:', data);
+        setError(data?.error || 'Falha na verificação da reativação');
+      }
+    } catch (err) {
+      console.error(`[RepaymentSuccess] Exception on attempt ${attempt}:`, err);
+      
+      // Auto-retry for network errors
+      if (attempt < 3) {
+        console.log(`[RepaymentSuccess] Retrying due to exception... (attempt ${attempt + 1})`);
+        setRetryCount(attempt);
+        setIsRetrying(true);
+        
+        setTimeout(() => {
+          setIsRetrying(false);
+          verifyReactivation(attempt + 1);
+        }, 2000);
         return;
       }
-
-      try {
-        console.log('Verifying reactivation for session:', sessionId);
-        
-        const { data, error } = await supabase.functions.invoke('verify-reactivation', {
-          body: { sessionId }
-        });
-
-        if (error) {
-          console.error('Error verifying reactivation:', error);
-          setError(error.message || 'Erro ao verificar reativação');
-        } else if (data?.success) {
-          console.log('Reactivation verified successfully:', data);
-          setVerificationResult(data);
-          setShowConfetti(true);
-          
-          // Stop confetti after 5 seconds
-          setTimeout(() => {
-            setShowConfetti(false);
-          }, 5000);
-        } else {
-          console.error('Reactivation verification failed:', data);
-          setError(data?.error || 'Falha na verificação da reativação');
-        }
-      } catch (err) {
-        console.error('Exception during reactivation verification:', err);
-        setError('Erro inesperado ao verificar reativação');
-      } finally {
+      
+      setError('Erro inesperado ao verificar reativação');
+    } finally {
+      if (attempt >= 3 || !isRetrying) {
         setIsVerifying(false);
+        setIsRetrying(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     verifyReactivation();
   }, [sessionId]);
 
@@ -77,7 +116,7 @@ const RepaymentSuccess = () => {
             </div>
             <CardTitle>Verificando Reativação</CardTitle>
             <CardDescription>
-              Confirmando a reativação da sua assinatura...
+              {isRetrying ? `Tentativa ${retryCount + 1} de 3...` : 'Confirmando a reativação da sua assinatura...'}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -106,12 +145,31 @@ const RepaymentSuccess = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="text-sm text-gray-600 mb-4">
+              <p>Erro: {error}</p>
+              {retryCount > 0 && (
+                <p className="mt-2">Tentativas realizadas: {retryCount}</p>
+              )}
+            </div>
+            
+            <Button 
+              onClick={() => {
+                setError(null);
+                setIsVerifying(true);
+                setRetryCount(0);
+                verifyReactivation();
+              }} 
+              className="w-full"
+              variant="outline"
+            >
+              Tentar Novamente
+            </Button>
             <Button 
               onClick={() => navigate('/recover')} 
               className="w-full"
               variant="outline"
             >
-              Tentar Novamente
+              Voltar para Recuperação
             </Button>
             <Button 
               onClick={() => navigate('/')} 

@@ -8,8 +8,9 @@ const corsHeaders = {
 };
 
 const logStep = (step: string, details?: any) => {
+  const timestamp = new Date().toISOString();
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[VERIFY-REACTIVATION] ${step}${detailsStr}`);
+  console.log(`[${timestamp}] [VERIFY-REACTIVATION] ${step}${detailsStr}`);
 };
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -22,15 +23,22 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId } = await req.json();
+    logStep('Function started');
     
-    // Input validation
+    const requestBody = await req.json();
+    const { sessionId } = requestBody;
+    
+    logStep('Request received', { sessionId });
+    
+    // Enhanced input validation
     if (!sessionId || typeof sessionId !== 'string' || sessionId.trim().length === 0) {
+      logStep('ERROR: Missing or invalid session ID', { sessionId });
       throw new Error('Valid session ID is required');
     }
     
     // Sanitize sessionId to prevent injection
     if (!/^cs_[a-zA-Z0-9_]+$/.test(sessionId)) {
+      logStep('ERROR: Invalid session ID format', { sessionId });
       throw new Error('Invalid session ID format');
     }
     
@@ -46,16 +54,31 @@ serve(async (req) => {
 
     // Retrieve the checkout session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    logStep('Stripe session status', { status: session.payment_status, sessionId });
+    logStep('Stripe session retrieved', { 
+      sessionId,
+      paymentStatus: session.payment_status, 
+      metadata: session.metadata,
+      customer: session.customer,
+      subscription: session.subscription
+    });
 
-    if (session.payment_status === 'paid' && session.metadata?.reactivation === 'true') {
+    if (session.payment_status === 'paid') {
+      // Enhanced metadata validation with fallback
+      const isReactivation = session.metadata?.reactivation === 'true';
+      
+      if (!isReactivation) {
+        logStep('Session is not a reactivation', { metadata: session.metadata });
+        throw new Error("Esta sessão não é uma reativação válida");
+      }
+
       const userId = session.metadata.userId;
-      const planType = session.metadata.planType;
-      const billingCycle = session.metadata.billingCycle;
+      const planType = session.metadata.planType || 'basic'; // fallback
+      const billingCycle = session.metadata.billingCycle || 'monthly'; // fallback
 
       logStep('Processing reactivation', { userId, planType, billingCycle });
 
       if (!userId) {
+        logStep('ERROR: UserId missing from metadata', { metadata: session.metadata });
         throw new Error("UserId não encontrado nos metadados da sessão");
       }
 
@@ -87,8 +110,40 @@ serve(async (req) => {
         logStep('Stripe IDs found', { stripeCustomerId, stripeSubscriptionId });
       }
 
-      // Note: Tabela 'subscriptions' não existe, apenas atualizamos 'users'
       logStep('User reactivated successfully', { userId, planType, billingCycle });
+
+      // Send welcome email after successful reactivation
+      try {
+        logStep('Attempting to send welcome email', { userId, email: session.customer_details?.email });
+        
+        // Get user details for welcome email
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name, email')
+          .eq('user_id', userId)
+          .single();
+
+        if (userData?.email && userData?.name) {
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+            body: {
+              email: userData.email,
+              name: userData.name,
+              planType: planType
+            }
+          });
+
+          if (emailError) {
+            logStep('Warning: Failed to send welcome email', { error: emailError });
+          } else {
+            logStep('Welcome email sent successfully', { email: userData.email });
+          }
+        } else {
+          logStep('Warning: User data incomplete for welcome email', { userData });
+        }
+      } catch (emailErr) {
+        logStep('Warning: Exception sending welcome email', { error: emailErr });
+        // Don't fail the reactivation if email fails
+      }
 
       return new Response(
         JSON.stringify({ 
