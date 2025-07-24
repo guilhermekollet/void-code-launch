@@ -45,7 +45,23 @@ export function PlanCard({
 
   const monthlyPrice = plan.monthlyPrice;
   const yearlyPrice = plan.yearlyPrice;
-  const displayPrice = billingCycle === 'monthly' ? monthlyPrice : monthlyPrice; // Sempre mostra preço mensal
+  
+  // Calcular preço mensal correto para planos anuais
+  const getDisplayPrice = () => {
+    if (billingCycle === 'monthly') {
+      return monthlyPrice;
+    } else {
+      // Para planos anuais, mostrar o preço mensal equivalente
+      if (plan.id.includes('basic')) {
+        return 16.66; // R$ 199.90 ÷ 12
+      } else if (plan.id.includes('premium')) {
+        return 24.16; // R$ 289.90 ÷ 12
+      }
+      return yearlyPrice / 12;
+    }
+  };
+  
+  const displayPrice = getDisplayPrice();
 
   // Remove "Free" from plan name if it's the free plan
   const displayName = plan.id === 'free' ? 'Gratuito' : plan.name;

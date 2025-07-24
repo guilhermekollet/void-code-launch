@@ -87,27 +87,8 @@ serve(async (req) => {
         logStep('Stripe IDs found', { stripeCustomerId, stripeSubscriptionId });
       }
 
-      // Try to update or create subscription record
-      const { error: upsertSubscriptionError } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          plan_type: planType,
-          status: 'active',
-          current_period_start: new Date().toISOString(),
-          current_period_end: new Date(Date.now() + (billingCycle === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000).toISOString(),
-          stripe_customer_id: stripeCustomerId,
-          stripe_subscription_id: stripeSubscriptionId,
-        }, { 
-          onConflict: 'user_id' 
-        });
-
-      if (upsertSubscriptionError) {
-        logStep('Error upserting subscription', upsertSubscriptionError);
-        // Continue even if subscription record fails, as user status was updated
-      } else {
-        logStep('Subscription record updated');
-      }
+      // Note: Tabela 'subscriptions' não existe, apenas atualizamos 'users'
+      logStep('User reactivated successfully', { userId, planType, billingCycle });
 
       return new Response(
         JSON.stringify({ 

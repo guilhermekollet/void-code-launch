@@ -91,14 +91,14 @@ serve(async (req) => {
     );
 
     // Verificar se o usuário existe na tabela users
-    const { data: userRecord, error: userError } = await supabase
+    const { data: userRecord, error: fetchUserError } = await supabase
       .from('users')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (userError || !userRecord) {
-      logStep("User not found in users table", { userId, error: userError });
+    if (fetchUserError || !userRecord) {
+      logStep("User not found in users table", { userId, error: fetchUserError });
       throw new Error("Usuário não encontrado");
     }
 
