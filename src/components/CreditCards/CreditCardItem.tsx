@@ -81,10 +81,10 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105 bg-white border-0 shadow-lg">
-        {/* Credit Card Front */}
+      <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 bg-white border-0 shadow-md">
+        {/* Credit Card Front - Layout Horizontal */}
         <div 
-          className="relative h-56 p-6 text-white flex flex-col justify-between"
+          className="relative h-40 p-4 text-white flex flex-col justify-between aspect-video rounded-lg"
           style={{ 
             background: cardColor.startsWith('linear-gradient') 
               ? cardColor 
@@ -93,52 +93,26 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
           }}
         >
           {/* Card Pattern Overlay */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-4 right-4 w-32 h-32 rounded-full border-4 border-white/20"></div>
-            <div className="absolute top-8 right-8 w-24 h-24 rounded-full border-2 border-white/10"></div>
-            <div className="absolute bottom-4 left-4 w-20 h-20 rounded-full border-2 border-white/15"></div>
+          <div className="absolute inset-0 opacity-10 rounded-lg">
+            <div className="absolute top-2 right-2 w-16 h-16 rounded-full border-2 border-white/20"></div>
+            <div className="absolute top-4 right-4 w-12 h-12 rounded-full border border-white/10"></div>
+            <div className="absolute bottom-2 left-2 w-10 h-10 rounded-full border border-white/15"></div>
           </div>
 
           {/* Top Section */}
           <div className="relative flex justify-between items-start">
             <div className="flex items-center gap-2">
-              <CreditCard className="h-8 w-8" style={{ color: textColor }} />
-              <span className="text-sm font-medium opacity-90" style={{ color: textColor }}>
+              <CreditCard className="h-5 w-5" style={{ color: textColor }} />
+              <span className="text-xs font-medium opacity-90" style={{ color: textColor }}>
                 CARTÃO DE CRÉDITO
               </span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 hover:bg-white/20 rounded-full"
-                onClick={handleViewTransactions}
-                title="Ver transações"
-              >
-                <Eye className="h-4 w-4" style={{ color: textColor }} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 hover:bg-white/20 rounded-full"
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                <Edit className="h-4 w-4" style={{ color: textColor }} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 hover:bg-white/20 rounded-full"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4" style={{ color: textColor }} />
-              </Button>
-            </div>
+            <CardBrandLogo className="h-6 w-8" />
           </div>
 
           {/* Card Number */}
           <div className="relative">
-            <p className="text-xl font-mono tracking-wider" style={{ color: textColor }}>
+            <p className="text-lg font-mono tracking-wider" style={{ color: textColor }}>
               {generateCardNumber(card.id)}
             </p>
           </div>
@@ -147,59 +121,50 @@ export function CreditCardItem({ card }: CreditCardItemProps) {
           <div className="relative flex justify-between items-end">
             <div>
               <p className="text-xs opacity-75 uppercase tracking-wide" style={{ color: textColor }}>
-                Portador
-              </p>
-              <p className="text-lg font-semibold" style={{ color: textColor }}>
                 {cardName.toUpperCase()}
               </p>
               <p className="text-xs opacity-90" style={{ color: textColor }}>
                 {card.bank_name.toUpperCase()}
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-xs opacity-75" style={{ color: textColor }}>
-                  VENCE
-                </p>
-                <p className="text-sm font-mono" style={{ color: textColor }}>
-                  {String(card.due_date).padStart(2, '0')}/XX
-                </p>
-              </div>
-              <CardBrandLogo className="h-8 w-12" />
+            <div className="text-right">
+              <p className="text-xs opacity-75" style={{ color: textColor }}>
+                VENCE {String(card.due_date).padStart(2, '0')}/XX
+              </p>
             </div>
           </div>
         </div>
 
         {/* Card Info Section */}
-        <CardContent className="p-6 space-y-4 bg-gradient-to-br from-gray-50 to-white">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <CardContent className="p-4 space-y-3 bg-gradient-to-br from-gray-50 to-white">
+          <div className="grid grid-cols-2 gap-3 text-sm">
             {card.close_date && (
-              <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-blue-600 font-medium">Fecha dia</p>
-                <p className="text-blue-800 font-bold text-lg">{card.close_date}</p>
+              <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-blue-600 font-medium text-xs">Fechamento</p>
+                <p className="text-blue-800 font-bold">{card.close_date}</p>
               </div>
             )}
-            <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
-              <p className="text-red-600 font-medium">Vence dia</p>
-              <p className="text-red-800 font-bold text-lg">{card.due_date}</p>
+            <div className="text-center p-2 bg-red-50 rounded-lg border border-red-100">
+              <p className="text-red-600 font-medium text-xs">Vencimento</p>
+              <p className="text-red-800 font-bold">{card.due_date}</p>
             </div>
           </div>
 
-          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
-            <p className="text-green-700 text-sm font-medium mb-1">Gasto este mês</p>
-            <p className="text-2xl font-bold text-green-800">
+          <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+            <p className="text-green-700 text-xs font-medium mb-1">Gasto este mês</p>
+            <p className="text-xl font-bold text-green-800">
               {formatCurrency(monthlySpent)}
             </p>
           </div>
 
           <Button
-            onClick={handleViewTransactions}
+            onClick={() => setIsEditModalOpen(true)}
             variant="outline"
             size="sm"
             className="w-full bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 transition-colors"
           >
-            <Eye className="h-4 w-4 mr-2" />
-            Ver Transações
+            <Edit className="h-4 w-4 mr-2" />
+            Gerenciar Cartão
           </Button>
         </CardContent>
       </Card>

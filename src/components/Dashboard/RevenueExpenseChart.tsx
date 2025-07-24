@@ -36,6 +36,7 @@ export function RevenueExpenseChart() {
       .filter(t => t.type === 'despesa')
       .reduce((sum, t) => sum + Number(t.value), 0);
 
+    // Retornar as duas barras lado a lado, com despesas como valores positivos
     return [
       {
         name: 'Receita',
@@ -45,7 +46,7 @@ export function RevenueExpenseChart() {
       },
       {
         name: 'Despesa', 
-        value: expenses,
+        value: Math.abs(expenses), // Tornar despesas positivas para mostrar barras lado a lado
         color: '#EF4444',
         icon: TrendingDown
       }

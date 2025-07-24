@@ -42,8 +42,19 @@ const Recover = () => {
         } else {
           console.log('Subscription data:', subscriptionData);
           
-          // Se o plano está cancelado ou não tem assinatura ativa, precisa de recovery
-          if (subscriptionData?.plan_status === 'canceled' || !subscriptionData?.subscribed) {
+          // Se o plano está cancelado, expirado ou não tem assinatura ativa, precisa de recovery
+          const now = new Date();
+          const trialEnd = subscriptionData?.trial_end ? new Date(subscriptionData.trial_end) : null;
+          const trialExpired = trialEnd && now > trialEnd;
+          
+          if (subscriptionData?.plan_status === 'canceled' || 
+              trialExpired || 
+              !subscriptionData?.subscribed) {
+            console.log('User needs recovery:', { 
+              planStatus: subscriptionData?.plan_status, 
+              trialExpired, 
+              subscribed: subscriptionData?.subscribed 
+            });
             setNeedsRecovery(true);
           } else {
             // Usuário tem assinatura ativa, redirecionar para dashboard
