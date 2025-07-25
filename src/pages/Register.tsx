@@ -95,6 +95,50 @@ export default function Register() {
     }
   }, [user, navigate]);
 
+  // Recuperar dados do localStorage ao inicializar
+  useEffect(() => {
+    const recoverFromLocalStorage = () => {
+      try {
+        const savedData = localStorage.getItem('registrationData');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          console.log('Recuperando dados do localStorage:', parsedData);
+          
+          setFormData({
+            name: parsedData.name || '',
+            email: parsedData.email || '',
+            phone: parsedData.phone || '55',
+            birthDate: parsedData.birthDate || '',
+            city: parsedData.city || '',
+            selectedPlan: parsedData.selectedPlan || '',
+            billingCycle: parsedData.billingCycle || 'yearly'
+          });
+
+          if (parsedData.onboardingId) {
+            setOnboardingId(parsedData.onboardingId);
+          }
+
+          // Direcionar para a etapa do plano se voltou do checkout
+          setCurrentStep('plan');
+          setIsContinuation(true);
+          
+          toast({
+            title: "Dados recuperados",
+            description: "Continuando de onde você parou.",
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao recuperar dados do localStorage:', error);
+        localStorage.removeItem('registrationData');
+      }
+    };
+
+    // Recuperar dados apenas se não for um usuário logado
+    if (!user) {
+      recoverFromLocalStorage();
+    }
+  }, [user, toast]);
+
   const validateName = (name: string): boolean => {
     const nameParts = name.trim().split(' ').filter(part => part.length > 0);
     return nameParts.length >= 2;

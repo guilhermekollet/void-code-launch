@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import { supabase } from "@/integrations/supabase/client"
 
 interface City {
   id: number
@@ -46,20 +47,49 @@ export function CityInput({
     setLoading(true)
     setOpen(true)
     try {
-      const response = await fetch(
-        `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${encodeURIComponent(searchTerm)}`
-      )
-      const data: City[] = await response.json()
-      
-      // Ordenar por nome e limitar a 20 resultados
-      const sortedCities = data
-        .sort((a, b) => a.nome.localeCompare(b.nome))
-        .slice(0, 20)
-      
-      setCities(sortedCities)
+      // Tentar usar a edge function primeiro
+      const { data, error } = await supabase.functions.invoke('get-cities', {
+        body: { searchTerm }
+      })
+
+      if (error) throw error
+
+      if (data && data.cities) {
+        setCities(data.cities.map((city: any) => ({
+          id: city.id,
+          nome: city.name,
+          microrregiao: {
+            mesorregiao: {
+              UF: {
+                sigla: city.state,
+                nome: city.stateName
+              }
+            }
+          }
+        })))
+      } else {
+        setCities([])
+      }
     } catch (error) {
-      console.error('Erro ao buscar cidades:', error)
-      setCities([])
+      console.error('Erro ao buscar cidades via edge function, tentando API direta:', error)
+      
+      // Fallback para API direta do IBGE
+      try {
+        const response = await fetch(
+          `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${encodeURIComponent(searchTerm)}`
+        )
+        const data: City[] = await response.json()
+        
+        // Ordenar por nome e limitar a 20 resultados
+        const sortedCities = data
+          .sort((a, b) => a.nome.localeCompare(b.nome))
+          .slice(0, 20)
+        
+        setCities(sortedCities)
+      } catch (fallbackError) {
+        console.error('Erro ao buscar cidades via API direta:', fallbackError)
+        setCities([])
+      }
     } finally {
       setLoading(false)
     }
