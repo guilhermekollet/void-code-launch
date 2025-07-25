@@ -84,15 +84,48 @@ serve(async (req) => {
         throw new Error(`Failed to update existing user: ${updateError.message}`);
       }
 
-      // Update onboarding status
-      await supabase
-        .from('onboarding')
-        .update({ 
-          payment_confirmed: true,
-          trial_start_date: trialStart.toISOString(),
-          trial_end_date: trialEnd.toISOString()
-        })
-        .eq('id', onboardingId);
+      // Send welcome email
+      console.log('[create-user-from-onboarding] 📧 Sending welcome email...');
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+          body: {
+            email: onboardingData.email,
+            name: onboardingData.name,
+            planType: onboardingData.selected_plan
+          }
+        });
+
+        if (emailError) {
+          console.error('[create-user-from-onboarding] 💥 Failed to send welcome email:', emailError);
+        } else {
+          console.log('[create-user-from-onboarding] ✅ Welcome email sent successfully');
+        }
+
+        // Update onboarding status with email status
+        await supabase
+          .from('onboarding')
+          .update({ 
+            payment_confirmed: true,
+            trial_start_date: trialStart.toISOString(),
+            trial_end_date: trialEnd.toISOString(),
+            sended_email: !emailError
+          })
+          .eq('id', onboardingId);
+
+      } catch (emailSendError) {
+        console.error('[create-user-from-onboarding] 💥 Error sending welcome email:', emailSendError);
+        
+        // Update onboarding status without email flag
+        await supabase
+          .from('onboarding')
+          .update({ 
+            payment_confirmed: true,
+            trial_start_date: trialStart.toISOString(),
+            trial_end_date: trialEnd.toISOString(),
+            sended_email: false
+          })
+          .eq('id', onboardingId);
+      }
 
       return new Response(
         JSON.stringify({ 
@@ -181,15 +214,48 @@ serve(async (req) => {
 
     console.log('[create-user-from-onboarding] Public user created successfully:', newUser.id);
 
-    // Update onboarding status
-    await supabase
-      .from('onboarding')
-      .update({ 
-        payment_confirmed: true,
-        trial_start_date: trialStart.toISOString(),
-        trial_end_date: trialEnd.toISOString()
-      })
-      .eq('id', onboardingId);
+    // Send welcome email
+    console.log('[create-user-from-onboarding] 📧 Sending welcome email to new user...');
+    try {
+      const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+        body: {
+          email: onboardingData.email,
+          name: onboardingData.name,
+          planType: onboardingData.selected_plan
+        }
+      });
+
+      if (emailError) {
+        console.error('[create-user-from-onboarding] 💥 Failed to send welcome email:', emailError);
+      } else {
+        console.log('[create-user-from-onboarding] ✅ Welcome email sent successfully');
+      }
+
+      // Update onboarding status with email status
+      await supabase
+        .from('onboarding')
+        .update({ 
+          payment_confirmed: true,
+          trial_start_date: trialStart.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+          sended_email: !emailError
+        })
+        .eq('id', onboardingId);
+
+    } catch (emailSendError) {
+      console.error('[create-user-from-onboarding] 💥 Error sending welcome email:', emailSendError);
+      
+      // Update onboarding status without email flag
+      await supabase
+        .from('onboarding')
+        .update({ 
+          payment_confirmed: true,
+          trial_start_date: trialStart.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+          sended_email: false
+        })
+        .eq('id', onboardingId);
+    }
 
     return new Response(
       JSON.stringify({ 
