@@ -5,17 +5,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, CreditCard } from "lucide-react";
+import { Eye, CreditCard, Calendar, DollarSign, TrendingUp } from "lucide-react";
 import { InstallmentDetailsModal } from "@/components/CreditCards/InstallmentDetailsModal";
 import { useCreditCards } from "@/hooks/useCreditCards";
 import { useTransactions } from "@/hooks/useFinancialData";
 import { useGroupedPurchases } from "@/hooks/useGroupedPurchases";
+import { useCreditCardBills } from "@/hooks/useCreditCardBillsNew";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function Cartoes() {
   const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
   const [installmentModalOpen, setInstallmentModalOpen] = useState(false);
   const { data: creditCards = [] } = useCreditCards();
   const { data: transactions = [] } = useTransactions();
+  const { data: bills = [] } = useCreditCardBills();
   const groupedPurchases = useGroupedPurchases(transactions);
 
   const formatCurrency = (value: number) => {
@@ -42,16 +46,177 @@ export default function Cartoes() {
     return '#ffffff';
   };
 
+  // Calculate summary stats
+  const totalBillAmount = bills.reduce((sum, bill) => sum + bill.bill_amount, 0);
+  const totalPaidAmount = bills.reduce((sum, bill) => sum + bill.paid_amount, 0);
+  const totalRemainingAmount = bills.reduce((sum, bill) => sum + bill.remaining_amount, 0);
+  const upcomingBills = bills.filter(bill => new Date(bill.due_date) > new Date()).length;
+
   return (
     <div className="space-y-6">
+      {/* Header Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-white border-[#E2E8F0]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[#64748B]">Total em Faturas</p>
+                <p className="text-lg font-semibold text-[#121212]">{formatCurrency(totalBillAmount)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-[#E2E8F0]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[#64748B]">Valores Pagos</p>
+                <p className="text-lg font-semibold text-[#121212]">{formatCurrency(totalPaidAmount)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-[#E2E8F0]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[#64748B]">Pendente</p>
+                <p className="text-lg font-semibold text-[#121212]">{formatCurrency(totalRemainingAmount)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-[#E2E8F0]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[#64748B]">Próximas Faturas</p>
+                <p className="text-lg font-semibold text-[#121212]">{upcomingBills}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Credit Cards Section */}
       <CreditCardsSection />
+      
+      {/* Bills Bar Chart */}
       <BillsBarChart />
+
+      {/* Bills List */}
+      {bills.length > 0 && (
+        <Card className="bg-white border-[#E2E8F0]">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-[#121212]">Faturas Detalhadas</CardTitle>
+            <p className="text-sm text-[#64748B]">Todas as faturas dos seus cartões</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {bills.map((bill) => {
+                const creditCardInfo = getCreditCardInfo(bill.credit_card_id);
+                const isOverdue = new Date(bill.due_date) < new Date() && bill.status !== 'paid';
+                const isPaid = bill.status === 'paid';
+                
+                return (
+                  <div
+                    key={bill.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                      isPaid 
+                        ? 'border-green-200 bg-green-50' 
+                        : isOverdue 
+                        ? 'border-red-200 bg-red-50' 
+                        : 'border-[#E2E8F0] hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        isPaid 
+                          ? 'bg-green-100' 
+                          : isOverdue 
+                          ? 'bg-red-100' 
+                          : 'bg-blue-50'
+                      }`}>
+                        <CreditCard className={`h-5 w-5 ${
+                          isPaid 
+                            ? 'text-green-600' 
+                            : isOverdue 
+                            ? 'text-red-600' 
+                            : 'text-blue-600'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-[#121212]">
+                            {creditCardInfo?.card_name || creditCardInfo?.bank_name || 'Cartão'}
+                          </p>
+                          <Badge
+                            variant={isPaid ? 'default' : isOverdue ? 'destructive' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {isPaid ? 'Paga' : isOverdue ? 'Vencida' : 'Pendente'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm text-[#64748B]">
+                            Vencimento: {format(parseISO(bill.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                          {bill.close_date && (
+                            <>
+                              <span className="text-sm text-[#64748B]">•</span>
+                              <span className="text-sm text-[#64748B]">
+                                Fechamento: {format(parseISO(bill.close_date), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        {bill.paid_amount > 0 && bill.remaining_amount > 0 && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            Pago: {formatCurrency(bill.paid_amount)} de {formatCurrency(bill.bill_amount)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="font-semibold text-[#121212]">
+                        {formatCurrency(bill.bill_amount)}
+                      </p>
+                      {bill.remaining_amount > 0 && !isPaid && (
+                        <p className="text-sm text-red-600 font-medium">
+                          Restante: {formatCurrency(bill.remaining_amount)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Seção de Compras Recentes do Cartão */}
       {groupedPurchases.length > 0 && (
         <Card className="bg-white border-[#E2E8F0]">
           <CardHeader>
-            <CardTitle className="text-[#121212]">Compras Recentes</CardTitle>
+            <CardTitle className="text-lg font-semibold text-[#121212]">Compras Recentes</CardTitle>
+            <p className="text-sm text-[#64748B]">Últimas transações no cartão de crédito</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
