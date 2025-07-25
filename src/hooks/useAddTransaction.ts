@@ -22,13 +22,25 @@ interface TransactionData {
 }
 
 export function useAddTransaction() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (transactionData: TransactionData) => {
-      if (!user) throw new Error('User not authenticated');
+      console.log('[useAddTransaction] Starting transaction creation:', { user: !!user, session: !!session });
+      
+      if (!user || !session) {
+        console.error('[useAddTransaction] Authentication failed:', { user: !!user, session: !!session });
+        throw new Error('User not authenticated');
+      }
+
+      // Verify session is still valid by checking auth state
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !currentSession) {
+        console.error('[useAddTransaction] Session validation failed:', sessionError);
+        throw new Error('Session expired. Please login again.');
+      }
 
       // Input validation
       if (!transactionData.amount || transactionData.amount <= 0) {
@@ -135,10 +147,13 @@ export function useAddTransaction() {
             .select()
             .single();
 
-          if (error) {
-            console.error('Error adding credit card installment transaction:', error);
-            throw error;
+        if (error) {
+          console.error('[useAddTransaction] Error adding credit card installment transaction:', error);
+          if (error.code === 'PGRST301') {
+            throw new Error('Authentication failed. Please login again.');
           }
+          throw error;
+        }
           
           transactions.push(data);
         }
@@ -166,7 +181,10 @@ export function useAddTransaction() {
           .single();
 
         if (error) {
-          console.error('Error adding credit card transaction:', error);
+          console.error('[useAddTransaction] Error adding credit card transaction:', error);
+          if (error.code === 'PGRST301') {
+            throw new Error('Authentication failed. Please login again.');
+          }
           throw error;
         }
 
@@ -200,7 +218,10 @@ export function useAddTransaction() {
             .single();
 
           if (error) {
-            console.error('Error adding installment transaction:', error);
+            console.error('[useAddTransaction] Error adding installment transaction:', error);
+            if (error.code === 'PGRST301') {
+              throw new Error('Authentication failed. Please login again.');
+            }
             throw error;
           }
           
@@ -227,7 +248,10 @@ export function useAddTransaction() {
           .single();
 
         if (error) {
-          console.error('Error adding transaction:', error);
+          console.error('[useAddTransaction] Error adding transaction:', error);
+          if (error.code === 'PGRST301') {
+            throw new Error('Authentication failed. Please login again.');
+          }
           throw error;
         }
 
@@ -259,10 +283,30 @@ export function useAddTransaction() {
       });
     },
     onError: (error) => {
-      console.error('Error adding transaction:', error);
+      console.error('[useAddTransaction] Error adding transaction:', error);
+      
+      let errorMessage = "Erro ao adicionar transação. Tente novamente.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Authentication failed') || error.message.includes('Session expired')) {
+          errorMessage = "Sessão expirada. Faça login novamente.";
+          // Redirect to login after showing error
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+        } else if (error.message.includes('User not authenticated')) {
+          errorMessage = "Usuário não autenticado. Faça login novamente.";
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Erro",
-        description: "Erro ao adicionar transação. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
