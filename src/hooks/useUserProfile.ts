@@ -15,6 +15,8 @@ interface UserProfile {
   completed_onboarding: boolean | null;
   plan_type: string | null;
   billing_cycle: string | null;
+  insights_alerts: boolean | null;
+  inactive_alerts: boolean | null;
 }
 
 export function useUserProfile() {
@@ -44,7 +46,7 @@ export function useUpdateUserProfile() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'phone_number' | 'birth_date' | 'city' | 'completed_onboarding'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'phone_number' | 'birth_date' | 'city' | 'completed_onboarding' | 'insights_alerts' | 'inactive_alerts'>>) => {
       if (!user?.id) throw new Error('User not authenticated');
       
       const { data, error } = await supabase

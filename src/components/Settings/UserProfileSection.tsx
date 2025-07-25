@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
 import { useState, useEffect } from "react";
+import { DateInputMask } from "@/components/ui/date-input-mask";
+import { CityInput } from "@/components/ui/city-input";
 
 export function UserProfileSection() {
   const { data: userProfile, isLoading } = useUserProfile();
@@ -13,19 +15,58 @@ export function UserProfileSection() {
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [city, setCity] = useState("");
 
   useEffect(() => {
     if (userProfile) {
       setName(userProfile.name || "");
       setEmail(userProfile.email || "");
+      
+      // Converter data do formato ISO para dd/mm/aaaa
+      if (userProfile.birth_date) {
+        const date = new Date(userProfile.birth_date);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        setBirthDate(`${day}/${month}/${year}`);
+      } else {
+        setBirthDate("");
+      }
+      
+      setCity(userProfile.city || "");
     }
   }, [userProfile]);
 
   const handleSave = async () => {
-    updateProfile.mutate({
+    const updates: any = {
       name: name.trim(),
       email: email.trim(),
-    });
+      city: city.trim() || null,
+    };
+
+    // Converter e validar data de nascimento
+    if (birthDate.trim()) {
+      const [day, month, year] = birthDate.split('/');
+      if (day && month && year && year.length === 4) {
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const today = new Date();
+        const age = today.getFullYear() - date.getFullYear();
+        const monthDiff = today.getMonth() - date.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+          // age--;
+        }
+        
+        if (age >= 16 && date <= today) {
+          updates.birth_date = date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+        }
+      }
+    } else {
+      updates.birth_date = null;
+    }
+
+    updateProfile.mutate(updates);
   };
 
   if (isLoading) {
@@ -51,7 +92,21 @@ export function UserProfileSection() {
 
   const hasChanges = 
     name !== (userProfile?.name || "") || 
-    email !== (userProfile?.email || "");
+    email !== (userProfile?.email || "") ||
+    city !== (userProfile?.city || "") ||
+    (() => {
+      if (!userProfile?.birth_date && !birthDate) return false;
+      if (!userProfile?.birth_date) return !!birthDate;
+      if (!birthDate) return !!userProfile?.birth_date;
+      
+      const date = new Date(userProfile.birth_date);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const formattedDate = `${day}/${month}/${year}`;
+      
+      return birthDate !== formattedDate;
+    })();
 
   return (
     <Card>
@@ -84,6 +139,26 @@ export function UserProfileSection() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seu@email.com"
+            className="border-[#DEDEDE] focus:border-[#61710C]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="birthDate">Data de Nascimento</Label>
+          <DateInputMask
+            value={birthDate}
+            onChange={setBirthDate}
+            placeholder="dd/mm/aaaa"
+            className="border-[#DEDEDE] focus:border-[#61710C]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="city">Cidade</Label>
+          <CityInput
+            value={city}
+            onValueChange={setCity}
+            placeholder="Digite sua cidade"
             className="border-[#DEDEDE] focus:border-[#61710C]"
           />
         </div>
