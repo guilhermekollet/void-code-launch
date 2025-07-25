@@ -1,8 +1,14 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
+import { SESv2Client, SendEmailCommand } from "https://esm.sh/@aws-sdk/client-sesv2@3.423.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_SECRET"));
+const sesClient = new SESv2Client({
+  region: Deno.env.get("AWS_REGION") || "us-east-1",
+  credentials: {
+    accessKeyId: Deno.env.get("AWS_ACCESS_KEY_ID")!,
+    secretAccessKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+  },
+});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,61 +52,79 @@ serve(async (req) => {
 
     const planText = planType === 'premium' ? 'Premium' : planType === 'free' ? 'Gratuito' : 'Premium';
     
-    const emailResponse = await resend.emails.send({
-      from: "Bolsofy <noreply@bolsofy.com>",
-      to: [email],
-      subject: "Bem-vindo ao Bolsofy! 🎉",
-      html: `
-        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <div style="text-align: center; padding: 40px 20px; background: linear-gradient(135deg, #61710C 0%, #4a5709 100%); color: white; border-radius: 12px 12px 0 0;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Bem-vindo ao Bolsofy!</h1>
-            <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">Sua jornada financeira começa agora</p>
+    const htmlContent = `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="text-align: center; padding: 40px 20px; background: linear-gradient(135deg, #61710C 0%, #4a5709 100%); color: white; border-radius: 12px 12px 0 0;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Bem-vindo ao Bolsofy!</h1>
+          <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">Sua jornada financeira começa agora</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <p style="font-size: 18px; margin-bottom: 20px;">Olá, ${name}!</p>
+          
+          <p style="margin-bottom: 20px;">
+            Que alegria ter você conosco! Sua conta foi criada com sucesso e você agora tem acesso ao plano <strong>${planText}</strong>.
+          </p>
+          
+          <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #61710C;">
+            <h3 style="margin-top: 0; color: #61710C;">🚀 Comece agora mesmo:</h3>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+              <li style="margin-bottom: 8px;">Adicione suas primeiras receitas e despesas</li>
+              <li style="margin-bottom: 8px;">Configure suas categorias personalizadas</li>
+              <li style="margin-bottom: 8px;">Acompanhe seus gastos recorrentes</li>
+              <li style="margin-bottom: 8px;">Visualize relatórios detalhados</li>
+            </ul>
           </div>
           
-          <div style="padding: 40px 30px; background: white; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <p style="font-size: 18px; margin-bottom: 20px;">Olá, ${name}!</p>
-            
-            <p style="margin-bottom: 20px;">
-              Que alegria ter você conosco! Sua conta foi criada com sucesso e você agora tem acesso ao plano <strong>${planText}</strong>.
-            </p>
-            
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #61710C;">
-              <h3 style="margin-top: 0; color: #61710C;">🚀 Comece agora mesmo:</h3>
-              <ul style="margin: 15px 0; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Adicione suas primeiras receitas e despesas</li>
-                <li style="margin-bottom: 8px;">Configure suas categorias personalizadas</li>
-                <li style="margin-bottom: 8px;">Acompanhe seus gastos recorrentes</li>
-                <li style="margin-bottom: 8px;">Visualize relatórios detalhados</li>
-              </ul>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://dashboard.bolsofy.com" 
-                 style="display: inline-block; background: #61710C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-                Acessar Dashboard
-              </a>
-            </div>
-            
-            <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
-              Dúvidas? Precisa de ajuda? Entre em contato conosco pelo WhatsApp: 
-              <a href="https://wa.me/5551992527815" style="color: #61710C; text-decoration: none;">+55 51 99252-7815</a>
-            </p>
-            
-            <p style="color: #666; font-size: 14px; margin-top: 15px;">
-              Com carinho,<br>
-              <strong>Equipe Bolsofy</strong>
-            </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://dashboard.bolsofy.com" 
+               style="display: inline-block; background: #61710C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+              Acessar Dashboard
+            </a>
           </div>
+          
+          <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
+            Dúvidas? Precisa de ajuda? Entre em contato conosco pelo WhatsApp: 
+            <a href="https://wa.me/5551992527815" style="color: #61710C; text-decoration: none;">+55 51 99252-7815</a>
+          </p>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 15px;">
+            Com carinho,<br>
+            <strong>Equipe Bolsofy</strong>
+          </p>
         </div>
-      `,
+      </div>
+    `;
+
+    const sendEmailCommand = new SendEmailCommand({
+      FromEmailAddress: "noreply@bolsofy.com",
+      Destination: {
+        ToAddresses: [email],
+      },
+      Content: {
+        Simple: {
+          Subject: {
+            Data: "Bem-vindo ao Bolsofy! 🎉",
+            Charset: "UTF-8",
+          },
+          Body: {
+            Html: {
+              Data: htmlContent,
+              Charset: "UTF-8",
+            },
+          },
+        },
+      },
     });
 
-    logStep("Email sent successfully", { messageId: emailResponse.data?.id });
+    const emailResponse = await sesClient.send(sendEmailCommand);
+
+    logStep("Email sent successfully via AWS SES", { messageId: emailResponse.MessageId });
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        messageId: emailResponse.data?.id,
+        messageId: emailResponse.MessageId,
         message: "Email de boas-vindas enviado com sucesso!" 
       }),
       { 
