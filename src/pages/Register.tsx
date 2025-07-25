@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { IOSSwitch } from '@/components/ui/ios-switch';
-import { DatePicker } from '@/components/ui/date-picker';
+import { DateInputMask } from '@/components/ui/date-input-mask';
 import { CityInput } from '@/components/ui/city-input';
 
 interface Plan {
@@ -58,9 +58,8 @@ type RegistrationStep = 'name' | 'email' | 'phone' | 'birthDate' | 'city' | 'pla
 interface FormData {
   name: string;
   email: string;
-  confirmEmail: string;
   phone: string;
-  birthDate: Date | undefined;
+  birthDate: string;
   city: string;
   selectedPlan: string;
   billingCycle: string;
@@ -71,9 +70,8 @@ export default function Register() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
-    confirmEmail: '',
     phone: '55',
-    birthDate: undefined,
+    birthDate: '',
     city: '',
     selectedPlan: '',
     billingCycle: 'yearly'
@@ -157,7 +155,13 @@ export default function Register() {
         name: updateData.name || formData.name,
         email: updateData.email || formData.email,
         phone: (updateData.phone || formData.phone).replace(/\D/g, ''),
-        birth_date: (updateData.birthDate || formData.birthDate)?.toISOString().split('T')[0] || null,
+        birth_date: updateData.birthDate || formData.birthDate ? 
+          (() => {
+            const dateStr = updateData.birthDate || formData.birthDate;
+            if (!dateStr) return null;
+            const [day, month, year] = dateStr.split('/');
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          })() : null,
         city: updateData.city || formData.city,
         selected_plan: updateData.selectedPlan || formData.selectedPlan,
         billing_cycle: updateData.billingCycle || formData.billingCycle,
@@ -220,9 +224,15 @@ export default function Register() {
     setFormData({
       name: existingData.name || '',
       email: existingData.email || '',
-      confirmEmail: existingData.email || '',
       phone: existingData.phone || '55',
-      birthDate: existingData.birthDate ? new Date(existingData.birthDate) : undefined,
+      birthDate: existingData.birthDate ? 
+        (() => {
+          const date = new Date(existingData.birthDate);
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const year = date.getFullYear().toString();
+          return `${day}/${month}/${year}`;
+        })() : '',
       city: existingData.city || '',
       selectedPlan: existingData.selectedPlan || '',
       billingCycle: existingData.billingCycle || 'yearly'
@@ -250,14 +260,28 @@ export default function Register() {
     setIsContinuation(true);
   };
 
-  const validateBirthDate = (date: Date | undefined): boolean => {
-    if (!date) return false;
+  const validateBirthDate = (dateStr: string): boolean => {
+    if (!dateStr || dateStr.length !== 10) return false;
+    
+    const [day, month, year] = dateStr.split('/').map(Number);
+    
+    // Verificar se os valores são válidos
+    if (!day || !month || !year || month > 12 || day > 31) return false;
+    
+    const date = new Date(year, month - 1, day);
     const today = new Date();
+    
+    // Verificar se a data é válida
+    if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+      return false;
+    }
+    
+    // Verificar idade mínima (16 anos)
     const age = today.getFullYear() - date.getFullYear();
     const monthDiff = today.getMonth() - date.getMonth();
     
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
-      return age - 1 >= 16; // Mínimo 16 anos
+      return age - 1 >= 16;
     }
     
     return age >= 16 && date <= today; // Não pode ser data futura
@@ -272,9 +296,7 @@ export default function Register() {
       case 'name':
         return validateName(formData.name);
       case 'email':
-        return validateEmail(formData.email) && 
-               validateEmail(formData.confirmEmail) && 
-               formData.email === formData.confirmEmail;
+        return validateEmail(formData.email);
       case 'phone':
         return validatePhone(formData.phone);
       case 'birthDate':
@@ -296,7 +318,7 @@ export default function Register() {
           errorMessage = 'Por favor, insira nome e sobrenome';
           break;
         case 'email':
-          errorMessage = 'Por favor, insira emails válidos e iguais';
+          errorMessage = 'Por favor, insira um email válido';
           break;
         case 'phone':
           errorMessage = 'Por favor, insira um telefone válido';
@@ -580,36 +602,19 @@ export default function Register() {
                   <p className="text-sm text-[#64748B]">Insira um email válido</p>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-[#121212]">Email *</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="seu@email.com" 
-                      value={formData.email} 
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-30" 
-                    />
-                    {formData.email && !validateEmail(formData.email) && (
-                      <p className="text-sm text-red-500">Email inválido</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmEmail" className="text-[#121212]">Confirmar email *</Label>
-                    <Input 
-                      id="confirmEmail" 
-                      type="email" 
-                      placeholder="seu@email.com" 
-                      value={formData.confirmEmail} 
-                      onChange={(e) => handleInputChange('confirmEmail', e.target.value)}
-                      className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-30" 
-                    />
-                    {formData.confirmEmail && formData.email !== formData.confirmEmail && (
-                      <p className="text-sm text-red-500">Emails não coincidem</p>
-                    )}
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-[#121212]">Email *</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="seu@email.com" 
+                    value={formData.email} 
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    className="border-[#DEDEDE] focus:border-[#61710C] placeholder:opacity-30" 
+                  />
+                  {formData.email && !validateEmail(formData.email) && (
+                    <p className="text-sm text-red-500">Email inválido</p>
+                  )}
                 </div>
               </div>
             )}
@@ -649,10 +654,10 @@ export default function Register() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="birthDate" className="text-[#121212]">Data de nascimento *</Label>
-                  <DatePicker
-                    date={formData.birthDate}
-                    onDateChange={(date) => setFormData(prev => ({ ...prev, birthDate: date }))}
-                    placeholder="Selecione sua data de nascimento"
+                  <DateInputMask
+                    value={formData.birthDate}
+                    onChange={(value) => handleInputChange('birthDate', value)}
+                    placeholder="dd/mm/aaaa"
                     className="w-full"
                   />
                   {formData.birthDate && !validateBirthDate(formData.birthDate) && (
