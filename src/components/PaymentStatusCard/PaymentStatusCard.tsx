@@ -13,7 +13,7 @@ interface PaymentStatusCardProps {
   onBackToLogin: () => void;
 }
 
-const LOGO_SRC = "/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png";
+const LOGO_SRC = "https://vkmyobxdztspftuamiyp.supabase.co/storage/v1/object/public/bsf//bsf-logo.png";
 
 export const PaymentStatusCard: React.FC<PaymentStatusCardProps> = ({
   status,

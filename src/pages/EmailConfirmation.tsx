@@ -12,7 +12,7 @@ export default function EmailConfirmation() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <img 
-              src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
+              src="https://vkmyobxdztspftuamiyp.supabase.co/storage/v1/object/public/bsf//bsf-logo.png" 
               alt="Bolsofy Logo" 
               className="h-12 w-auto" 
             />

@@ -102,7 +102,7 @@ export function AppSidebar() {
       }}>
         <SidebarHeader className="p-6 bg-white">
           <div className="flex items-center gap-3">
-            <img src="/lovable-uploads/549233e8-56e8-49c8-b3d7-3393077d8256.png" alt="Bolsofy Logo" className="h-10 w-auto" />
+            <img src="https://vkmyobxdztspftuamiyp.supabase.co/storage/v1/object/public/bsf//bsf-logo.png" alt="Bolsofy Logo" className="h-10 w-auto" />
           </div>
         </SidebarHeader>
         <SidebarContent className="bg-white">

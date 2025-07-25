@@ -149,7 +149,7 @@ const Recover = () => {
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
               <img 
-                src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
+                src="https://vkmyobxdztspftuamiyp.supabase.co/storage/v1/object/public/bsf//bsf-logo.png" 
                 alt="Bolsofy Logo" 
                 className="h-12 w-auto mx-auto" 
               />
@@ -174,7 +174,7 @@ const Recover = () => {
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
               <img 
-                src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
+                src="https://vkmyobxdztspftuamiyp.supabase.co/storage/v1/object/public/bsf//bsf-logo.png" 
                 alt="Bolsofy Logo" 
                 className="h-12 w-auto mx-auto" 
               />
@@ -202,11 +202,11 @@ const Recover = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <div className="mx-auto mb-6">
-            <img 
-              src="/lovable-uploads/cbc5c4e1-192c-4793-88bf-85942b0381ab.png" 
-              alt="Bolsofy Logo" 
-              className="h-16 w-auto mx-auto" 
-            />
+             <img 
+               src="https://vkmyobxdztspftuamiyp.supabase.co/storage/v1/object/public/bsf//bsf-logo.png" 
+               alt="Bolsofy Logo" 
+               className="h-16 w-auto mx-auto" 
+             />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Reative sua Assinatura
