@@ -73,7 +73,11 @@ serve(async (req) => {
           trial_start: trialStart.toISOString(),
           trial_end: trialEnd.toISOString(),
           plan_status: 'active',
-          completed_onboarding: true
+          completed_onboarding: true,
+          birth_date: onboardingData.birth_date,
+          city: onboardingData.city,
+          insights_alerts: true,
+          inactive_alerts: true
         })
         .eq('id', existingUser.id)
         .select()
@@ -199,7 +203,11 @@ serve(async (req) => {
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),
         plan_status: 'active',
-        completed_onboarding: true
+        completed_onboarding: true,
+        birth_date: onboardingData.birth_date,
+        city: onboardingData.city,
+        insights_alerts: true,
+        inactive_alerts: true
       }])
       .select()
       .single();
