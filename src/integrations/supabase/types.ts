@@ -705,6 +705,10 @@ export type Database = {
         Args: { card_id: number; due_date_param: string }
         Returns: number
       }
+      generate_credit_card_bill_improved: {
+        Args: { card_id: number; transaction_date: string }
+        Returns: number
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown

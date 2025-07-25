@@ -1,6 +1,6 @@
 
 import { CreditCardsSection } from "@/components/Dashboard/CreditCardsSection";
-import { BillsBarChart } from "@/components/CreditCards/BillsBarChart";
+import { BillsTimelineChart } from "@/components/CreditCards/BillsTimelineChart";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,7 +117,7 @@ export default function Cartoes() {
       <CreditCardsSection />
       
       {/* Bills Bar Chart */}
-      <BillsBarChart />
+      <BillsTimelineChart />
 
       {/* Bills List */}
       {bills.length > 0 && (

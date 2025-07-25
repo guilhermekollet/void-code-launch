@@ -64,17 +64,17 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
 
         const totalReceitas = regularReceitas + installmentReceitas;
 
-        // Regular expenses
+        // Regular expenses - Show as positive values for visualization
         const regularDespesas = monthTransactions
           .filter(t => t.type === 'despesa' && !t.is_installment)
-          .reduce((sum, t) => sum + Number(t.value), 0);
+          .reduce((sum, t) => sum + Math.abs(Number(t.value)), 0);
 
-        // Installment expenses - FIXED: Use individual installment value, not total
+        // Installment expenses - Show as positive values for visualization
         const installmentDespesas = installmentTransactions
           .filter(t => t.type === 'despesa')
           .reduce((sum, t) => {
             // Use installment_value if available, otherwise divide total by installments
-            const installmentValue = t.installment_value ? Number(t.installment_value) : Number(t.value) / Number(t.total_installments);
+            const installmentValue = t.installment_value ? Math.abs(Number(t.installment_value)) : Math.abs(Number(t.value)) / Number(t.total_installments);
             return sum + installmentValue;
           }, 0);
 
@@ -82,7 +82,7 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
 
         const gastosRecorrentes = monthTransactions
           .filter(t => t.type === 'despesa' && t.is_recurring)
-          .reduce((sum, t) => sum + Number(t.value), 0);
+          .reduce((sum, t) => sum + Math.abs(Number(t.value)), 0);
         
         // For 2-year period, include year in label to avoid confusion
         const monthLabel = months === 24 
