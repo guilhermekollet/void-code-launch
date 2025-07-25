@@ -367,6 +367,8 @@ export type Database = {
       onboarding: {
         Row: {
           billing_cycle: string
+          birth_date: string | null
+          city: string | null
           created_at: string | null
           email: string
           id: string
@@ -385,6 +387,8 @@ export type Database = {
         }
         Insert: {
           billing_cycle: string
+          birth_date?: string | null
+          city?: string | null
           created_at?: string | null
           email: string
           id?: string
@@ -403,6 +407,8 @@ export type Database = {
         }
         Update: {
           billing_cycle?: string
+          birth_date?: string | null
+          city?: string | null
           created_at?: string | null
           email?: string
           id?: string
