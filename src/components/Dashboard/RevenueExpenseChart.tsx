@@ -104,7 +104,7 @@ export function RevenueExpenseChart() {
     return (
       <Card className="bg-white border-[#DEDEDE] shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-xl font-semibold text-[#121212]">Receita x Despesa</CardTitle>
+          <CardTitle className="text-lg font-semibold text-[#121212]">Receita x Despesa</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[280px] flex items-center justify-center text-gray-500">
@@ -122,7 +122,7 @@ export function RevenueExpenseChart() {
     return (
       <Card className="bg-white border-[#DEDEDE] shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-xl font-semibold text-[#121212]">Receita x Despesa</CardTitle>
+          <CardTitle className="text-lg font-semibold text-[#121212]">Receita x Despesa</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[280px] flex items-center justify-center text-gray-500">
@@ -137,7 +137,7 @@ export function RevenueExpenseChart() {
     <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
         <div className="flex flex-col">
-          <CardTitle className="text-xl font-semibold text-[#121212]">
+          <CardTitle className="text-lg font-semibold text-[#121212]">
             Receita x Despesa
           </CardTitle>
           <p className="text-sm text-gray-500 mt-1">

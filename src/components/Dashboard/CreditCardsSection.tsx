@@ -9,7 +9,7 @@ export function CreditCardsSection() {
   return (
     <Card className="bg-white border-[#E2E8F0]">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-[#121212]">Cartões</CardTitle>
+        <CardTitle className="text-lg font-semibold text-[#121212]">Cartões</CardTitle>
       </CardHeader>
       <CardContent>
         <CreditCardsList />

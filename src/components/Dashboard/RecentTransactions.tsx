@@ -114,7 +114,7 @@ export function RecentTransactions({
     return (
       <Card className="bg-white border-gray-200">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-[#121212]">
+          <CardTitle className="text-lg font-semibold text-[#121212]">
             Transações Recentes
           </CardTitle>
         </CardHeader>
@@ -131,7 +131,7 @@ export function RecentTransactions({
     <>
       <Card className="bg-white border-gray-200">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-semibold text-[#121212]">
+          <CardTitle className="text-lg font-semibold text-[#121212]">
             Transações Recentes
           </CardTitle>
         </CardHeader>
