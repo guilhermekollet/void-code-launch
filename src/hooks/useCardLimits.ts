@@ -7,8 +7,7 @@ export function useCardLimits() {
   const { data: creditCards = [] } = useCreditCards();
 
   const getCardLimit = () => {
-    const planType = subscription?.plan_type || 'basic';
-    return planType === 'premium' ? 5 : 1;
+    return Infinity; // Sem limite de cartões
   };
 
   const getCurrentCardCount = () => {
@@ -16,11 +15,11 @@ export function useCardLimits() {
   };
 
   const canAddCard = () => {
-    return getCurrentCardCount() < getCardLimit();
+    return true; // Sempre pode adicionar cartões
   };
 
   const isLimitReached = () => {
-    return getCurrentCardCount() >= getCardLimit();
+    return false; // Nunca atinge o limite
   };
 
   return {

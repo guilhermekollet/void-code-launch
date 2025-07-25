@@ -114,14 +114,13 @@ export function RecentTransactions({
     return (
       <Card className="bg-white border-gray-200">
         <CardHeader>
-          <CardTitle className="text-gray-900 text-xl font-medium">
+          <CardTitle className="text-xl font-semibold text-[#121212]">
             Transações Recentes
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12">
-            <Receipt className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">Nenhuma transação encontrada</p>
+          <div className="h-[280px] flex items-center justify-center text-gray-500">
+            Sem dados disponíveis
           </div>
         </CardContent>
       </Card>
@@ -132,7 +131,7 @@ export function RecentTransactions({
     <>
       <Card className="bg-white border-gray-200">
         <CardHeader className="pb-3">
-          <CardTitle className="text-gray-900 text-xl font-medium">
+          <CardTitle className="text-xl font-semibold text-[#121212]">
             Transações Recentes
           </CardTitle>
         </CardHeader>

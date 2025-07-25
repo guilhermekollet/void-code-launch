@@ -81,7 +81,7 @@ export function ModernQuickStats({
         {getVisibleCards().map((card, index) => (
           <Card key={index} className={`bg-[#FDFDFD] ${card.borderColor} shadow-sm hover:shadow-md transition-shadow`}>
             <CardHeader className="space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-[#64748B]">{card.title}</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-500">{card.title}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${card.color}`}>
@@ -97,7 +97,7 @@ export function ModernQuickStats({
         <div className="relative">
           <Card className={`bg-[#FDFDFD] ${cards[currentIndex].borderColor} shadow-sm`}>
             <CardHeader className="space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-[#64748B]">{cards[currentIndex].title}</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-500">{cards[currentIndex].title}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${cards[currentIndex].color}`}>
