@@ -189,14 +189,62 @@ export default function Register() {
     }
   };
 
+  // Função para resetar localStorage e voltar ao início
+  const resetLocalStorage = () => {
+    try {
+      localStorage.removeItem('registrationData');
+      setFormData({
+        name: '',
+        email: '',
+        phone: '55',
+        birthDate: '',
+        city: '',
+        selectedPlan: '',
+        billingCycle: 'yearly'
+      });
+      setOnboardingId(null);
+      setCurrentStep('name');
+      setIsContinuation(false);
+      console.log('localStorage resetado - voltando ao início');
+    } catch (error) {
+      console.error('Erro ao resetar localStorage:', error);
+    }
+  };
+
+  // Função para validar se onboardingId existe no banco
+  const validateOnboardingId = async (id: string): Promise<boolean> => {
+    try {
+      const { data } = await supabase
+        .from('onboarding')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+      
+      return !!data;
+    } catch (error) {
+      console.error('Erro ao validar onboardingId:', error);
+      return false;
+    }
+  };
+
   // Recuperar dados do localStorage ao inicializar
   useEffect(() => {
-    const recoverFromLocalStorage = () => {
+    const recoverFromLocalStorage = async () => {
       try {
         const savedData = localStorage.getItem('registrationData');
         if (savedData) {
           const parsedData: LocalStorageData = JSON.parse(savedData);
           console.log('Recuperando dados do localStorage:', parsedData);
+          
+          // Se existe onboardingId, validar se ainda existe no banco
+          if (parsedData.onboardingId) {
+            const isValid = await validateOnboardingId(parsedData.onboardingId);
+            if (!isValid) {
+              console.log('OnboardingId inválido - resetando localStorage');
+              resetLocalStorage();
+              return;
+            }
+          }
           
           setFormData({
             name: parsedData.name || '',
@@ -223,7 +271,7 @@ export default function Register() {
         }
       } catch (error) {
         console.error('Erro ao recuperar dados do localStorage:', error);
-        localStorage.removeItem('registrationData');
+        resetLocalStorage();
       }
     };
 
@@ -472,7 +520,32 @@ export default function Register() {
     }
 
     if (currentStep === 'name') {
-      await saveOrUpdateOnboarding('name');
+      // Criar registro imediatamente após validação do nome
+      try {
+        const currentFormData = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          birthDate: formData.birthDate,
+          city: formData.city,
+          selectedPlan: formData.selectedPlan,
+          billingCycle: formData.billingCycle
+        };
+
+        const newOnboardingId = await ensureOnboardingId(currentFormData);
+        console.log('OnboardingId criado/garantido:', newOnboardingId);
+        
+        await saveOrUpdateOnboarding('name');
+      } catch (error) {
+        console.error('Erro ao criar onboarding:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar dados. Tente novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const nextIndex = currentStepIndex + 1;
       if (nextIndex < stepKeys.length) {
         setCurrentStep(stepKeys[nextIndex]);
