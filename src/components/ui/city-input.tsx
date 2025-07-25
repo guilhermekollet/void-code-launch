@@ -135,6 +135,10 @@ export function CityInput({
     onValueChange?.(cityString)
     setOpen(false)
     setCities([])
+    // Limpar estado de busca para evitar mostrar "nenhuma cidade encontrada"
+    setTimeout(() => {
+      setCities([])
+    }, 100)
   }
 
   const handleInputFocus = () => {
@@ -160,7 +164,7 @@ export function CityInput({
       />
       
       {open && (
-        <div className="absolute top-full left-0 right-0 z-[9999] mt-1 bg-background border border-border rounded-md shadow-lg">
+        <div className="absolute top-full left-0 right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-border rounded-md shadow-lg">
           <div className="max-h-60 overflow-auto">
             {loading && (
               <div className="p-3 text-center text-sm text-muted-foreground">

@@ -65,6 +65,11 @@ interface FormData {
   billingCycle: string;
 }
 
+interface LocalStorageData extends FormData {
+  onboardingId?: string;
+  birth_date?: string;
+}
+
 export default function Register() {
   const [currentStep, setCurrentStep] = useState<RegistrationStep>('name');
   const [formData, setFormData] = useState<FormData>({
@@ -95,20 +100,109 @@ export default function Register() {
     }
   }, [user, navigate]);
 
+  // Função para atualizar localStorage com dados completos
+  const updateLocalStorage = (updatedData: Partial<LocalStorageData> = {}) => {
+    try {
+      const dataToSave: LocalStorageData = {
+        name: updatedData.name || formData.name,
+        email: updatedData.email || formData.email,
+        phone: updatedData.phone || formData.phone,
+        birthDate: updatedData.birthDate || formData.birthDate,
+        city: updatedData.city || formData.city,
+        selectedPlan: updatedData.selectedPlan || formData.selectedPlan,
+        billingCycle: updatedData.billingCycle || formData.billingCycle,
+        onboardingId: updatedData.onboardingId || onboardingId || undefined,
+        birth_date: updatedData.birth_date || updatedData.birthDate || formData.birthDate
+      };
+      
+      localStorage.setItem('registrationData', JSON.stringify(dataToSave));
+      console.log('localStorage atualizado:', dataToSave);
+    } catch (error) {
+      console.error('Erro ao atualizar localStorage:', error);
+    }
+  };
+
+  // Função para garantir que onboardingId existe ou criar um novo
+  const ensureOnboardingId = async (currentFormData: FormData): Promise<string> => {
+    try {
+      if (onboardingId) {
+        // Verificar se o onboardingId ainda existe no banco
+        const { data: existingRecord } = await supabase
+          .from('onboarding')
+          .select('id')
+          .eq('id', onboardingId)
+          .maybeSingle();
+
+        if (existingRecord) {
+          return onboardingId;
+        }
+      }
+
+      // Se não existe onboardingId ou registro foi removido, buscar por email
+      const { data: existingByEmail } = await supabase
+        .from('onboarding')
+        .select('id')
+        .eq('email', currentFormData.email)
+        .maybeSingle();
+
+      if (existingByEmail) {
+        setOnboardingId(existingByEmail.id);
+        updateLocalStorage({ onboardingId: existingByEmail.id });
+        return existingByEmail.id;
+      }
+
+      // Criar novo registro se não existe
+      const newRecord = {
+        name: currentFormData.name,
+        email: currentFormData.email,
+        phone: currentFormData.phone.replace(/\D/g, ''),
+        birth_date: currentFormData.birthDate ? 
+          (() => {
+            const [day, month, year] = currentFormData.birthDate.split('/');
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          })() : null,
+        city: currentFormData.city,
+        selected_plan: currentFormData.selectedPlan,
+        billing_cycle: currentFormData.billingCycle,
+        registration_stage: 'name'
+      };
+
+      const { data, error } = await supabase
+        .from('onboarding')
+        .insert([newRecord])
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      
+      if (data) {
+        setOnboardingId(data.id);
+        updateLocalStorage({ onboardingId: data.id });
+        console.log('Novo onboardingId criado:', data.id);
+        return data.id;
+      }
+
+      throw new Error('Falha ao criar registro de onboarding');
+    } catch (error) {
+      console.error('Erro ao garantir onboardingId:', error);
+      throw error;
+    }
+  };
+
   // Recuperar dados do localStorage ao inicializar
   useEffect(() => {
     const recoverFromLocalStorage = () => {
       try {
         const savedData = localStorage.getItem('registrationData');
         if (savedData) {
-          const parsedData = JSON.parse(savedData);
+          const parsedData: LocalStorageData = JSON.parse(savedData);
           console.log('Recuperando dados do localStorage:', parsedData);
           
           setFormData({
             name: parsedData.name || '',
             email: parsedData.email || '',
             phone: parsedData.phone || '55',
-            birthDate: parsedData.birthDate || '',
+            birthDate: parsedData.birthDate || parsedData.birth_date || '',
             city: parsedData.city || '',
             selectedPlan: parsedData.selectedPlan || '',
             billingCycle: parsedData.billingCycle || 'yearly'
@@ -195,59 +289,51 @@ export default function Register() {
 
   const saveOrUpdateOnboarding = async (stage: string, updateData: Partial<FormData> = {}) => {
     try {
-      const dataToSave = {
+      const currentFormData = {
         name: updateData.name || formData.name,
         email: updateData.email || formData.email,
-        phone: (updateData.phone || formData.phone).replace(/\D/g, ''),
-        birth_date: updateData.birthDate || formData.birthDate ? 
+        phone: updateData.phone || formData.phone,
+        birthDate: updateData.birthDate || formData.birthDate,
+        city: updateData.city || formData.city,
+        selectedPlan: updateData.selectedPlan || formData.selectedPlan,
+        billingCycle: updateData.billingCycle || formData.billingCycle
+      };
+
+      // Garantir que onboardingId existe
+      const guaranteedOnboardingId = await ensureOnboardingId(currentFormData);
+
+      const dataToSave = {
+        name: currentFormData.name,
+        email: currentFormData.email,
+        phone: currentFormData.phone.replace(/\D/g, ''),
+        birth_date: currentFormData.birthDate ? 
           (() => {
-            const dateStr = updateData.birthDate || formData.birthDate;
+            const dateStr = currentFormData.birthDate;
             if (!dateStr) return null;
             const [day, month, year] = dateStr.split('/');
             return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
           })() : null,
-        city: updateData.city || formData.city,
-        selected_plan: updateData.selectedPlan || formData.selectedPlan,
-        billing_cycle: updateData.billingCycle || formData.billingCycle,
+        city: currentFormData.city,
+        selected_plan: currentFormData.selectedPlan,
+        billing_cycle: currentFormData.billingCycle,
         registration_stage: stage
       };
 
-      if (onboardingId) {
-        const { error } = await supabase
-          .from('onboarding')
-          .update(dataToSave)
-          .eq('id', onboardingId);
+      const { error } = await supabase
+        .from('onboarding')
+        .update(dataToSave)
+        .eq('id', guaranteedOnboardingId);
 
-        if (error) throw error;
-        console.log('Updated onboarding record:', onboardingId);
-      } else {
-        const { data: existingRecord } = await supabase
-          .from('onboarding')
-          .select('id')
-          .eq('email', dataToSave.email)
-          .single();
+      if (error) throw error;
+      
+      // Atualizar localStorage com todos os dados
+      updateLocalStorage({
+        ...currentFormData,
+        onboardingId: guaranteedOnboardingId,
+        birth_date: currentFormData.birthDate
+      });
 
-        if (existingRecord) {
-          const { error } = await supabase
-            .from('onboarding')
-            .update(dataToSave)
-            .eq('id', existingRecord.id);
-
-          if (error) throw error;
-          setOnboardingId(existingRecord.id);
-          console.log('Updated existing onboarding record:', existingRecord.id);
-        } else {
-          const { data, error } = await supabase
-            .from('onboarding')
-            .insert([dataToSave])
-            .select('id')
-            .single();
-
-          if (error) throw error;
-          if (data) setOnboardingId(data.id);
-          console.log('Created new onboarding record:', data?.id);
-        }
-      }
+      console.log('Updated onboarding record:', guaranteedOnboardingId);
 
       toast({
         title: "Progresso salvo",
@@ -541,15 +627,16 @@ export default function Register() {
       console.log('Checkout session created, redirecting to:', data.url);
 
       // Store registration data for recovery
-      localStorage.setItem('registrationData', JSON.stringify({
+      updateLocalStorage({
         name: formData.name,
         email: formData.email,
         phone: formData.phone.replace(/\D/g, ''),
-        plan: formData.selectedPlan,
+        selectedPlan: formData.selectedPlan,
         billingCycle: formData.billingCycle,
-        onboardingId: onboardingId,
-        sessionId: data.sessionId
-      }));
+        onboardingId: onboardingId || undefined,
+        birthDate: formData.birthDate,
+        city: formData.city
+      });
 
       // Redirect to Stripe checkout
       window.location.href = data.url;

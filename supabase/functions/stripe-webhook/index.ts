@@ -264,6 +264,31 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       logStep("⚠️ Failed to update trial dates in onboarding", { error: updateTrialError.message });
     }
 
+    // Enviar email de boas-vindas para usuário existente
+    try {
+      logStep("📧 Sending welcome email for existing user", { 
+        email: onboardingData.email, 
+        name: onboardingData.name,
+        planType: onboardingData.selected_plan 
+      });
+
+      const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+        body: {
+          email: onboardingData.email,
+          name: onboardingData.name,
+          planType: onboardingData.selected_plan
+        }
+      });
+
+      if (emailError) {
+        logStep("⚠️ Failed to send welcome email (non-critical)", { error: emailError });
+      } else {
+        logStep("✅ Welcome email sent successfully for existing user");
+      }
+    } catch (emailError) {
+      logStep("⚠️ Exception sending welcome email (non-critical)", { error: emailError });
+    }
+
     logStep("🎊 === EXISTING USER PLAN UPDATE COMPLETED ===", {
       userId: existingUser.id,
       email: onboardingData.email,
@@ -271,7 +296,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       planType: onboardingData.selected_plan,
       billingCycle: onboardingData.billing_cycle,
       completedOnboarding: true,
-      trialDays: 3
+      trialDays: 3,
+      welcomeEmailSent: true
     });
     
     return;
@@ -364,6 +390,31 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       logStep("⚠️ Failed to update trial dates in onboarding", { error: updateTrialError.message });
     }
 
+    // Enviar email de boas-vindas para usuário órfão adotado
+    try {
+      logStep("📧 Sending welcome email for adopted user", { 
+        email: onboardingData.email, 
+        name: onboardingData.name,
+        planType: onboardingData.selected_plan 
+      });
+
+      const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+        body: {
+          email: onboardingData.email,
+          name: onboardingData.name,
+          planType: onboardingData.selected_plan
+        }
+      });
+
+      if (emailError) {
+        logStep("⚠️ Failed to send welcome email (non-critical)", { error: emailError });
+      } else {
+        logStep("✅ Welcome email sent successfully for adopted user");
+      }
+    } catch (emailError) {
+      logStep("⚠️ Exception sending welcome email (non-critical)", { error: emailError });
+    }
+
     logStep("🎊 === ORPHANED USER ADOPTION COMPLETED ===", {
       userId: newUser.id,
       authUserId: orphanedAuthUser.id,
@@ -372,7 +423,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       planType: onboardingData.selected_plan,
       billingCycle: onboardingData.billing_cycle,
       completedOnboarding: true,
-      trialDays: 3
+      trialDays: 3,
+      welcomeEmailSent: true
     });
 
     return;
@@ -489,6 +541,31 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     logStep("✅ Updated trial dates in onboarding");
   }
 
+  // Enviar email de boas-vindas
+  try {
+    logStep("📧 Sending welcome email", { 
+      email: onboardingData.email, 
+      name: onboardingData.name,
+      planType: onboardingData.selected_plan 
+    });
+
+    const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+      body: {
+        email: onboardingData.email,
+        name: onboardingData.name,
+        planType: onboardingData.selected_plan
+      }
+    });
+
+    if (emailError) {
+      logStep("⚠️ Failed to send welcome email (non-critical)", { error: emailError });
+    } else {
+      logStep("✅ Welcome email sent successfully");
+    }
+  } catch (emailError) {
+    logStep("⚠️ Exception sending welcome email (non-critical)", { error: emailError });
+  }
+
   logStep("🎊 === USER CREATION COMPLETED SUCCESSFULLY ===", {
     userId: newUser.id,
     authUserId: authUser.user.id,
@@ -499,6 +576,7 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     completedOnboarding: true,
     trialStart: trialStart.toISOString(),
     trialEnd: trialEnd.toISOString(),
-    trialDays: 3
+    trialDays: 3,
+    welcomeEmailSent: true
   });
 }
