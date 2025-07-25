@@ -9,6 +9,8 @@ interface UserProfile {
   name: string | null;
   email: string | null;
   phone_number: string;
+  birth_date: string | null;
+  city: string | null;
   user_id: string | null;
   completed_onboarding: boolean | null;
   plan_type: string | null;
@@ -42,7 +44,7 @@ export function useUpdateUserProfile() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'phone_number' | 'completed_onboarding'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'phone_number' | 'birth_date' | 'city' | 'completed_onboarding'>>) => {
       if (!user?.id) throw new Error('User not authenticated');
       
       const { data, error } = await supabase

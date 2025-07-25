@@ -8,6 +8,8 @@ interface UserProfileUpdate {
   name?: string;
   email?: string;
   phone_number?: string;
+  birth_date?: string;
+  city?: string;
   completed_onboarding?: boolean;
 }
 

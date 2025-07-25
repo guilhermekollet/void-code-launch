@@ -223,6 +223,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       .from("users")
       .update({
         completed_onboarding: true,
+        birth_date: onboardingData.birth_date,
+        city: onboardingData.city,
         plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja atualizado
         billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja atualizado
         stripe_session_id: session.id,
@@ -316,6 +318,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         name: onboardingData.name,
         email: onboardingData.email,
         phone_number: onboardingData.phone,
+        birth_date: onboardingData.birth_date,
+        city: onboardingData.city,
         plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja definido
         billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja definido
         stripe_session_id: session.id,
@@ -425,6 +429,8 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       name: onboardingData.name,
       email: onboardingData.email,
       phone_number: onboardingData.phone,
+      birth_date: onboardingData.birth_date,
+      city: onboardingData.city,
       plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja definido
       billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja definido
       stripe_session_id: session.id,

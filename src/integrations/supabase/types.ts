@@ -311,6 +311,38 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          content: string | null
+          embedding: string | null
+          id: number
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          embedding?: string | null
+          id?: number
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          embedding?: string | null
+          id?: number
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           id: number
@@ -567,10 +599,14 @@ export type Database = {
       users: {
         Row: {
           billing_cycle: string | null
+          birth_date: string | null
+          city: string | null
           completed_onboarding: boolean | null
           created_at: string
           email: string | null
           id: number
+          inactive_alerts: boolean | null
+          insights_alerts: boolean | null
           name: string | null
           phone_number: string
           plan_status: string | null
@@ -582,10 +618,14 @@ export type Database = {
         }
         Insert: {
           billing_cycle?: string | null
+          birth_date?: string | null
+          city?: string | null
           completed_onboarding?: boolean | null
           created_at?: string
           email?: string | null
           id?: number
+          inactive_alerts?: boolean | null
+          insights_alerts?: boolean | null
           name?: string | null
           phone_number: string
           plan_status?: string | null
@@ -597,10 +637,14 @@ export type Database = {
         }
         Update: {
           billing_cycle?: string | null
+          birth_date?: string | null
+          city?: string | null
           completed_onboarding?: boolean | null
           created_at?: string
           email?: string | null
           id?: number
+          inactive_alerts?: boolean | null
+          insights_alerts?: boolean | null
           name?: string | null
           phone_number?: string
           plan_status?: string | null
@@ -653,8 +697,109 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       generate_credit_card_bill: {
         Args: { card_id: number; due_date_param: string }
+        Returns: number
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      match_documents: {
+        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Returns: {
+          id: number
+          content: string
+          metadata: Json
+          similarity: number
+        }[]
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
         Returns: number
       }
     }

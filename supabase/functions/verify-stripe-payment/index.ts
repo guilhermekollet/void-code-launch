@@ -110,6 +110,8 @@ serve(async (req) => {
           email: onboarding.email,
           name: onboarding.name,
           phone_number: onboarding.phone,
+          birth_date: onboarding.birth_date,
+          city: onboarding.city,
           plan_type: onboarding.selected_plan,
           billing_cycle: onboarding.billing_cycle,
           trial_start: trialStart,

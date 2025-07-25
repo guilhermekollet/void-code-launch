@@ -386,7 +386,7 @@ export default function Register() {
     }
 
     if (currentStep === 'name') {
-      //await saveOrUpdateOnboarding('name');
+      await saveOrUpdateOnboarding('name');
       const nextIndex = currentStepIndex + 1;
       if (nextIndex < stepKeys.length) {
         setCurrentStep(stepKeys[nextIndex]);
