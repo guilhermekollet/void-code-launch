@@ -96,6 +96,9 @@ serve(async (req) => {
             email: onboardingData.email,
             name: onboardingData.name,
             planType: onboardingData.selected_plan
+          },
+          headers: {
+            'Content-Type': 'application/json'
           }
         });
 
@@ -230,6 +233,9 @@ serve(async (req) => {
           email: onboardingData.email,
           name: onboardingData.name,
           planType: onboardingData.selected_plan
+        },
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
 
