@@ -43,11 +43,15 @@ export function useAddTransaction() {
       }
 
       // Input validation
-      if (!transactionData.amount || transactionData.amount <= 0) {
+      console.log('[useAddTransaction] Validating amount:', transactionData.amount, typeof transactionData.amount);
+      
+      if (!transactionData.amount || transactionData.amount === 0) {
+        console.error('[useAddTransaction] Amount validation failed:', transactionData.amount);
         throw new Error('Amount must be greater than 0');
       }
       
-      if (transactionData.amount > 999999999) {
+      const absoluteAmount = Math.abs(transactionData.amount);
+      if (absoluteAmount > 999999999) {
         throw new Error('Amount is too large');
       }
 

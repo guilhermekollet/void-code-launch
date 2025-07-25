@@ -82,10 +82,24 @@ export function AddTransactionModal({
   };
 
   const handleSave = () => {
-    if (!amount) return;
+    console.log('[AddTransactionModal] handleSave called with amount:', amount, typeof amount);
+    
+    if (!amount || amount.trim() === '') {
+      console.error('[AddTransactionModal] Empty amount');
+      return;
+    }
 
-    // For expenses, make the amount negative
-    const finalAmount = type === 'despesa' ? -Math.abs(parseFloat(amount)) : parseFloat(amount);
+    // Parse amount - CurrencyInput returns string like "123.45"
+    const parsedAmount = parseFloat(amount);
+    console.log('[AddTransactionModal] Parsed amount:', parsedAmount, typeof parsedAmount);
+    
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      console.error('[AddTransactionModal] Invalid amount after parsing:', parsedAmount);
+      return;
+    }
+
+    // For expenses, make the amount negative; for income, keep positive
+    const finalAmount = type === 'despesa' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
 
     const baseData = {
       amount: finalAmount,
