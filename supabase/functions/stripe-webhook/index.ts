@@ -227,6 +227,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         city: onboardingData.city,
         plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja atualizado
         billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja atualizado
+        plan_status: 'active', // DEFINIR plan_status como active
+        insights_alerts: true, // DEFINIR insights_alerts como true
+        inactive_alerts: true, // DEFINIR inactive_alerts como true
         stripe_session_id: session.id,
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),
@@ -246,6 +249,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         userId: existingUser.id,
         planType: onboardingData.selected_plan,
         billingCycle: onboardingData.billing_cycle,
+        planStatus: 'active',
+        insightsAlerts: true,
+        inactiveAlerts: true,
         trialDays: 3
       });
     }
@@ -284,6 +290,22 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         logStep("⚠️ Failed to send welcome email (non-critical)", { error: emailError });
       } else {
         logStep("✅ Welcome email sent successfully for existing user");
+        
+        // Atualizar sended_email para true após envio bem-sucedido
+        try {
+          const { error: sendedEmailError } = await supabase
+            .from("onboarding")
+            .update({ sended_email: true })
+            .eq("id", onboardingData.id);
+            
+          if (sendedEmailError) {
+            logStep("⚠️ Failed to update sended_email status", { error: sendedEmailError.message });
+          } else {
+            logStep("✅ Updated sended_email to true in onboarding table");
+          }
+        } catch (error) {
+          logStep("⚠️ Exception updating sended_email status", { error });
+        }
       }
     } catch (emailError) {
       logStep("⚠️ Exception sending welcome email (non-critical)", { error: emailError });
@@ -348,6 +370,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         city: onboardingData.city,
         plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja definido
         billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja definido
+        plan_status: 'active', // DEFINIR plan_status como active
+        insights_alerts: true, // DEFINIR insights_alerts como true
+        inactive_alerts: true, // DEFINIR inactive_alerts como true
         stripe_session_id: session.id,
         trial_start: trialStart.toISOString(),
         trial_end: trialEnd.toISOString(),
@@ -372,6 +397,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       email: onboardingData.email,
       planType: onboardingData.selected_plan,
       billingCycle: onboardingData.billing_cycle,
+      planStatus: 'active',
+      insightsAlerts: true,
+      inactiveAlerts: true,
       completedOnboarding: true,
       trialDays: 3
     });
@@ -410,6 +438,22 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
         logStep("⚠️ Failed to send welcome email (non-critical)", { error: emailError });
       } else {
         logStep("✅ Welcome email sent successfully for adopted user");
+        
+        // Atualizar sended_email para true após envio bem-sucedido
+        try {
+          const { error: sendedEmailError } = await supabase
+            .from("onboarding")
+            .update({ sended_email: true })
+            .eq("id", onboardingData.id);
+            
+          if (sendedEmailError) {
+            logStep("⚠️ Failed to update sended_email status", { error: sendedEmailError.message });
+          } else {
+            logStep("✅ Updated sended_email to true in onboarding table");
+          }
+        } catch (error) {
+          logStep("⚠️ Exception updating sended_email status", { error });
+        }
       }
     } catch (emailError) {
       logStep("⚠️ Exception sending welcome email (non-critical)", { error: emailError });
@@ -485,6 +529,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       city: onboardingData.city,
       plan_type: onboardingData.selected_plan, // GARANTIR que plan_type seja definido
       billing_cycle: onboardingData.billing_cycle, // GARANTIR que billing_cycle seja definido
+      plan_status: 'active', // DEFINIR plan_status como active
+      insights_alerts: true, // DEFINIR insights_alerts como true
+      inactive_alerts: true, // DEFINIR inactive_alerts como true
       stripe_session_id: session.id,
       trial_start: trialStart.toISOString(),
       trial_end: trialEnd.toISOString(),
@@ -519,6 +566,9 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
     email: onboardingData.email,
     planType: onboardingData.selected_plan,
     billingCycle: onboardingData.billing_cycle,
+    planStatus: 'active',
+    insightsAlerts: true,
+    inactiveAlerts: true,
     completedOnboarding: true,
     trialDays: 3
   });
@@ -561,6 +611,22 @@ async function processSuccessfulPayment(session: Stripe.Checkout.Session, supaba
       logStep("⚠️ Failed to send welcome email (non-critical)", { error: emailError });
     } else {
       logStep("✅ Welcome email sent successfully");
+      
+      // Atualizar sended_email para true após envio bem-sucedido
+      try {
+        const { error: sendedEmailError } = await supabase
+          .from("onboarding")
+          .update({ sended_email: true })
+          .eq("id", onboardingData.id);
+          
+        if (sendedEmailError) {
+          logStep("⚠️ Failed to update sended_email status", { error: sendedEmailError.message });
+        } else {
+          logStep("✅ Updated sended_email to true in onboarding table");
+        }
+      } catch (error) {
+        logStep("⚠️ Exception updating sended_email status", { error });
+      }
     }
   } catch (emailError) {
     logStep("⚠️ Exception sending welcome email (non-critical)", { error: emailError });
