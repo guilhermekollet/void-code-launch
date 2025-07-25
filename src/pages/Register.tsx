@@ -10,6 +10,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { IOSSwitch } from '@/components/ui/ios-switch';
+import { DatePicker } from '@/components/ui/date-picker';
+import { CityInput } from '@/components/ui/city-input';
 
 interface Plan {
   id: string;
@@ -51,13 +53,15 @@ const plans: Plan[] = [
   }
 ];
 
-type RegistrationStep = 'name' | 'email' | 'phone' | 'plan';
+type RegistrationStep = 'name' | 'email' | 'phone' | 'birthDate' | 'city' | 'plan';
 
 interface FormData {
   name: string;
   email: string;
   confirmEmail: string;
   phone: string;
+  birthDate: Date | undefined;
+  city: string;
   selectedPlan: string;
   billingCycle: string;
 }
@@ -69,6 +73,8 @@ export default function Register() {
     email: '',
     confirmEmail: '',
     phone: '55',
+    birthDate: undefined,
+    city: '',
     selectedPlan: '',
     billingCycle: 'yearly'
   });
@@ -81,8 +87,8 @@ export default function Register() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const steps = ['Nome', 'Email', 'Telefone', 'Plano'];
-  const stepKeys: RegistrationStep[] = ['name', 'email', 'phone', 'plan'];
+  const steps = ['Nome', 'Email', 'Telefone', 'Data Nascimento', 'Cidade', 'Plano'];
+  const stepKeys: RegistrationStep[] = ['name', 'email', 'phone', 'birthDate', 'city', 'plan'];
   const currentStepIndex = stepKeys.indexOf(currentStep);
 
   useEffect(() => {
@@ -151,6 +157,8 @@ export default function Register() {
         name: updateData.name || formData.name,
         email: updateData.email || formData.email,
         phone: (updateData.phone || formData.phone).replace(/\D/g, ''),
+        birth_date: (updateData.birthDate || formData.birthDate)?.toISOString().split('T')[0] || null,
+        city: updateData.city || formData.city,
         selected_plan: updateData.selectedPlan || formData.selectedPlan,
         billing_cycle: updateData.billingCycle || formData.billingCycle,
         registration_stage: stage
@@ -214,6 +222,8 @@ export default function Register() {
       email: existingData.email || '',
       confirmEmail: existingData.email || '',
       phone: existingData.phone || '55',
+      birthDate: existingData.birthDate ? new Date(existingData.birthDate) : undefined,
+      city: existingData.city || '',
       selectedPlan: existingData.selectedPlan || '',
       billingCycle: existingData.billingCycle || 'yearly'
     });
@@ -223,10 +233,14 @@ export default function Register() {
     }
 
     const stage = existingData.registrationStage;
-    if (stage === 'phone') {
+    if (stage === 'plan' || stage === 'payment') {
       setCurrentStep('plan');
-    } else if (stage === 'plan' || stage === 'payment') {
+    } else if (stage === 'city') {
       setCurrentStep('plan');
+    } else if (stage === 'birthDate') {
+      setCurrentStep('city');
+    } else if (stage === 'phone') {
+      setCurrentStep('birthDate');
     } else if (stage === 'email') {
       setCurrentStep('phone');
     } else {
@@ -234,6 +248,23 @@ export default function Register() {
     }
 
     setIsContinuation(true);
+  };
+
+  const validateBirthDate = (date: Date | undefined): boolean => {
+    if (!date) return false;
+    const today = new Date();
+    const age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      return age - 1 >= 16; // Mínimo 16 anos
+    }
+    
+    return age >= 16 && date <= today; // Não pode ser data futura
+  };
+
+  const validateCity = (city: string): boolean => {
+    return city.trim().length >= 3;
   };
 
   const canProceedFromStep = (step: RegistrationStep): boolean => {
@@ -246,6 +277,10 @@ export default function Register() {
                formData.email === formData.confirmEmail;
       case 'phone':
         return validatePhone(formData.phone);
+      case 'birthDate':
+        return validateBirthDate(formData.birthDate);
+      case 'city':
+        return validateCity(formData.city);
       case 'plan':
         return formData.selectedPlan !== '';
       default:
@@ -265,6 +300,12 @@ export default function Register() {
           break;
         case 'phone':
           errorMessage = 'Por favor, insira um telefone válido';
+          break;
+        case 'birthDate':
+          errorMessage = 'Por favor, insira uma data de nascimento válida (mínimo 16 anos)';
+          break;
+        case 'city':
+          errorMessage = 'Por favor, selecione sua cidade';
           break;
         case 'plan':
           errorMessage = 'Por favor, selecione um plano';
@@ -341,6 +382,24 @@ export default function Register() {
       }
 
       await saveOrUpdateOnboarding('phone');
+      const nextIndex = currentStepIndex + 1;
+      if (nextIndex < stepKeys.length) {
+        setCurrentStep(stepKeys[nextIndex]);
+      }
+      return;
+    }
+
+    if (currentStep === 'birthDate') {
+      await saveOrUpdateOnboarding('birthDate');
+      const nextIndex = currentStepIndex + 1;
+      if (nextIndex < stepKeys.length) {
+        setCurrentStep(stepKeys[nextIndex]);
+      }
+      return;
+    }
+
+    if (currentStep === 'city') {
+      await saveOrUpdateOnboarding('city');
       const nextIndex = currentStepIndex + 1;
       if (nextIndex < stepKeys.length) {
         setCurrentStep(stepKeys[nextIndex]);
@@ -575,6 +634,54 @@ export default function Register() {
                         ? 'Número brasileiro deve ter entre 10 e 11 dígitos após o DDD'
                         : 'Telefone inválido'
                       }
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'birthDate' && (
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-semibold text-[#121212]">Qual é sua data de nascimento?</h2>
+                  <p className="text-sm text-[#64748B]">Insira sua data de nascimento (mínimo 16 anos)</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="birthDate" className="text-[#121212]">Data de nascimento *</Label>
+                  <DatePicker
+                    date={formData.birthDate}
+                    onDateChange={(date) => setFormData(prev => ({ ...prev, birthDate: date }))}
+                    placeholder="Selecione sua data de nascimento"
+                    className="w-full"
+                  />
+                  {formData.birthDate && !validateBirthDate(formData.birthDate) && (
+                    <p className="text-sm text-red-500">
+                      Data inválida (mínimo 16 anos e não pode ser futura)
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {currentStep === 'city' && (
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-semibold text-[#121212]">Em qual cidade você mora?</h2>
+                  <p className="text-sm text-[#64748B]">Digite e selecione sua cidade</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-[#121212]">Cidade *</Label>
+                  <CityInput
+                    value={formData.city}
+                    onValueChange={(city) => handleInputChange('city', city)}
+                    placeholder="Digite sua cidade"
+                    className="w-full"
+                  />
+                  {formData.city && !validateCity(formData.city) && (
+                    <p className="text-sm text-red-500">
+                      Selecione uma cidade válida
                     </p>
                   )}
                 </div>
