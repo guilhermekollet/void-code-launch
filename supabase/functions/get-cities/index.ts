@@ -43,17 +43,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Fetch cities from IBGE API
     const response = await fetch(
-      `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${encodeURIComponent(searchTerm)}`
+      `https://servicodados.ibge.gov.br/api/v1/localidades/municipios`
     );
 
     if (!response.ok) {
       throw new Error(`IBGE API returned status ${response.status}`);
     }
 
-    const cities: City[] = await response.json();
+    const allCities: City[] = await response.json();
+
+    // Filter cities that start with the search term (case insensitive)
+    const filteredCities = allCities.filter(city => 
+      city.nome.toLowerCase().startsWith(searchTerm.toLowerCase())
+    );
 
     // Sort by name and limit to 20 results
-    const sortedCities = cities
+    const sortedCities = filteredCities
       .sort((a, b) => a.nome.localeCompare(b.nome))
       .slice(0, 20)
       .map(city => ({

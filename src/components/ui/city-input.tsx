@@ -76,12 +76,17 @@ export function CityInput({
       // Fallback para API direta do IBGE
       try {
         const response = await fetch(
-          `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${encodeURIComponent(searchTerm)}`
+          `https://servicodados.ibge.gov.br/api/v1/localidades/municipios`
         )
-        const data: City[] = await response.json()
+        const allCities: City[] = await response.json()
+        
+        // Filtrar cidades que começam com o termo de busca
+        const filteredCities = allCities.filter(city => 
+          city.nome.toLowerCase().startsWith(searchTerm.toLowerCase())
+        )
         
         // Ordenar por nome e limitar a 20 resultados
-        const sortedCities = data
+        const sortedCities = filteredCities
           .sort((a, b) => a.nome.localeCompare(b.nome))
           .slice(0, 20)
         
@@ -194,7 +199,7 @@ export function CityInput({
                   <div className="flex flex-col">
                     <span className="font-medium">{city.nome}</span>
                     <span className="text-xs text-muted-foreground">
-                      {city.microrregiao.mesorregiao.UF.nome} ({city.microrregiao.mesorregiao.UF.sigla})
+                      {city.microrregiao.mesorregiao.UF.sigla}
                     </span>
                   </div>
                   {isSelected && (
