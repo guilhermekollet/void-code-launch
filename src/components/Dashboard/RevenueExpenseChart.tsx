@@ -87,15 +87,6 @@ export function RevenueExpenseChart() {
             />
           </div>
         </foreignObject>
-        <text 
-          x={0} 
-          y={55} 
-          textAnchor="middle" 
-          fontSize={12}
-          fill="#666"
-        >
-          {payload.value}
-        </text>
       </g>
     );
   };
@@ -135,7 +126,7 @@ export function RevenueExpenseChart() {
 
   return (
     <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200">
-      <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="pb-4">
         <div className="flex flex-col">
           <CardTitle className="text-lg font-semibold text-[#121212]">
             Receita x Despesa
@@ -144,17 +135,9 @@ export function RevenueExpenseChart() {
             Comparação do mês atual
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsFullscreenOpen(true)}
-          className="h-8 w-8 text-[#64748B] hover:text-[#121212] hover:bg-[#F8F9FA]"
-        >
-          <Maximize className="h-4 w-4" />
-        </Button>
       </CardHeader>
-      <CardContent className="pt-2">
-        <ResponsiveContainer width="100%" height={280} minWidth={300}>
+      <CardContent className="pt-2 h-full">
+        <ResponsiveContainer width="100%" height="100%" minWidth={300}>
           <BarChart
             data={chartData}
             margin={{
@@ -170,7 +153,7 @@ export function RevenueExpenseChart() {
               axisLine={false}
               tickLine={false}
               tick={<CustomXAxisTick />}
-              height={70}
+              height={40}
               interval={0}
             />
             <YAxis 
