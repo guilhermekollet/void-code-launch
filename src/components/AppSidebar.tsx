@@ -1,11 +1,12 @@
 
 import { BarChart3, CreditCard, Settings, Home, Repeat, MessageCircle, Tag, Crown, Star, Circle, Lock } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/Settings/UpgradeModal";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 
 const items = [{
@@ -50,6 +51,8 @@ const handleBolsofyIAClick = () => {
 
 export function AppSidebar() {
   const { data: subscription } = useSubscription();
+  const { setOpen } = useSidebar();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
@@ -78,6 +81,9 @@ export function AppSidebar() {
 
   const handlePlanCardClick = () => {
     navigate('/configuracoes');
+    if (isMobile) {
+      setTimeout(() => setOpen(false), 100);
+    }
   };
 
   const handleBetaClick = () => {
@@ -92,6 +98,9 @@ export function AppSidebar() {
     if (item.requiresPremium && !isPremium) {
       event.preventDefault();
       setUpgradeModalOpen(true);
+    } else if (isMobile) {
+      // Close sidebar on mobile after navigation
+      setTimeout(() => setOpen(false), 100);
     }
   };
 

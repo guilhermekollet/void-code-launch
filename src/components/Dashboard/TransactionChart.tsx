@@ -40,7 +40,7 @@ export function TransactionChart() {
             <Maximize className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent className="pt-2 flex-1 flex flex-col">
+        <CardContent className="pt-2 flex-1 flex flex-col overflow-hidden">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
