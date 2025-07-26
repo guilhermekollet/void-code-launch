@@ -40,8 +40,9 @@ export default function Dashboard() {
     return <div>Carregando...</div>;
   }
 
-  // Transform transactions to match expected interface
-  const recentTransactions = transactions.slice(0, 10).map(transaction => ({
+  // Transform transactions to match expected interface - limit for mobile
+  const transactionLimit = 5; // Reduced for mobile optimization
+  const recentTransactions = transactions.slice(0, transactionLimit).map(transaction => ({
     id: transaction.id,
     description: transaction.description || 'Sem descrição',
     amount: transaction.amount,
@@ -59,7 +60,7 @@ export default function Dashboard() {
   const hasCreditCardBills = creditCards.length > 0 && bills.length > 0;
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-6 md:space-y-8 p-4 md:p-6">
       <ModernQuickStats
         totalBalance={totalBalance}
         monthlyIncome={monthlyIncome}
@@ -68,12 +69,12 @@ export default function Dashboard() {
         formatCurrency={formatCurrency}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <TransactionChart />
         <RevenueExpenseChart />
       </div>
 
-      <div className={`grid grid-cols-1 ${hasCreditCardBills ? 'lg:grid-cols-2' : ''} gap-6`}>
+      <div className={`grid grid-cols-1 ${hasCreditCardBills ? 'lg:grid-cols-2' : ''} gap-4 md:gap-6`}>
         <RecentTransactions 
           transactions={recentTransactions}
           formatCurrency={formatCurrency}

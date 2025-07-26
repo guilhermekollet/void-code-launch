@@ -18,7 +18,7 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
     receitas: true,
     despesas: true,
     gastosRecorrentes: true,
-    fluxoLiquido: true
+    fluxoLiquido: false
   });
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -272,17 +272,6 @@ export function FullscreenChart({ isOpen, onClose }: FullscreenChartProps) {
                           name="gastosRecorrentes"
                           dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
                           activeDot={{ r: 5, stroke: '#3B82F6', strokeWidth: 2, cursor: 'pointer' }}
-                        />
-                      )}
-                      {visibleLines.fluxoLiquido && (
-                        <Line
-                          type="monotone"
-                          dataKey="fluxoLiquido"
-                          stroke="#9333EA"
-                          strokeWidth={2}
-                          name="fluxoLiquido"
-                          dot={{ fill: '#9333EA', strokeWidth: 2, r: 3 }}
-                          activeDot={{ r: 5, stroke: '#9333EA', strokeWidth: 2, cursor: 'pointer' }}
                         />
                       )}
                     </LineChart>

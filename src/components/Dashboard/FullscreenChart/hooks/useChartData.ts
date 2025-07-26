@@ -92,8 +92,8 @@ export function useFullscreenChartData(period: string, showFuture: boolean) {
         return {
           mes: monthLabel,
           receitas: totalReceitas,
-          despesas: totalDespesas,
-          gastosRecorrentes,
+          despesas: Math.abs(totalDespesas), // Ensure expenses are positive
+          gastosRecorrentes: Math.abs(gastosRecorrentes), // Ensure recurring expenses are positive
           fluxoLiquido: totalReceitas - totalDespesas,
           isFuture: false
         };

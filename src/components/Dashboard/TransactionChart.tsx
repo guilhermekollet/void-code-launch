@@ -28,7 +28,7 @@ export function TransactionChart() {
 
   return (
     <>
-      <Card className="bg-white border-[#E2E8F0] hover:shadow-md transition-shadow h-[250px] flex flex-col">
+      <Card className="bg-white border-[#E2E8F0] hover:shadow-md transition-shadow h-[300px] md:h-[400px] flex flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-shrink-0">
           <CardTitle className="text-lg font-semibold text-[#121212]">Fluxo Financeiro</CardTitle>
           <Button

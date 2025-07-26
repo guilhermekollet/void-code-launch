@@ -141,23 +141,23 @@ export function RecentTransactions({
             const isInstallment = transaction.total_installments && transaction.total_installments > 1;
             
             return (
-              <div key={transaction.id} className="bg-white border border-[#E2E8F0] rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
+              <div key={transaction.id} className="bg-white border border-[#E2E8F0] rounded-lg p-3 md:p-4 hover:shadow-md transition-shadow">
+                <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-start justify-between'}`}>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-medium text-gray-900">{transaction.description}</h3>
-                      {transaction.is_agent && (
+                    <div className={`flex items-center gap-2 ${isMobile ? 'mb-1' : 'mb-2'}`}>
+                      <h3 className={`font-medium text-gray-900 ${isMobile ? 'text-sm' : ''}`}>{transaction.description}</h3>
+                      {transaction.is_agent && !isMobile && (
                         <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border-green-200">
-                          Bolsofy AI
+                          AI
                         </Badge>
                       )}
-                      {transaction.is_recurring && (
+                      {transaction.is_recurring && !isMobile && (
                         <Badge variant="outline" className="text-xs">
                           <Repeat className="h-3 w-3 mr-1" />
-                          Recorrente
+                          Rec
                         </Badge>
                       )}
-                      {isInstallment && (
+                      {isInstallment && !isMobile && (
                         <Badge 
                           variant="outline" 
                           className="text-xs cursor-pointer hover:bg-gray-50"
@@ -169,58 +169,66 @@ export function RecentTransactions({
                       )}
                     </div>
                     
-                    <div className="flex items-center gap-3 text-sm text-gray-600 mb-2">
+                    <div className={`flex items-center gap-2 text-xs text-gray-600 ${isMobile ? 'mb-1' : 'mb-2'}`}>
                       <span>{transaction.category}</span>
-                      <span>•</span>
-                      <span>{format(new Date(transaction.tx_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge className={getTypeColor(transaction.type)}>
-                        {transaction.type === 'receita' ? 'Receita' : 'Despesa'}
-                      </Badge>
-                      
-                      {creditCardInfo && (
-                        <Badge
-                          className="text-xs px-2 py-0.5"
-                          style={{
-                            backgroundColor: creditCardInfo.color,
-                            color: getContrastColor(creditCardInfo.color),
-                            border: `1px solid ${creditCardInfo.color}`
-                          }}
-                        >
-                          <CreditCard className="h-3 w-3 mr-1" />
-                          {creditCardInfo.card_name || creditCardInfo.bank_name}
-                        </Badge>
+                      {!isMobile && (
+                        <>
+                          <span>•</span>
+                          <span>{format(new Date(transaction.tx_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        </>
                       )}
                     </div>
+                    
+                    {!isMobile && (
+                      <div className="flex items-center gap-2">
+                        <Badge className={getTypeColor(transaction.type)}>
+                          {transaction.type === 'receita' ? 'Receita' : 'Despesa'}
+                        </Badge>
+                        
+                        {creditCardInfo && (
+                          <Badge
+                            className="text-xs px-2 py-0.5"
+                            style={{
+                              backgroundColor: creditCardInfo.color,
+                              color: getContrastColor(creditCardInfo.color),
+                              border: `1px solid ${creditCardInfo.color}`
+                            }}
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            {creditCardInfo.card_name || creditCardInfo.bank_name}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <span className={`text-lg font-semibold ${getAmountColor(transaction.type)}`}>
+                  <div className={`flex items-center ${isMobile ? 'justify-between' : 'gap-3'}`}>
+                    <span className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold ${getAmountColor(transaction.type)}`}>
                       {formatCurrency(transaction.amount)}
                     </span>
                     
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(transaction)}
-                        className="h-8 w-8 p-0"
-                        disabled={updateTransactionMutation.isPending}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(transaction.id, transaction.description)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        disabled={deleteTransactionMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {!isMobile && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(transaction)}
+                          className="h-8 w-8 p-0"
+                          disabled={updateTransactionMutation.isPending}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(transaction.id, transaction.description)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={deleteTransactionMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

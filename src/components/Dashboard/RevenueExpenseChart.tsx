@@ -125,16 +125,11 @@ export function RevenueExpenseChart() {
   }
 
   return (
-    <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200 h-[250px] flex flex-col">
+    <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200 h-[300px] md:h-[400px] flex flex-col">
       <CardHeader className="pb-4 flex-shrink-0">
-        <div className="flex flex-col">
-          <CardTitle className="text-lg font-semibold text-[#121212]">
-            Receita x Despesa
-          </CardTitle>
-          <p className="text-sm text-gray-500 mt-1">
-            Comparação do mês atual
-          </p>
-        </div>
+        <CardTitle className="text-lg font-semibold text-[#121212]">
+          Receita x Despesa
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-2 flex-1 flex flex-col">
         <div className="flex-1">
@@ -145,7 +140,7 @@ export function RevenueExpenseChart() {
               top: 20,
               right: 20,
               left: 20,
-              bottom: 70,
+              bottom: 20,
             }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -153,7 +148,7 @@ export function RevenueExpenseChart() {
               dataKey="name" 
               axisLine={false}
               tickLine={false}
-              tick={<CustomXAxisTick />}
+              tick={{ fontSize: 12, fill: '#666' }}
               height={40}
               interval={0}
             />
