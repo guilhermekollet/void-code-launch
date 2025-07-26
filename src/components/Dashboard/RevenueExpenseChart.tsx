@@ -125,7 +125,7 @@ export function RevenueExpenseChart() {
   }
 
   return (
-    <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200 h-[350px] flex flex-col">
+    <Card className="bg-white border-[#DEDEDE] shadow-sm hover:shadow-md transition-shadow duration-200 h-[250px] flex flex-col">
       <CardHeader className="pb-4 flex-shrink-0">
         <div className="flex flex-col">
           <CardTitle className="text-lg font-semibold text-[#121212]">

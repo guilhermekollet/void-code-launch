@@ -28,8 +28,8 @@ export function TransactionChart() {
 
   return (
     <>
-      <Card className="bg-white border-[#E2E8F0] hover:shadow-md transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <Card className="bg-white border-[#E2E8F0] hover:shadow-md transition-shadow h-[250px] flex flex-col">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-shrink-0">
           <CardTitle className="text-lg font-semibold text-[#121212]">Fluxo Financeiro</CardTitle>
           <Button
             variant="ghost"
@@ -40,8 +40,8 @@ export function TransactionChart() {
             <Maximize className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent className="pt-2">
-          <ResponsiveContainer width="100%" height={280}>
+        <CardContent className="pt-2 flex-1 flex flex-col">
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis 

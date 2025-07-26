@@ -68,9 +68,6 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
         if (numericPhone.length === 11 && !numericPhone.startsWith('9', 2)) {
           return "Celular deve começar com 9 após o DDD"
         }
-        if (numericPhone.length < 10) {
-          return "Número muito curto (mín. 10 dígitos)"
-        }
       } else if (country.code === '+1') { // EUA/Canada
         if (numericPhone.length > 10) {
           return "Número muito longo para os EUA"
