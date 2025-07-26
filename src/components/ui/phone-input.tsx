@@ -101,8 +101,8 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value
-      // Allow only numbers, spaces, parentheses, and hyphens for display
-      const cleanedValue = inputValue.replace(/[^\d\s()-]/g, '')
+      // Allow only numbers and spaces for display
+      const cleanedValue = inputValue.replace(/[^\d\s]/g, '')
       
       // Extract only numbers for validation and storage
       const numericValue = cleanedValue.replace(/\D/g, '')
@@ -125,8 +125,8 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
     }
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Allow only numbers and common phone formatting characters
-      const allowedChars = /[0-9\s()-]/
+      // Allow only numbers and spaces
+      const allowedChars = /[0-9\s]/
       if (!allowedChars.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
         e.preventDefault()
       }
